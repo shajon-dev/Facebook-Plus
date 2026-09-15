@@ -1,0 +1,46 @@
+/* Facebook Plus — Tiếng Việt. Tự động tạo từ test/gen_strings.py.
+   Giữ các bản dịch đồng bộ thông qua script đó; các key khớp với mọi .lproj khác. */
+
+"settings.subtitle" = "Tinh chỉnh tùy chọn";
+"row.metaplus.title" = "Bật Facebook Plus";
+"row.metaplus.desc" = "Xem trước mọi tính năng trả phí mà không cần đăng ký.";
+"row.noads.title" = "Xóa quảng cáo";
+"row.norecs.title" = "Xóa đề xuất";
+"row.norecs.desc" = "Ẩn các bài viết được đề xuất theo thuật toán.";
+"row.nopymk.title" = "Xóa mục Người bạn có thể biết";
+"row.noreels.title" = "Xóa thanh cuộn Reels";
+"row.nothreads.title" = "Xóa quảng bá Threads";
+"row.nothreads.desc" = "Ẩn thẻ “khám phá các thread mới”.";
+"row.nogroups.title" = "Xóa đề xuất nhóm";
+"row.nogroups.desc" = "Ẩn các mục “những nhóm bạn nên tham gia”.";
+"row.feedlike.title" = "Xác nhận lượt thích bài viết";
+"row.feedlike.desc" = "Hỏi trước khi gửi lượt thích.";
+"row.reelslike.title" = "Xác nhận lượt thích Reels";
+"row.anonstories.title" = "Xem tin ẩn danh";
+"row.anonstories.desc" = "Xem tin mà không gửi xác nhận đã đọc.";
+"row.noautonext.title" = "Tắt tự động chuyển tiếp";
+"row.nostorypymk.title" = "Ẩn đề xuất tin";
+"row.nostorypymk.desc" = "Xóa “những người bạn có thể biết” khỏi khay tin.";
+"row.oled.title" = "Chế độ tối OLED";
+"row.oled.desc" = "Chuyển toàn bộ ứng dụng sang màu đen thực sự.";
+"row.appicon.title" = "Biểu tượng ứng dụng";
+"row.appicon.desc" = "Chọn biểu tượng ứng dụng thay thế.";
+"row.autoclear.title" = "Xóa bộ nhớ đệm khi khởi chạy";
+"row.clearcache.title" = "Xóa bộ nhớ đệm ngay";
+"row.diagnostics.title" = "Chẩn đoán";
+"row.diagnostics.desc" = "Xem những tính năng đang hoạt động.";
+"row.welcome.title" = "Hiển thị màn hình chào mừng";
+"row.reset.title" = "Đặt lại tất cả cài đặt";
+"row.language.title" = "Ngôn ngữ";
+"footer.by" = "Facebook Plus · bởi ";
+"reset.title" = "Đặt lại tất cả cài đặt";
+"reset.message" = "Mọi tùy chọn sẽ trở về mặc định. Không thể hoàn tác thao tác này.";
+"reset.confirm" = "Đặt lại";
+"toast.settingsReset" = "Đã đặt lại cài đặt";
+"toast.cacheCleared" = "Đã xóa bộ nhớ đệm";
+"appicon.default" = "Mặc định";
+"appicon.applied" = "Đã áp dụng biểu tượng %@";
+"appicon.error.unsupported" = "Ứng dụng này không cho phép thay đổi biểu tượng.";
+"appicon.error.failed" = "Không thể thay đổi biểu tượng.";
+"common.cancel" = "Hủy";
+"common.ok" = "OK";
