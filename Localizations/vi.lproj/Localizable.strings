@@ -15,6 +15,12 @@
 "row.nosuggestedpages.desc" = "Ẩn các mục “trang gợi ý cho bạn”.";
 "row.feedlike.title" = "Xác nhận lượt thích bài viết";
 "row.feedlike.desc" = "Hỏi trước khi gửi lượt thích.";
+
+"row.downloadreels.title" = "Tải Reels";
+"row.downloadreels.desc" = "Hiện nút tải xuống khi xem Reels.";
+"row.downloadstories.title" = "Tải Story";
+"row.downloadstories.desc" = "Hiện nút tải xuống khi xem Story.";
+
 "row.reelslike.title" = "Xác nhận lượt thích Reels";
 "row.anonstories.title" = "Xem tin ẩn danh";
 "row.anonstories.desc" = "Xem tin mà không gửi xác nhận đã đọc.";

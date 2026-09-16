@@ -57,6 +57,10 @@ extern NSString *const FBPKeyNoThreads;         // Remove the Threads promo unit
 extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should join"
 extern NSString *const FBPKeyNoSuggestedPages;  // Remove "suggested pages for you"
 
+// Downloads
+extern NSString *const FBPKeyReelsDownloaderEnabled;
+extern NSString *const FBPKeyStoryDownloaderEnabled;
+
 // Reels
 extern NSString *const FBPKeyReelsLike;         // Confirm reels like
 

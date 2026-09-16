@@ -338,6 +338,14 @@ compatibleWithTraitCollection:nil]
                        desc:FBPL(@"row.feedlike.desc")
                        icon:@"alert" color:UIColor.systemGreenColor],
         ]},
+        @{ @"header" : @"Downloads", @"rows" : @[
+            [self switchRow:FBPKeyReelsDownloaderEnabled title:FBPL(@"row.downloadreels.title")
+                       desc:FBPL(@"row.downloadreels.desc")
+                       icon:@"arrow.down.to.line" color:UIColor.systemBlueColor],
+            [self switchRow:FBPKeyStoryDownloaderEnabled title:FBPL(@"row.downloadstories.title")
+                       desc:FBPL(@"row.downloadstories.desc")
+                       icon:@"arrow.down.to.line" color:UIColor.systemPurpleColor],
+        ]},
         @{ @"header" : @"Reels", @"rows" : @[
             [self switchRow:FBPKeyReelsLike title:FBPL(@"row.reelslike.title") desc:nil
                        icon:@"alert" color:UIColor.systemGreenColor],

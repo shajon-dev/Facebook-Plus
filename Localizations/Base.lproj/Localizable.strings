@@ -15,6 +15,12 @@
 "row.nosuggestedpages.desc" = "Hides the “suggested pages for you” units.";
 "row.feedlike.title" = "Confirm Post Likes";
 "row.feedlike.desc" = "Asks before a like is sent.";
+
+"row.downloadreels.title" = "Download Reels";
+"row.downloadreels.desc" = "Show the download button while viewing Reels.";
+"row.downloadstories.title" = "Download Stories";
+"row.downloadstories.desc" = "Show the download button while viewing Stories.";
+
 "row.reelslike.title" = "Confirm Reels Likes";
 "row.anonstories.title" = "Watch Stories Anonymously";
 "row.anonstories.desc" = "View stories without sending a read receipt.";
