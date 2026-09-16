@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "تفضيلات التعديل";
-"row.metaplus.title" = "تفعيل Facebook Plus";
-"row.metaplus.desc" = "معاينة كل الميزات المدفوعة دون اشتراك.";
 "row.noads.title" = "إزالة الإعلانات";
 "row.norecs.title" = "إزالة التوصيات";
 "row.norecs.desc" = "يُخفي المنشورات المقترحة بواسطة الخوارزمية.";

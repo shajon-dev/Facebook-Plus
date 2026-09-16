@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "টুইক পছন্দসমূহ";
-"row.metaplus.title" = "Facebook Plus চালু করুন";
-"row.metaplus.desc" = "সাবস্ক্রাইব ছাড়াই সব পেইড ফিচার প্রিভিউ করুন।";
 "row.noads.title" = "বিজ্ঞাপন সরান";
 "row.norecs.title" = "সুপারিশ সরান";
 "row.norecs.desc" = "অ্যালগরিদমে সাজেস্ট করা পোস্ট লুকায়।";

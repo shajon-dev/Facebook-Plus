@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "ट्वीक प्राथमिकताएँ";
-"row.metaplus.title" = "Facebook Plus चालू करें";
-"row.metaplus.desc" = "बिना सदस्यता के हर सशुल्क सुविधा देखें।";
 "row.noads.title" = "विज्ञापन हटाएँ";
 "row.norecs.title" = "सुझाव हटाएँ";
 "row.norecs.desc" = "एल्गोरिद्म द्वारा सुझाई गई पोस्ट छिपाता है।";

@@ -36,7 +36,6 @@ FacebookPlus_FILES = \
 	src/Features/LikeConfirmation/FBPConfirmHooks.xm \
 	src/Features/AppChrome/FBPChromeHooks.xm \
 	src/Features/OLED/FBPOLEDHooks.xm \
-	src/Features/FacebookPlus/FBPPlusHooks.xm \
 	src/Features/Menu/FBPMenuHooks.xm \
 	src/PluginsInject/PluginsInject.mm \
 	src/PluginsInject/Paths.mm \

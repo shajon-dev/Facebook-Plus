@@ -2,8 +2,6 @@
    Giữ các bản dịch đồng bộ thông qua script đó; các key khớp với mọi .lproj khác. */
 
 "settings.subtitle" = "Tinh chỉnh tùy chọn";
-"row.metaplus.title" = "Bật Facebook Plus";
-"row.metaplus.desc" = "Xem trước mọi tính năng trả phí mà không cần đăng ký.";
 "row.noads.title" = "Xóa quảng cáo";
 "row.norecs.title" = "Xóa đề xuất";
 "row.norecs.desc" = "Ẩn các bài viết được đề xuất theo thuật toán.";

@@ -42,10 +42,6 @@
       <td nowrap>🎨 <b>Appearance</b></td>
       <td><b>OLED Dark Mode</b> (True black)<br>Custom App-Icon Picker (Seamless integration with <code>CFBundleAlternateIcons</code>)</td>
     </tr>
-    <tr>
-      <td nowrap>💎 <b>Subscription</b></td>
-      <td><b>Preview Meta Facebook Plus:</b> Flips the client-side gate for paid subscriber perks so they appear in the UI for preview.<br><i>(Note: Unlocks UI only, server-side features are not granted)</i></td>
-    </tr>
   </tbody>
 </table>
 
@@ -123,7 +119,6 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 │   │   ├── AppChrome   # UI settings gesture (TabBar & Settings Button)
 │   │   ├── AppIcons    # Custom app-icon picker logic
 │   │   ├── Diagnostics # Diagnostics and logging controllers
-│   │   ├── FacebookPlus# Subscription unlock previews
 │   │   ├── Feed        # Feed-related hooks (ads, suggestions, Reels)
 │   │   ├── Language    # UI language override hooks
 │   │   ├── LikeConfirmation # Confirm before liking logic

@@ -70,9 +70,6 @@ extern NSString *const FBPKeyFeedLike;          // Confirm post like
 // Appearance
 extern NSString *const FBPKeyOLED;              // True-black background in dark mode
 
-// Facebook Plus
-extern NSString *const FBPKeyMetaPlus;          // Unlock paid subscriber benefits for preview
-
 // Other
 extern NSString *const FBPKeyNotifyUpdates;
 extern NSString *const FBPKeyAutoClearCache;

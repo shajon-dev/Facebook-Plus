@@ -27,8 +27,6 @@ NSString *const FBPKeyFeedLike         = @"feedLike";
 
 NSString *const FBPKeyOLED             = @"oledMode";
 
-NSString *const FBPKeyMetaPlus         = @"metaFacebookPlus";
-
 NSString *const FBPKeyNotifyUpdates    = @"notifyUpdates";
 NSString *const FBPKeyAutoClearCache   = @"autoClearCache";
 NSString *const FBPKeyLanguage         = @"uiLanguage";

@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "Tweak 設定";
-"row.metaplus.title" = "Facebook Plus を有効化";
-"row.metaplus.desc" = "すべての有料機能を登録なしでプレビュー。";
 "row.noads.title" = "広告を削除";
 "row.norecs.title" = "おすすめを削除";
 "row.norecs.desc" = "アルゴリズムによるおすすめ投稿を非表示にします。";

@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "Tweak-Einstellungen";
-"row.metaplus.title" = "Facebook Plus aktivieren";
-"row.metaplus.desc" = "Alle kostenpflichtigen Funktionen ohne Abo testen.";
 "row.noads.title" = "Werbung entfernen";
 "row.norecs.title" = "Empfehlungen entfernen";
 "row.norecs.desc" = "Blendet algorithmisch vorgeschlagene Beiträge aus.";

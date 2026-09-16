@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "Tweak Tercihleri";
-"row.metaplus.title" = "Facebook Plus’ı Etkinleştir";
-"row.metaplus.desc" = "Tüm ücretli özellikleri abone olmadan önizle.";
 "row.noads.title" = "Reklamları Kaldır";
 "row.norecs.title" = "Önerileri Kaldır";
 "row.norecs.desc" = "Algoritmanın önerdiği gönderileri gizler.";

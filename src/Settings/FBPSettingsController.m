@@ -315,11 +315,6 @@ compatibleWithTraitCollection:nil]
 
 - (NSArray<NSDictionary *> *)buildSections {
     return @[
-        @{ @"header" : @"Subscription", @"rows" : @[
-            [self switchRow:FBPKeyMetaPlus title:FBPL(@"row.metaplus.title")
-                       desc:FBPL(@"row.metaplus.desc")
-                       icon:@"crown.fill" color:UIColor.systemBlueColor],
-        ]},
         @{ @"header" : @"Feed", @"rows" : @[
             [self switchRow:FBPKeyNoAds title:FBPL(@"row.noads.title") desc:nil
                        icon:@"ads" color:UIColor.systemRedColor],

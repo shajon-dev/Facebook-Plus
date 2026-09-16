@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "插件偏好设置";
-"row.metaplus.title" = "启用 Facebook Plus";
-"row.metaplus.desc" = "无需订阅即可预览所有付费功能。";
 "row.noads.title" = "移除广告";
 "row.norecs.title" = "移除推荐内容";
 "row.norecs.desc" = "隐藏算法推荐的帖子。";

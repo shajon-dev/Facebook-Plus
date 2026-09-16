@@ -12,7 +12,6 @@ extern void FBPInitStoryHooks(void);
 extern void FBPInitConfirmHooks(void);
 extern void FBPInitChromeHooks(void);
 extern void FBPInitOLEDHooks(void);
-extern void FBPInitPlusHooks(void);
 extern void FBPInitMenuHooks(void);
 
 /// Runs every installer. Each group latches itself with FBP_ONCE, so calling
@@ -23,7 +22,6 @@ static void FBPInstallHooks(void) {
     FBPInitConfirmHooks();
     FBPInitChromeHooks();
     FBPInitOLEDHooks();
-    FBPInitPlusHooks();
     FBPInitMenuHooks();
 }
 

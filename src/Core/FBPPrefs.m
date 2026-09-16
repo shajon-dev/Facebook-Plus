@@ -46,11 +46,6 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
 
         FBPKeyOLED             : @YES,
 
-        // Off by default: this unlocks Facebook's paid subscriber UI (and the
-        // Meta AI quotas) for preview, so it stays a deliberate opt-in rather
-        // than something installing the tweak silently switches on.
-        FBPKeyMetaPlus         : @NO,
-
         FBPKeyNotifyUpdates    : @YES,
         FBPKeyAutoClearCache   : @YES,
 

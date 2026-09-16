@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "Preferensi Tweak";
-"row.metaplus.title" = "Aktifkan Facebook Plus";
-"row.metaplus.desc" = "Pratinjau semua fitur berbayar tanpa berlangganan.";
 "row.noads.title" = "Hapus Iklan";
 "row.norecs.title" = "Hapus Rekomendasi";
 "row.norecs.desc" = "Menyembunyikan postingan yang disarankan algoritma.";

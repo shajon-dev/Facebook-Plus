@@ -2,8 +2,6 @@
    Keep translations in sync via that script; keys match every other .lproj. */
 
 "settings.subtitle" = "Настройки твика";
-"row.metaplus.title" = "Включить Facebook Plus";
-"row.metaplus.desc" = "Все платные функции для предпросмотра без подписки.";
 "row.noads.title" = "Убрать рекламу";
 "row.norecs.title" = "Убрать рекомендации";
 "row.norecs.desc" = "Скрывает посты, предложенные алгоритмом.";
