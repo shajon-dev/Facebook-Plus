@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "“Senin için önerilen sayfalar” bölümlerini gizler.";
 "row.feedlike.title" = "Gönderi Beğenilerini Onayla";
 "row.feedlike.desc" = "Beğeni gönderilmeden önce sorar.";
+
+"row.downloadreels.title" = "Reels'i İndir";
+"row.downloadreels.desc" = "Reels izlerken indirme düğmesini gösterir.";
+"row.downloadstories.title" = "Hikayeleri İndir";
+"row.downloadstories.desc" = "Hikaye izlerken indirme düğmesini gösterir.";
 "row.reelslike.title" = "Reels Beğenilerini Onayla";
 "row.anonstories.title" = "Hikâyeleri Anonim İzle";
 "row.anonstories.desc" = "Okundu bilgisi göndermeden hikâyeleri izle.";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "Simge değiştirilemedi.";
 "common.cancel" = "İptal";
 "common.ok" = "Tamam";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Bilinmeyen hata";
+"download.story.saved" = "Fotoğraflar'a kaydedildi";
+"download.story.a11y" = "Hikayeyi İndir";
+"download.reel.a11y" = "Reel'i İndir";
+"download.reel.progress" = "Reel indiriliyor…";
+"download.reel.saving" = "İndirme tamamlandı, kaydediliyor…";
+"download.reel.saved" = "Reel Fotoğraflar'a kaydedildi";
+"download.reel.failed" = "Reel indirilemedi.";
+"download.reel.failedDetail" = "Reel indirilemedi.\n%@";
+"download.reel.saveFailed" = "Fotoğraflar'a kaydedilemedi.\n%@";
+"download.reel.inProgress" = "Bir Reel zaten indiriliyor.";
+"download.reel.httpError" = "Facebook CDN HTTP %ld döndürdü.";
+"download.reel.tmpFailed" = "Geçici video dosyası oluşturulamadı.";
+"download.reel.noLink" = "Bu videonun bağlantısı alınamadı.";

@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "Menyembunyikan unit “halaman untuk Anda”.";
 "row.feedlike.title" = "Konfirmasi Suka Postingan";
 "row.feedlike.desc" = "Bertanya sebelum suka dikirim.";
+
+"row.downloadreels.title" = "Unduh Reels";
+"row.downloadreels.desc" = "Menampilkan tombol unduh saat menonton Reels.";
+"row.downloadstories.title" = "Unduh Stories";
+"row.downloadstories.desc" = "Menampilkan tombol unduh saat menonton Stories.";
 "row.reelslike.title" = "Konfirmasi Suka Reels";
 "row.anonstories.title" = "Lihat Story secara Anonim";
 "row.anonstories.desc" = "Lihat story tanpa mengirim tanda telah dibaca.";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "Ikon tidak dapat diganti.";
 "common.cancel" = "Batal";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Kesalahan tidak diketahui";
+"download.story.saved" = "Disimpan ke Foto";
+"download.story.a11y" = "Unduh Story";
+"download.reel.a11y" = "Unduh Reel";
+"download.reel.progress" = "Mengunduh Reel…";
+"download.reel.saving" = "Unduhan selesai, menyimpan…";
+"download.reel.saved" = "Reel disimpan ke Foto";
+"download.reel.failed" = "Gagal mengunduh Reel.";
+"download.reel.failedDetail" = "Gagal mengunduh Reel.\n%@";
+"download.reel.saveFailed" = "Tidak dapat menyimpan ke Foto.\n%@";
+"download.reel.inProgress" = "Sebuah Reel sedang diunduh.";
+"download.reel.httpError" = "Facebook CDN mengembalikan HTTP %ld.";
+"download.reel.tmpFailed" = "Tidak dapat membuat file video sementara.";
+"download.reel.noLink" = "Tidak dapat mengambil tautan video ini.";

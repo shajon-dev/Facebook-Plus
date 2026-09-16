@@ -4,13 +4,13 @@
 
   <p>
     <strong>The ultimate privacy and enhancement tweak for the Facebook iOS app.</strong><br>
-    <em>Quieten your feed, watch stories anonymously, confirm interactions, and customize the app's appearance.</em>
+    <em>Quieten your feed, watch stories anonymously, download Reels & Stories, confirm interactions, and customize the app's appearance.</em>
   </p>
 
   <p>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square"></a>
-    <img alt="Platform" src="https://img.shields.io/badge/Platform-iOS%2015.1%2B-lightgrey.svg?style=flat-square">
-    <img alt="Version" src="https://img.shields.io/badge/Version-1.0.0-success.svg?style=flat-square">
+    <img alt="Platform" src="https://img.shields.io/badge/Platform-iOS%2017.0%2B-lightgrey.svg?style=flat-square">
+    <img alt="Version" src="https://img.shields.io/badge/Version-1.0.1-success.svg?style=flat-square">
   </p>
 </div>
 
@@ -28,15 +28,15 @@
   <tbody>
     <tr>
       <td nowrap>📰 <b>Feed</b></td>
-      <td>Remove Ads & Sponsored Posts<br>Hide "People you may know" & Group suggestions<br>Remove Reels carousel & Threads promo<br><b>Confirm before liking</b> (prevents accidental likes)</td>
+      <td>Remove Ads & Sponsored Posts<br>Hide "People you may know", Group & Page suggestions<br>Remove Reels carousel & Threads promo<br><b>Confirm before liking</b> (prevents accidental likes)</td>
     </tr>
     <tr>
       <td nowrap>🎬 <b>Reels</b></td>
-      <td><b>Confirm before liking</b></td>
+      <td><b>Confirm before liking</b><br>Save <b>Reels</b> to Photos</td>
     </tr>
     <tr>
       <td nowrap>📖 <b>Stories</b></td>
-      <td>Watch stories anonymously (Ghost Mode)<br>Disable auto-advance<br>Remove "People you may know"</td>
+      <td>Watch stories anonymously (Ghost Mode)<br>Disable auto-advance<br>Remove "People you may know"<br> Save <b>Stories</b> (video & photo) to Photos</td>
     </tr>
     <tr>
       <td nowrap>🎨 <b>Appearance</b></td>
@@ -45,7 +45,7 @@
   </tbody>
 </table>
 
-💡 **Settings:** Long-press any **tab bar item** or the **native Facebook settings button**.
+💡 **Settings:** Long-press any **tab bar item** (classic or the new iOS 26 liquid-glass bar)
 
 ---
 
@@ -119,6 +119,7 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 │   │   ├── AppChrome   # UI settings gesture (TabBar & Settings Button)
 │   │   ├── AppIcons    # Custom app-icon picker logic
 │   │   ├── Diagnostics # Diagnostics and logging controllers
+│   │   ├── Downloads   # Reel & Story media downloaders (save to Photos)
 │   │   ├── Feed        # Feed-related hooks (ads, suggestions, Reels)
 │   │   ├── Language    # UI language override hooks
 │   │   ├── LikeConfirmation # Confirm before liking logic
@@ -134,15 +135,12 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 └── test                # Input IPA directory and test scripts
 ```
 
-**Resilient Hooking:** Each hook dynamically verifies that its target class and selector exist before installation. If a Facebook update changes a specific class, only that single feature degrades safely without crashing the entire tweak.
-
-## 📝 To-Do
-
-- [ ] Add Download Stories and Reels feature
+**Resilient Hooking:** Each hook dynamically verifies that its target class and selector exist before installation. If a Facebook update changes a specific class, only that single feature degrades safely without crashing the entire tweak. The settings gesture, for example, hooks both the classic tab bar and the new iOS 26 liquid-glass bars so long-press keeps working across iOS versions.
 
 ## 📜 Provenance & Credits
 
 - **Idea & Inspiration:** The core concept of this tweak was inspired by the closed-source Facebook tweak **[Glow](https://github.com/dayanch96/Glow)**. This project is a clean reimplementation based on its behavioral analysis.
+- **Story & Reels Downloader:** The media download feature (`src/Features/Downloads/`) was contributed by **[ttlongdl](https://github.com/ttlongdl/Facebook-Plus)** via their GPLv3 fork, and is integrated here with attribution as required by the license.
 - **Compatibility Layer:** The sideloading compatibility layer (`src/PluginsInject/`) is copied and derived directly from **[zxPluginsInject](https://github.com/asdfzxcvbn/zxPluginsInject)**.
 - **Symbol Rebinding:** Uses **[fishhook](https://github.com/facebook/fishhook)** for dynamic symbol rebinding.
 

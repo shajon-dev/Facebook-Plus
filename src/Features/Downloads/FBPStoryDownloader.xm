@@ -1,6 +1,7 @@
 #import "FBPlus.h"
 #import "FBPHeaders.h"
 #import "FBPPrefs.h"
+#import "FBPResources.h"
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
@@ -128,9 +129,9 @@ static void FBPStoryShowSavedPopup(void) {
 
         UIAlertController *alert =
             [UIAlertController alertControllerWithTitle:nil
-                                                message:@"Đã lưu vào Photos"
+                                                message:FBPL(@"download.story.saved")
                                          preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+        [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.ok")
                                                   style:UIAlertActionStyleDefault
                                                 handler:nil]];
         [vc presentViewController:alert animated:YES completion:nil];
@@ -318,9 +319,13 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
         button.tintColor = UIColor.whiteColor;
         button.backgroundColor = UIColor.clearColor;
         button.frame = CGRectMake(0, 0, 38, 38);
-        button.accessibilityLabel = @"Download Story";
-        [button setImage:[UIImage systemImageNamed:@"arrow.down.to.line"]
+        button.accessibilityLabel = FBPL(@"download.story.a11y");
+        [button setImage:[UIImage fbp_imageNamed:@"download"]
                 forState:UIControlStateNormal];
+        button.imageView.contentMode = UIViewContentModeScaleAspectFit;
+        // Match the eye (mark-as-seen) button's glyph size in FBPStoryHooks.xm,
+        // which in turn matches Facebook's own header controls.
+        button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
         [button addTarget:[FBPStoryDownloadTarget shared]
                    action:@selector(downloadTapped:)
          forControlEvents:UIControlEventTouchUpInside];
@@ -335,10 +340,15 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
         [host addSubview:progress];
     }
 
-    // V1.1: the previous two-row position overlapped Facebook's eye/privacy
-    // control. Move Download one full row farther down.
-    CGFloat cx = CGRectGetWidth(host.bounds) - 24.0;
-    CGFloat cy = 41.0 + (44.0 * 3.0);
+    // Sit directly under the eye (mark-as-seen) button, on the same right-hand
+    // axis and one row-gap below it. This mirrors the eye button's grid in
+    // FBPStoryHooks.xm: centre = safe-area top + header row (41) + one gap (44)
+    // per row. The eye is at row 1 (safeTop + 41 + 44); Download is the next row.
+    static const CGFloat kHeaderRowCentre = 41.0;
+    static const CGFloat kCloseCentreFromRight = 24.0;
+    static const CGFloat kRowGap = 44.0;
+    CGFloat cx = CGRectGetWidth(host.bounds) - host.safeAreaInsets.right - kCloseCentreFromRight;
+    CGFloat cy = host.safeAreaInsets.top + kHeaderRowCentre + kRowGap * 2.0;
     button.center = CGPointMake(cx, cy);
     progress.frame = CGRectMake(cx - 15.0, cy + 21.0, 30.0, 2.0);
 

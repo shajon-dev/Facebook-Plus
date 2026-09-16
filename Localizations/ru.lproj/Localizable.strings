@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "Скрывает блоки «рекомендуемые страницы».";
 "row.feedlike.title" = "Подтверждать «Нравится»";
 "row.feedlike.desc" = "Спрашивает перед отправкой отметки «Нравится».";
+
+"row.downloadreels.title" = "Скачивать Reels";
+"row.downloadreels.desc" = "Показывает кнопку скачивания при просмотре Reels.";
+"row.downloadstories.title" = "Скачивать истории";
+"row.downloadstories.desc" = "Показывает кнопку скачивания при просмотре историй.";
 "row.reelslike.title" = "Подтверждать «Нравится» в Reels";
 "row.anonstories.title" = "Смотреть истории анонимно";
 "row.anonstories.desc" = "Смотреть истории без отправки отметки о просмотре.";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "Не удалось изменить значок.";
 "common.cancel" = "Отмена";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Неизвестная ошибка";
+"download.story.saved" = "Сохранено в Фото";
+"download.story.a11y" = "Скачать историю";
+"download.reel.a11y" = "Скачать Reel";
+"download.reel.progress" = "Скачивание Reel…";
+"download.reel.saving" = "Загрузка завершена, сохранение…";
+"download.reel.saved" = "Reel сохранён в Фото";
+"download.reel.failed" = "Не удалось скачать Reel.";
+"download.reel.failedDetail" = "Не удалось скачать Reel.\n%@";
+"download.reel.saveFailed" = "Не удалось сохранить в Фото.\n%@";
+"download.reel.inProgress" = "Reel уже скачивается.";
+"download.reel.httpError" = "Facebook CDN вернул HTTP %ld.";
+"download.reel.tmpFailed" = "Не удалось создать временный видеофайл.";
+"download.reel.noLink" = "Не удалось получить ссылку на это видео.";

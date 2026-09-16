@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "“회원님을 위한 추천 페이지” 항목을 숨깁니다.";
 "row.feedlike.title" = "게시물 좋아요 확인";
 "row.feedlike.desc" = "좋아요를 보내기 전에 확인합니다.";
+
+"row.downloadreels.title" = "릴스 다운로드";
+"row.downloadreels.desc" = "릴스를 볼 때 다운로드 버튼을 표시합니다.";
+"row.downloadstories.title" = "스토리 다운로드";
+"row.downloadstories.desc" = "스토리를 볼 때 다운로드 버튼을 표시합니다.";
 "row.reelslike.title" = "릴스 좋아요 확인";
 "row.anonstories.title" = "스토리 익명으로 보기";
 "row.anonstories.desc" = "읽음 표시를 보내지 않고 스토리를 봅니다.";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "아이콘을 변경할 수 없습니다.";
 "common.cancel" = "취소";
 "common.ok" = "확인";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "알 수 없는 오류";
+"download.story.saved" = "사진에 저장됨";
+"download.story.a11y" = "스토리 다운로드";
+"download.reel.a11y" = "릴스 다운로드";
+"download.reel.progress" = "릴스 다운로드 중…";
+"download.reel.saving" = "다운로드 완료, 저장 중…";
+"download.reel.saved" = "릴스를 사진에 저장함";
+"download.reel.failed" = "릴스 다운로드에 실패했습니다.";
+"download.reel.failedDetail" = "릴스 다운로드에 실패했습니다.\n%@";
+"download.reel.saveFailed" = "사진에 저장하지 못했습니다.\n%@";
+"download.reel.inProgress" = "이미 릴스를 다운로드하는 중입니다.";
+"download.reel.httpError" = "Facebook CDN이 HTTP %ld을(를) 반환했습니다.";
+"download.reel.tmpFailed" = "임시 동영상 파일을 만들지 못했습니다.";
+"download.reel.noLink" = "이 동영상의 링크를 가져오지 못했습니다.";

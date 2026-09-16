@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "“आपके लिए सुझाए गए पेज” यूनिट छिपाता है।";
 "row.feedlike.title" = "पोस्ट लाइक की पुष्टि करें";
 "row.feedlike.desc" = "लाइक भेजने से पहले पूछता है।";
+
+"row.downloadreels.title" = "Reels डाउनलोड करें";
+"row.downloadreels.desc" = "Reels देखते समय डाउनलोड बटन दिखाता है।";
+"row.downloadstories.title" = "Stories डाउनलोड करें";
+"row.downloadstories.desc" = "Story देखते समय डाउनलोड बटन दिखाता है।";
 "row.reelslike.title" = "Reels लाइक की पुष्टि करें";
 "row.anonstories.title" = "स्टोरी गुमनाम रूप से देखें";
 "row.anonstories.desc" = "पढ़े जाने की सूचना भेजे बिना स्टोरी देखें।";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "आइकन नहीं बदला जा सका।";
 "common.cancel" = "रद्द करें";
 "common.ok" = "ठीक है";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "अज्ञात त्रुटि";
+"download.story.saved" = "Photos में सहेजा गया";
+"download.story.a11y" = "Story डाउनलोड करें";
+"download.reel.a11y" = "Reel डाउनलोड करें";
+"download.reel.progress" = "Reel डाउनलोड हो रहा है…";
+"download.reel.saving" = "डाउनलोड पूरा, सहेजा जा रहा है…";
+"download.reel.saved" = "Reel Photos में सहेजा गया";
+"download.reel.failed" = "Reel डाउनलोड विफल रहा।";
+"download.reel.failedDetail" = "Reel डाउनलोड विफल रहा।\n%@";
+"download.reel.saveFailed" = "Photos में सहेजा नहीं जा सका।\n%@";
+"download.reel.inProgress" = "एक Reel पहले से डाउनलोड हो रहा है।";
+"download.reel.httpError" = "Facebook CDN ने HTTP %ld लौटाया।";
+"download.reel.tmpFailed" = "अस्थायी वीडियो फ़ाइल नहीं बनाई जा सकी।";
+"download.reel.noLink" = "इस वीडियो का लिंक नहीं मिल सका।";

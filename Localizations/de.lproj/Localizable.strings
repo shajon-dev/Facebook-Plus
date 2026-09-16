@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "Blendet die „Vorgeschlagene Seiten für dich“-Einheiten aus.";
 "row.feedlike.title" = "„Gefällt mir“ bestätigen";
 "row.feedlike.desc" = "Fragt nach, bevor ein „Gefällt mir“ gesendet wird.";
+
+"row.downloadreels.title" = "Reels herunterladen";
+"row.downloadreels.desc" = "Zeigt den Download-Button beim Ansehen von Reels.";
+"row.downloadstories.title" = "Stories herunterladen";
+"row.downloadstories.desc" = "Zeigt den Download-Button beim Ansehen von Stories.";
 "row.reelslike.title" = "Reels-„Gefällt mir“ bestätigen";
 "row.anonstories.title" = "Storys anonym ansehen";
 "row.anonstories.desc" = "Storys ansehen, ohne eine Lesebestätigung zu senden.";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "Das Symbol konnte nicht geändert werden.";
 "common.cancel" = "Abbrechen";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Unbekannter Fehler";
+"download.story.saved" = "In Fotos gespeichert";
+"download.story.a11y" = "Story herunterladen";
+"download.reel.a11y" = "Reel herunterladen";
+"download.reel.progress" = "Reel wird heruntergeladen…";
+"download.reel.saving" = "Download abgeschlossen, wird gespeichert…";
+"download.reel.saved" = "Reel in Fotos gespeichert";
+"download.reel.failed" = "Reel-Download fehlgeschlagen.";
+"download.reel.failedDetail" = "Reel-Download fehlgeschlagen.\n%@";
+"download.reel.saveFailed" = "Speichern in Fotos fehlgeschlagen.\n%@";
+"download.reel.inProgress" = "Ein Reel wird bereits heruntergeladen.";
+"download.reel.httpError" = "Facebook-CDN gab HTTP %ld zurück.";
+"download.reel.tmpFailed" = "Temporäre Videodatei konnte nicht erstellt werden.";
+"download.reel.noLink" = "Link dieses Videos konnte nicht abgerufen werden.";

@@ -50,3 +50,20 @@
 "appicon.error.failed" = "Không thể thay đổi biểu tượng.";
 "common.cancel" = "Hủy";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Lỗi không xác định";
+"download.story.saved" = "Đã lưu vào Photos";
+"download.story.a11y" = "Tải Story";
+"download.reel.a11y" = "Tải Reel";
+"download.reel.progress" = "Đang tải Reel…";
+"download.reel.saving" = "Đã tải xong, đang lưu…";
+"download.reel.saved" = "Đã lưu Reel vào Photos";
+"download.reel.failed" = "Tải Reel thất bại.";
+"download.reel.failedDetail" = "Tải Reel thất bại.\n%@";
+"download.reel.saveFailed" = "Không lưu được vào Photos.\n%@";
+"download.reel.inProgress" = "Một Reel đang được tải.";
+"download.reel.httpError" = "Facebook CDN trả HTTP %ld.";
+"download.reel.tmpFailed" = "Không tạo được file video tạm.";
+"download.reel.noLink" = "Chưa lấy được link của video này.";

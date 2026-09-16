@@ -302,7 +302,10 @@ compatibleWithTraitCollection:nil]
         [subtitle.topAnchor constraintEqualToAnchor:titleRow.bottomAnchor constant:2],
 
         [close.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14],
-        [close.centerYAnchor constraintEqualToAnchor:titleRow.centerYAnchor],
+        // Span the whole title+subtitle block so the (centred) glyph sits at its
+        // vertical middle, not level with the title alone.
+        [close.topAnchor constraintEqualToAnchor:titleRow.topAnchor],
+        [close.bottomAnchor constraintEqualToAnchor:subtitle.bottomAnchor],
     ]];
     return container;
 }
@@ -341,10 +344,10 @@ compatibleWithTraitCollection:nil]
         @{ @"header" : @"Downloads", @"rows" : @[
             [self switchRow:FBPKeyReelsDownloaderEnabled title:FBPL(@"row.downloadreels.title")
                        desc:FBPL(@"row.downloadreels.desc")
-                       icon:@"arrow.down.to.line" color:UIColor.systemBlueColor],
+                       icon:@"download" color:UIColor.systemBlueColor],
             [self switchRow:FBPKeyStoryDownloaderEnabled title:FBPL(@"row.downloadstories.title")
                        desc:FBPL(@"row.downloadstories.desc")
-                       icon:@"arrow.down.to.line" color:UIColor.systemPurpleColor],
+                       icon:@"download" color:UIColor.systemPurpleColor],
         ]},
         @{ @"header" : @"Reels", @"rows" : @[
             [self switchRow:FBPKeyReelsLike title:FBPL(@"row.reelslike.title") desc:nil

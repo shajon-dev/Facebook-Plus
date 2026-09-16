@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "隐藏“你可能喜欢的主页”栏目。";
 "row.feedlike.title" = "确认帖子点赞";
 "row.feedlike.desc" = "发送点赞前先询问。";
+
+"row.downloadreels.title" = "下载 Reels";
+"row.downloadreels.desc" = "观看 Reels 时显示下载按钮。";
+"row.downloadstories.title" = "下载快拍";
+"row.downloadstories.desc" = "观看快拍时显示下载按钮。";
 "row.reelslike.title" = "确认 Reels 点赞";
 "row.anonstories.title" = "匿名查看快拍";
 "row.anonstories.desc" = "查看快拍时不发送已读回执。";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "无法更改图标。";
 "common.cancel" = "取消";
 "common.ok" = "好";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "未知错误";
+"download.story.saved" = "已保存到照片";
+"download.story.a11y" = "下载快拍";
+"download.reel.a11y" = "下载 Reel";
+"download.reel.progress" = "正在下载 Reel…";
+"download.reel.saving" = "下载完成，正在保存…";
+"download.reel.saved" = "Reel 已保存到照片";
+"download.reel.failed" = "Reel 下载失败。";
+"download.reel.failedDetail" = "Reel 下载失败。\n%@";
+"download.reel.saveFailed" = "无法保存到照片。\n%@";
+"download.reel.inProgress" = "已有一个 Reel 正在下载。";
+"download.reel.httpError" = "Facebook CDN 返回了 HTTP %ld。";
+"download.reel.tmpFailed" = "无法创建临时视频文件。";
+"download.reel.noLink" = "无法获取此视频的链接。";

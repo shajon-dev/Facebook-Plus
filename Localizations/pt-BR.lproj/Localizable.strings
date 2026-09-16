@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "Oculta as seções de “páginas sugeridas para você”.";
 "row.feedlike.title" = "Confirmar curtidas";
 "row.feedlike.desc" = "Pergunta antes de enviar uma curtida.";
+
+"row.downloadreels.title" = "Baixar Reels";
+"row.downloadreels.desc" = "Mostra o botão de download ao ver Reels.";
+"row.downloadstories.title" = "Baixar Stories";
+"row.downloadstories.desc" = "Mostra o botão de download ao ver Stories.";
 "row.reelslike.title" = "Confirmar curtidas nos Reels";
 "row.anonstories.title" = "Ver stories anonimamente";
 "row.anonstories.desc" = "Ver stories sem enviar confirmação de leitura.";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "Não foi possível alterar o ícone.";
 "common.cancel" = "Cancelar";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Erro desconhecido";
+"download.story.saved" = "Salvo em Fotos";
+"download.story.a11y" = "Baixar story";
+"download.reel.a11y" = "Baixar Reel";
+"download.reel.progress" = "Baixando Reel…";
+"download.reel.saving" = "Download concluído, salvando…";
+"download.reel.saved" = "Reel salvo em Fotos";
+"download.reel.failed" = "Falha ao baixar o Reel.";
+"download.reel.failedDetail" = "Falha ao baixar o Reel.\n%@";
+"download.reel.saveFailed" = "Não foi possível salvar em Fotos.\n%@";
+"download.reel.inProgress" = "Um Reel já está sendo baixado.";
+"download.reel.httpError" = "O Facebook CDN retornou HTTP %ld.";
+"download.reel.tmpFailed" = "Não foi possível criar o arquivo de vídeo temporário.";
+"download.reel.noLink" = "Não foi possível obter o link deste vídeo.";

@@ -1,6 +1,7 @@
 #import "FBPlus.h"
 #import "FBPHeaders.h"
 #import "FBPPrefs.h"
+#import "FBPResources.h"
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -270,7 +271,7 @@ static void FBPShowMessage(
 
         [alert addAction:
             [UIAlertAction
-                actionWithTitle:@"OK"
+                actionWithTitle:FBPL(@"common.ok")
                 style:
                     UIAlertActionStyleDefault
                 handler:nil]];
@@ -299,7 +300,11 @@ static void FBPShowMessage(
 @property(nonatomic, strong)
     UILabel *titleLabel;
 
+@property(nonatomic, strong)
+    UIImageView *checkmarkView;
+
 - (void)setProgressValue:(float)value;
+- (void)showSuccessWithTitle:(NSString *)title;
 
 @end
 
@@ -309,133 +314,98 @@ static void FBPShowMessage(
 
     [super viewDidLoad];
 
-    self.view.backgroundColor =
-        [UIColor systemBackgroundColor];
+    // Clear background so the hosting alert's vibrant blur shows through instead
+    // of a flat fill — the "premium" material look.
+    self.view.backgroundColor = UIColor.clearColor;
 
-    self.preferredContentSize =
-        CGSizeMake(280.0, 165.0);
+    self.preferredContentSize = CGSizeMake(272.0, 172.0);
 
-    self.spinner =
-        [[UIActivityIndicatorView alloc]
-            initWithActivityIndicatorStyle:
-                UIActivityIndicatorViewStyleMedium];
-
-    self.spinner
-        .translatesAutoresizingMaskIntoConstraints =
-            NO;
-
+    // Spinner — large for presence, tinted to the label colour.
+    self.spinner = [[UIActivityIndicatorView alloc]
+        initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    self.spinner.translatesAutoresizingMaskIntoConstraints = NO;
+    self.spinner.color = UIColor.labelColor;
     [self.spinner startAnimating];
 
-    self.titleLabel =
-        [[UILabel alloc] init];
+    // Success checkmark, shown only once the save completes.
+    UIImageSymbolConfiguration *checkCfg =
+        [UIImageSymbolConfiguration configurationWithPointSize:40.0
+                                                        weight:UIImageSymbolWeightSemibold];
+    self.checkmarkView = [[UIImageView alloc]
+        initWithImage:[UIImage systemImageNamed:@"checkmark.circle.fill"
+                              withConfiguration:checkCfg]];
+    self.checkmarkView.translatesAutoresizingMaskIntoConstraints = NO;
+    self.checkmarkView.tintColor = UIColor.systemGreenColor;
+    self.checkmarkView.contentMode = UIViewContentModeScaleAspectFit;
+    self.checkmarkView.hidden = YES;
 
-    self.titleLabel
-        .translatesAutoresizingMaskIntoConstraints =
-            NO;
+    // Title — rounded, wraps to two lines so longer strings never truncate.
+    self.titleLabel = [[UILabel alloc] init];
+    self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.titleLabel.text = FBPL(@"download.reel.progress");
+    self.titleLabel.font = FBPFont(16.0, UIFontWeightSemibold);
+    self.titleLabel.textColor = UIColor.labelColor;
+    self.titleLabel.textAlignment = NSTextAlignmentCenter;
+    self.titleLabel.numberOfLines = 2;
+    self.titleLabel.adjustsFontSizeToFitWidth = YES;
+    self.titleLabel.minimumScaleFactor = 0.85;
 
-    self.titleLabel.text =
-        @"Đang tải Reel...";
+    // Progress bar — accent-tinted, thicker and rounded.
+    self.progressView = [[UIProgressView alloc]
+        initWithProgressViewStyle:UIProgressViewStyleDefault];
+    self.progressView.translatesAutoresizingMaskIntoConstraints = NO;
+    self.progressView.progress = 0.0f;
+    self.progressView.progressTintColor = UIColor.systemBlueColor;
+    self.progressView.trackTintColor =
+        [UIColor.labelColor colorWithAlphaComponent:0.12];
+    self.progressView.transform = CGAffineTransformMakeScale(1.0, 1.6);
+    self.progressView.clipsToBounds = YES;
+    self.progressView.layer.cornerRadius = 3.0;
 
-    self.titleLabel.font =
-        [UIFont
-            boldSystemFontOfSize:17.0];
-
-    self.titleLabel.textAlignment =
-        NSTextAlignmentCenter;
-
-    self.progressView =
-        [[UIProgressView alloc]
-            initWithProgressViewStyle:
-                UIProgressViewStyleDefault];
-
-    self.progressView
-        .translatesAutoresizingMaskIntoConstraints =
-            NO;
-
-    self.progressView.progress =
-        0.0f;
-
-    self.percentLabel =
-        [[UILabel alloc] init];
-
-    self.percentLabel
-        .translatesAutoresizingMaskIntoConstraints =
-            NO;
-
-    self.percentLabel.text =
-        @"0%";
-
+    // Percent — rounded, monospaced digits so it doesn't jitter as it counts.
+    self.percentLabel = [[UILabel alloc] init];
+    self.percentLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.percentLabel.text = @"0%";
     self.percentLabel.font =
-        [UIFont
-            monospacedDigitSystemFontOfSize:16.0
-            weight:
-                UIFontWeightSemibold];
+        [UIFont monospacedDigitSystemFontOfSize:15.0 weight:UIFontWeightSemibold];
+    self.percentLabel.textColor = UIColor.secondaryLabelColor;
+    self.percentLabel.textAlignment = NSTextAlignmentCenter;
 
-    self.percentLabel.textAlignment =
-        NSTextAlignmentCenter;
+    [self.view addSubview:self.spinner];
+    [self.view addSubview:self.checkmarkView];
+    [self.view addSubview:self.titleLabel];
+    [self.view addSubview:self.progressView];
+    [self.view addSubview:self.percentLabel];
 
-    [self.view
-        addSubview:self.spinner];
-
-    [self.view
-        addSubview:self.titleLabel];
-
-    [self.view
-        addSubview:self.progressView];
-
-    [self.view
-        addSubview:self.percentLabel];
-
-    [NSLayoutConstraint
-        activateConstraints:@[
-
+    [NSLayoutConstraint activateConstraints:@[
         [self.spinner.topAnchor
-            constraintEqualToAnchor:
-                self.view.topAnchor
-                constant:20.0],
-
+            constraintEqualToAnchor:self.view.topAnchor constant:24.0],
         [self.spinner.centerXAnchor
-            constraintEqualToAnchor:
-                self.view.centerXAnchor],
+            constraintEqualToAnchor:self.view.centerXAnchor],
+
+        [self.checkmarkView.centerXAnchor
+            constraintEqualToAnchor:self.spinner.centerXAnchor],
+        [self.checkmarkView.centerYAnchor
+            constraintEqualToAnchor:self.spinner.centerYAnchor],
 
         [self.titleLabel.topAnchor
-            constraintEqualToAnchor:
-                self.spinner.bottomAnchor
-                constant:8.0],
-
+            constraintEqualToAnchor:self.spinner.bottomAnchor constant:14.0],
         [self.titleLabel.leadingAnchor
-            constraintEqualToAnchor:
-                self.view.leadingAnchor
-                constant:20.0],
-
+            constraintEqualToAnchor:self.view.leadingAnchor constant:20.0],
         [self.titleLabel.trailingAnchor
-            constraintEqualToAnchor:
-                self.view.trailingAnchor
-                constant:-20.0],
+            constraintEqualToAnchor:self.view.trailingAnchor constant:-20.0],
 
         [self.progressView.topAnchor
-            constraintEqualToAnchor:
-                self.titleLabel.bottomAnchor
-                constant:18.0],
-
+            constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:18.0],
         [self.progressView.leadingAnchor
-            constraintEqualToAnchor:
-                self.view.leadingAnchor
-                constant:28.0],
-
+            constraintEqualToAnchor:self.view.leadingAnchor constant:28.0],
         [self.progressView.trailingAnchor
-            constraintEqualToAnchor:
-                self.view.trailingAnchor
-                constant:-28.0],
+            constraintEqualToAnchor:self.view.trailingAnchor constant:-28.0],
 
         [self.percentLabel.topAnchor
-            constraintEqualToAnchor:
-                self.progressView.bottomAnchor
-                constant:9.0],
-
+            constraintEqualToAnchor:self.progressView.bottomAnchor constant:12.0],
         [self.percentLabel.centerXAnchor
-            constraintEqualToAnchor:
-                self.view.centerXAnchor]
+            constraintEqualToAnchor:self.view.centerXAnchor],
     ]];
 }
 
@@ -467,8 +437,37 @@ static void FBPShowMessage(
         if (percent >= 100) {
 
             self.titleLabel.text =
-                @"Đã tải xong, đang lưu...";
+                FBPL(@"download.reel.saving");
         }
+    });
+}
+
+// Morphs the card into a success state: the spinner and percent give way to a
+// green checkmark, the bar fills green. Used in place of a separate confirmation
+// alert so the whole flow reads as one premium HUD.
+- (void)showSuccessWithTitle:(NSString *)title {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.spinner stopAnimating];
+        self.spinner.hidden = YES;
+        self.percentLabel.hidden = YES;
+
+        self.progressView.progressTintColor = UIColor.systemGreenColor;
+        [self.progressView setProgress:1.0f animated:YES];
+
+        self.titleLabel.text = title;
+
+        self.checkmarkView.hidden = NO;
+        self.checkmarkView.transform = CGAffineTransformMakeScale(0.6, 0.6);
+        self.checkmarkView.alpha = 0.0;
+        [UIView animateWithDuration:0.28
+                              delay:0.0
+             usingSpringWithDamping:0.6
+              initialSpringVelocity:0.5
+                            options:UIViewAnimationOptionCurveEaseOut
+                         animations:^{
+            self.checkmarkView.transform = CGAffineTransformIdentity;
+            self.checkmarkView.alpha = 1.0;
+        } completion:nil];
     });
 }
 
@@ -624,9 +623,9 @@ static void FBPShowMessage(
         dismissProgressWithCompletion:^{
 
         FBPShowMessage(
-            @"Facebook Plus",
+            FBPL(@"download.appName"),
             message ?:
-                @"Tải Reel thất bại."
+                FBPL(@"download.reel.failed")
         );
     }];
 }
@@ -667,15 +666,16 @@ static void FBPShowMessage(
 
         if (success) {
 
+            // Morph the progress card into a success checkmark, hold briefly so
+            // it registers, then dismiss — no separate confirmation alert.
+            [self.progressController
+                showSuccessWithTitle:FBPL(@"download.reel.saved")];
 
-            [self
-                dismissProgressWithCompletion:^{
-
-                FBPShowMessage(
-                    @"Facebook Plus",
-                    @"Reel đã được lưu vào Photos ✓"
-                );
-            }];
+            dispatch_after(
+                dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.3 * NSEC_PER_SEC)),
+                dispatch_get_main_queue(), ^{
+                [self dismissProgressWithCompletion:nil];
+            });
 
         } else {
 
@@ -684,12 +684,12 @@ static void FBPShowMessage(
                 dismissProgressWithCompletion:^{
 
                 FBPShowMessage(
-                    @"Facebook Plus",
+                    FBPL(@"download.appName"),
                     [NSString
                         stringWithFormat:
-                            @"Không lưu được vào Photos.\n%@",
+                            FBPL(@"download.reel.saveFailed"),
                         error.localizedDescription
-                            ?: @"Unknown error"]
+                            ?: FBPL(@"download.error.unknown")]
                 );
             }];
         }
@@ -707,8 +707,8 @@ static void FBPShowMessage(
     if (self.downloading) {
 
         FBPShowMessage(
-            @"Facebook Plus",
-            @"Một Reel đang được tải."
+            FBPL(@"download.appName"),
+            FBPL(@"download.reel.inProgress")
         );
 
         return;
@@ -819,7 +819,7 @@ static void FBPShowMessage(
             finishWithError:
                 [NSString
                     stringWithFormat:
-                        @"Facebook CDN trả HTTP %ld.",
+                        FBPL(@"download.reel.httpError"),
                         (long)status]];
 
         return;
@@ -862,7 +862,7 @@ static void FBPShowMessage(
 
         [self
             finishWithError:
-                @"Không tạo được file video tạm."];
+                FBPL(@"download.reel.tmpFailed")];
 
         return;
     }
@@ -890,9 +890,9 @@ static void FBPShowMessage(
         finishWithError:
             [NSString
                 stringWithFormat:
-                    @"Tải Reel thất bại.\n%@",
+                    FBPL(@"download.reel.failedDetail"),
                 error.localizedDescription
-                    ?: @"Unknown error"]];
+                    ?: FBPL(@"download.error.unknown")]];
 }
 
 @end
@@ -1059,8 +1059,8 @@ static BOOL FBPCaptureActivePlaybackController(UIButton *sender) {
 
     if (!url) {
         FBPShowMessage(
-            @"Facebook Plus",
-            @"Chưa lấy được link của video này."
+            FBPL(@"download.appName"),
+            FBPL(@"download.reel.noLink")
         );
         return;
     }
@@ -1289,27 +1289,24 @@ FBPGetOrCreateWindowButton(
     button.backgroundColor =
         [UIColor clearColor];
 
-    UIImageSymbolConfiguration *config =
-        [UIImageSymbolConfiguration
-            configurationWithPointSize:29.0
-            weight:
-                UIImageSymbolWeightMedium];
-
     UIImage *image =
-        [UIImage
-            systemImageNamed:
-                @"arrow.down.to.line"
-            withConfiguration:config];
+        [UIImage fbp_imageNamed:@"download"];
 
     [button
         setImage:image
         forState:UIControlStateNormal];
 
+    button.imageView.contentMode =
+        UIViewContentModeScaleAspectFit;
+
+    button.contentEdgeInsets =
+        UIEdgeInsetsMake(9, 9, 9, 9);
+
     button.tintColor =
         [UIColor whiteColor];
 
     button.accessibilityLabel =
-        @"Download Reel";
+        FBPL(@"download.reel.a11y");
 
     FBPReelDownloadHandler *handler =
         [FBPReelDownloadHandler shared];
@@ -1412,8 +1409,9 @@ FBPGetOrCreateWindowButton(
 }
 
 /*
- * Tìm UIScrollView đang chứa sidebar. Facebook có thể bọc sidebar qua nhiều
- * container, nên leo toàn bộ superview chain thay vì đoán class cụ thể.
+ * Find the UIScrollView that contains the sidebar. Facebook may wrap the sidebar
+ * in several containers, so walk the entire superview chain rather than guessing
+ * a specific class.
  */
 - (UIScrollView *)scrollViewForSidebar:(UIView *)sidebar {
     UIView *view = sidebar;
@@ -1437,10 +1435,10 @@ FBPGetOrCreateWindowButton(
 }
 
 /*
- * Sidebar có thể vẫn còn window khi user đã chuyển sang tab khác.
- * Vì vậy sidebar.window != nil là CHƯA đủ để kết luận Reels đang hiển thị.
- * Kiểm tra toàn bộ ancestor tới UIWindow: chỉ cần một thằng hidden/alpha thấp
- * thì sidebar đó không còn là UI active.
+ * The sidebar can still have a window after the user has switched to another
+ * tab, so sidebar.window != nil is NOT enough to conclude that Reels is on
+ * screen. Check the full ancestor chain up to the UIWindow: if any one of them
+ * is hidden or has a low alpha, the sidebar is no longer the active UI.
  */
 - (BOOL)sidebarHierarchyIsVisible:(UIView *)sidebar inWindow:(UIWindow *)window {
     if (!sidebar || !window || sidebar.window != window) return NO;
@@ -1450,8 +1448,22 @@ FBPGetOrCreateWindowButton(
         if (view.hidden || view.alpha < 0.05) return NO;
         view = view.superview;
     }
+    if (view != window) return NO;
 
-    return view == window;
+    // A modal presented over the Reel (comment sheet, share sheet, the "..." menu,
+    // or Facebook Plus settings) does not hide the sidebar in the view tree — it
+    // just sits on top of it. Facebook hides its own like/comment/share controls
+    // in that state, so the download button should hide too. Detect it: if the
+    // window's top-most presented controller is a modal that does not contain the
+    // sidebar, the Reel is covered.
+    UIViewController *top = window.rootViewController;
+    while (top.presentedViewController) top = top.presentedViewController;
+    if (top && top != window.rootViewController &&
+        ![sidebar isDescendantOfView:top.view]) {
+        return NO;
+    }
+
+    return YES;
 }
 
 static BOOL FBPViewControllerTreeContainsClass(UIViewController *vc, Class targetClass) {
@@ -1510,9 +1522,10 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
         CGRect sidebarFrame = [sidebar convertRect:sidebar.bounds toView:window];
 
         /*
-         * V0.27: candidate phải THỰC SỰ nằm trên màn hình hiện tại.
-         * V0.26 cho trackingArea rộng tới ±1 màn hình nên sidebar của Reels
-         * đã rời tab vẫn có thể thắng cuộc và giữ button sống như ma :)).
+         * The candidate must ACTUALLY be on the current screen. An earlier
+         * revision allowed a tracking area as wide as ±1 screen, so a Reels
+         * sidebar that had already left the tab could still win and keep the
+         * button alive like a ghost.
          */
         if (!CGRectIntersectsRect(window.bounds, sidebarFrame))
             continue;
@@ -1546,14 +1559,16 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
     if (!button) return;
 
     /*
-     * V0.27: DẸP HẲN chuyện button chạy theo Reel.
+     * Stop the button from chasing the Reel while it moves.
      *
-     * - Ngón tay đang kéo UIScrollView => hide ngay, KHÔNG đổi frame button.
-     * - Sau khi thả tay, Facebook còn decelerate/snap => candidate vẫn đổi,
-     *   tiếp tục hide.
-     * - Candidate đứng yên 5 frame => snap xong: đặt frame MỘT LẦN rồi show.
+     * - A finger dragging the UIScrollView => hide immediately, do NOT move the
+     *   button's frame.
+     * - After the finger lifts, Facebook still decelerates / snaps => the
+     *   candidate keeps changing, so keep hiding.
+     * - Candidate held still for 5 frames => the snap is done: set the frame
+     *   ONCE and then show.
      *
-     * Vì vậy lúc vuốt, button không bao giờ xuất hiện ở vị trí trung gian.
+     * This way the button never appears at an intermediate position mid-swipe.
      */
     BOOL dragging = [self userIsDraggingSidebar:bestSidebar];
 
@@ -1580,7 +1595,7 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
 
     self.lastCandidateFrame = bestButtonFrame;
 
-    /* Deceleration / snap vẫn đang chạy. */
+    /* Deceleration / snap is still running. */
     if (dx > 0.35 || dy > 0.35) {
         self.stableFrames = 0;
         [self setButton:button visible:NO];
@@ -1590,8 +1605,9 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
     self.stableFrames += 1;
 
     /*
-     * Chờ 5 frame thực sự đứng yên rồi mới hiện. Không animate vị trí.
-     * Frame chỉ được cập nhật đúng khoảnh khắc button còn đang hidden.
+     * Wait for 5 genuinely still frames before showing. Do not animate the
+     * position. The frame is only updated at the moment the button is still
+     * hidden.
      */
     if (self.stableFrames >= 5) {
         CGRect finalFrame = CGRectIntegral(bestButtonFrame);

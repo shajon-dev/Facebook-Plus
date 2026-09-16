@@ -353,7 +353,9 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
     // symbols, and a filled circle among them would read as out of place.
     [button setImage:[UIImage fbp_imageNamed:@"eye"] forState:UIControlStateNormal];
     button.imageView.contentMode = UIViewContentModeScaleAspectFit;
-    button.contentEdgeInsets = UIEdgeInsetsMake(3, 3, 3, 3);
+    // Keep the 38pt tap target but shrink the glyph to match Facebook's own
+    // header controls (the "⌄ ⋯ ✕" symbols above it).
+    button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
     // A single dedicated action: tap the eye, confirm, done — no intermediate
     // one-item menu.
     [button addTarget:target

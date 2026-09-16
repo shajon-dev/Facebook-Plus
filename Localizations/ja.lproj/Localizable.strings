@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "「あなたへのおすすめページ」を非表示にします。";
 "row.feedlike.title" = "投稿の「いいね！」を確認";
 "row.feedlike.desc" = "「いいね！」を送る前に確認します。";
+
+"row.downloadreels.title" = "リールをダウンロード";
+"row.downloadreels.desc" = "リールの視聴中にダウンロードボタンを表示します。";
+"row.downloadstories.title" = "ストーリーズをダウンロード";
+"row.downloadstories.desc" = "ストーリーズの視聴中にダウンロードボタンを表示します。";
 "row.reelslike.title" = "リールの「いいね！」を確認";
 "row.anonstories.title" = "ストーリーズを匿名で見る";
 "row.anonstories.desc" = "既読を送らずにストーリーズを見ます。";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "アイコンを変更できませんでした。";
 "common.cancel" = "キャンセル";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "不明なエラー";
+"download.story.saved" = "写真に保存しました";
+"download.story.a11y" = "ストーリーをダウンロード";
+"download.reel.a11y" = "リールをダウンロード";
+"download.reel.progress" = "リールをダウンロード中…";
+"download.reel.saving" = "ダウンロード完了、保存中…";
+"download.reel.saved" = "リールを写真に保存しました";
+"download.reel.failed" = "リールのダウンロードに失敗しました。";
+"download.reel.failedDetail" = "リールのダウンロードに失敗しました。\n%@";
+"download.reel.saveFailed" = "写真に保存できませんでした。\n%@";
+"download.reel.inProgress" = "すでにリールをダウンロード中です。";
+"download.reel.httpError" = "Facebook CDN が HTTP %ld を返しました。";
+"download.reel.tmpFailed" = "一時動画ファイルを作成できませんでした。";
+"download.reel.noLink" = "この動画のリンクを取得できませんでした。";

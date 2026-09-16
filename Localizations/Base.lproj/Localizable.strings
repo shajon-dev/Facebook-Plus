@@ -50,3 +50,20 @@
 "appicon.error.failed" = "The icon could not be changed.";
 "common.cancel" = "Cancel";
 "common.ok" = "OK";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "Unknown error";
+"download.story.saved" = "Saved to Photos";
+"download.story.a11y" = "Download Story";
+"download.reel.a11y" = "Download Reel";
+"download.reel.progress" = "Downloading Reel…";
+"download.reel.saving" = "Download complete, saving…";
+"download.reel.saved" = "Reel saved to Photos";
+"download.reel.failed" = "Reel download failed.";
+"download.reel.failedDetail" = "Reel download failed.\n%@";
+"download.reel.saveFailed" = "Couldn’t save to Photos.\n%@";
+"download.reel.inProgress" = "A Reel is already downloading.";
+"download.reel.httpError" = "Facebook CDN returned HTTP %ld.";
+"download.reel.tmpFailed" = "Couldn’t create the temporary video file.";
+"download.reel.noLink" = "Couldn’t get this video’s link.";

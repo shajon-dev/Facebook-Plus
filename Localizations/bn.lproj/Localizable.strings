@@ -15,6 +15,11 @@
 "row.nosuggestedpages.desc" = "“আপনার জন্য প্রস্তাবিত পেজ” ইউনিটগুলো লুকায়।";
 "row.feedlike.title" = "পোস্ট লাইক নিশ্চিত করুন";
 "row.feedlike.desc" = "লাইক পাঠানোর আগে জিজ্ঞাসা করে।";
+
+"row.downloadreels.title" = "Reels ডাউনলোড";
+"row.downloadreels.desc" = "Reels দেখার সময় ডাউনলোড বোতাম দেখায়।";
+"row.downloadstories.title" = "Stories ডাউনলোড";
+"row.downloadstories.desc" = "Story দেখার সময় ডাউনলোড বোতাম দেখায়।";
 "row.reelslike.title" = "Reels লাইক নিশ্চিত করুন";
 "row.anonstories.title" = "স্টোরি বেনামে দেখুন";
 "row.anonstories.desc" = "পড়ার রসিদ না পাঠিয়ে স্টোরি দেখুন।";
@@ -44,3 +49,20 @@
 "appicon.error.failed" = "আইকন পরিবর্তন করা যায়নি।";
 "common.cancel" = "বাতিল";
 "common.ok" = "ঠিক আছে";
+
+/* Downloads — runtime messages */
+"download.appName" = "Facebook Plus";
+"download.error.unknown" = "অজানা ত্রুটি";
+"download.story.saved" = "Photos-এ সংরক্ষিত হয়েছে";
+"download.story.a11y" = "Story ডাউনলোড";
+"download.reel.a11y" = "Reel ডাউনলোড";
+"download.reel.progress" = "Reel ডাউনলোড হচ্ছে…";
+"download.reel.saving" = "ডাউনলোড সম্পন্ন, সংরক্ষণ হচ্ছে…";
+"download.reel.saved" = "Reel Photos-এ সংরক্ষিত হয়েছে";
+"download.reel.failed" = "Reel ডাউনলোড ব্যর্থ হয়েছে।";
+"download.reel.failedDetail" = "Reel ডাউনলোড ব্যর্থ হয়েছে।\n%@";
+"download.reel.saveFailed" = "Photos-এ সংরক্ষণ করা যায়নি।\n%@";
+"download.reel.inProgress" = "একটি Reel ইতিমধ্যে ডাউনলোড হচ্ছে।";
+"download.reel.httpError" = "Facebook CDN HTTP %ld ফেরত দিয়েছে।";
+"download.reel.tmpFailed" = "অস্থায়ী ভিডিও ফাইল তৈরি করা যায়নি।";
+"download.reel.noLink" = "এই ভিডিওর লিংক পাওয়া যায়নি।";
