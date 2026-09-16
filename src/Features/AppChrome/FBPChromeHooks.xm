@@ -83,6 +83,32 @@ static void FBPAttachSettingsGesture(UIView *view) {
 
 %end // FBPTabBar
 
+// iOS 26+ liquid-glass tab bars. The classic FBTabBarContainerView /
+// FBTabBarItemDefaultView hooks above still fire on older builds; these cover the
+// new floating-pill and native-glass bars that replaced them, so long-press keeps
+// working across iOS versions.
+%group FBPLiquidTabBar
+
+%hook FBFloatingTabBar
+
+- (void)layoutSubviews {
+    %orig;
+    FBPAttachSettingsGesture(self);
+}
+
+%end
+
+%hook FBNativeTabBar
+
+- (void)layoutSubviews {
+    %orig;
+    FBPAttachSettingsGesture(self);
+}
+
+%end
+
+%end // FBPLiquidTabBar
+
 // The tab bar slides away as the user scrolls; the toast stack follows it so a
 // progress pill never sits over content or floats in empty space.
 %group FBPTabBarOffset
@@ -171,6 +197,14 @@ void FBPInitChromeHooks(void) {
         FBP_ONCE(gTabBar) { %init(FBPTabBar); }
         [FBPDiagnostics.shared recordGroup:@"FBPTabBar" installed:YES detail:nil];
     }
+
+    // iOS 26+ liquid-glass tab bars (present alongside or instead of the classic
+    // ones depending on the OS version).
+    if (objc_getClass("FBFloatingTabBar") || objc_getClass("FBNativeTabBar")) {
+        FBP_ONCE(gLiquidTabBar) { %init(FBPLiquidTabBar); }
+        [FBPDiagnostics.shared recordGroup:@"FBPLiquidTabBar" installed:YES detail:nil];
+    }
+
 
     // The offset selector lives on the container controller, not FBTabBar.
     if (objc_getClass("FBTabBarAndContentViewController")) {

@@ -67,6 +67,15 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBTabBarItemDefaultView : UIView
 @end
 
+// iOS 26+ "liquid glass" tab bars. FBFloatingTabBar is the floating pill bar and
+// FBNativeTabBar wraps the system bar; both are METANoCodingView (a UIView
+// subclass) and replace the classic FBTabBarContainerView on newer builds.
+@interface FBFloatingTabBar : UIView
+@end
+
+@interface FBNativeTabBar : UIView
+@end
+
 @interface FBBaseAppDelegate : UIResponder <UIApplicationDelegate>
 @end
 
