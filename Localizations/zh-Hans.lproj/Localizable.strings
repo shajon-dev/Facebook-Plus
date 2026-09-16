@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "隐藏“发现新 threads”卡片。";
 "row.nogroups.title" = "移除小组推荐";
 "row.nogroups.desc" = "隐藏“你可以加入的小组”版块。";
+"row.nosuggestedpages.title" = "移除推荐主页";
+"row.nosuggestedpages.desc" = "隐藏“你可能喜欢的主页”栏目。";
 "row.feedlike.title" = "确认帖子点赞";
 "row.feedlike.desc" = "发送点赞前先询问。";
 "row.reelslike.title" = "确认 Reels 点赞";

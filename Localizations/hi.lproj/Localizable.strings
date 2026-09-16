@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "«नए threads खोजें» कार्ड छिपाता है।";
 "row.nogroups.title" = "समूह सुझाव हटाएँ";
 "row.nogroups.desc" = "«जिन समूहों से जुड़ें» ब्लॉक छिपाता है।";
+"row.nosuggestedpages.title" = "सुझाए गए पेज हटाएँ";
+"row.nosuggestedpages.desc" = "“आपके लिए सुझाए गए पेज” यूनिट छिपाता है।";
 "row.feedlike.title" = "पोस्ट लाइक की पुष्टि करें";
 "row.feedlike.desc" = "लाइक भेजने से पहले पूछता है।";
 "row.reelslike.title" = "Reels लाइक की पुष्टि करें";

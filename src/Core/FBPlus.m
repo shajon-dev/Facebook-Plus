@@ -16,6 +16,7 @@ NSString *const FBPKeyNoReels          = @"noReels";
 NSString *const FBPKeyNoStoryPYMK      = @"noStoryPYMK";
 NSString *const FBPKeyNoThreads        = @"noThreads";
 NSString *const FBPKeyNoGroupSuggestions = @"noGroupSuggestions";
+NSString *const FBPKeyNoSuggestedPages = @"noSuggestedPages";
 
 NSString *const FBPKeyReelsLike        = @"reelsLike";
 

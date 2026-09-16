@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Oculta la tarjeta «descubrir nuevos threads».";
 "row.nogroups.title" = "Eliminar sugerencias de grupos";
 "row.nogroups.desc" = "Oculta los bloques «grupos a los que unirte».";
+"row.nosuggestedpages.title" = "Quitar páginas sugeridas";
+"row.nosuggestedpages.desc" = "Oculta las secciones de “páginas que quizá te gusten”.";
 "row.feedlike.title" = "Confirmar Me gusta";
 "row.feedlike.desc" = "Pregunta antes de enviar un Me gusta.";
 "row.reelslike.title" = "Confirmar Me gusta en Reels";

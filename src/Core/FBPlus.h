@@ -55,6 +55,7 @@ extern NSString *const FBPKeyNoReels;           // Remove the reels carousel
 extern NSString *const FBPKeyNoStoryPYMK;       // Remove PYMK from the story tray
 extern NSString *const FBPKeyNoThreads;         // Remove the Threads promo unit
 extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should join"
+extern NSString *const FBPKeyNoSuggestedPages;  // Remove "suggested pages for you"
 
 // Reels
 extern NSString *const FBPKeyReelsLike;         // Confirm reels like

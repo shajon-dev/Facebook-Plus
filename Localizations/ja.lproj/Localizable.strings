@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "「新しいスレッドを見つけよう」カードを非表示にします。";
 "row.nogroups.title" = "グループの提案を削除";
 "row.nogroups.desc" = "「参加できるグループ」ユニットを非表示にします。";
+"row.nosuggestedpages.title" = "おすすめページを非表示";
+"row.nosuggestedpages.desc" = "「あなたへのおすすめページ」を非表示にします。";
 "row.feedlike.title" = "投稿の「いいね！」を確認";
 "row.feedlike.desc" = "「いいね！」を送る前に確認します。";
 "row.reelslike.title" = "リールの「いいね！」を確認";

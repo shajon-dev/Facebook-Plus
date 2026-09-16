@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Masque la carte « découvrir de nouveaux threads ».";
 "row.nogroups.title" = "Supprimer les suggestions de groupes";
 "row.nogroups.desc" = "Masque les blocs « groupes à rejoindre ».";
+"row.nosuggestedpages.title" = "Supprimer les pages suggérées";
+"row.nosuggestedpages.desc" = "Masque les blocs « pages suggérées pour vous ».";
 "row.feedlike.title" = "Confirmer les J’aime";
 "row.feedlike.desc" = "Demande avant d’envoyer un J’aime.";
 "row.reelslike.title" = "Confirmer les J’aime des Reels";

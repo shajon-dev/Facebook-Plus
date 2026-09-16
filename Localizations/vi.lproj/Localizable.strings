@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Ẩn thẻ “khám phá các thread mới”.";
 "row.nogroups.title" = "Xóa đề xuất nhóm";
 "row.nogroups.desc" = "Ẩn các mục “những nhóm bạn nên tham gia”.";
+"row.nosuggestedpages.title" = "Xóa Trang được đề xuất";
+"row.nosuggestedpages.desc" = "Ẩn các mục “trang gợi ý cho bạn”.";
 "row.feedlike.title" = "Xác nhận lượt thích bài viết";
 "row.feedlike.desc" = "Hỏi trước khi gửi lượt thích.";
 "row.reelslike.title" = "Xác nhận lượt thích Reels";

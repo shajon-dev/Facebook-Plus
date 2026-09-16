@@ -336,6 +336,9 @@ compatibleWithTraitCollection:nil]
             [self switchRow:FBPKeyNoGroupSuggestions title:FBPL(@"row.nogroups.title")
                        desc:FBPL(@"row.nogroups.desc")
                        icon:@"group" color:UIColor.systemTealColor],
+            [self switchRow:FBPKeyNoSuggestedPages title:FBPL(@"row.nosuggestedpages.title")
+                       desc:FBPL(@"row.nosuggestedpages.desc")
+                       icon:@"group" color:UIColor.systemOrangeColor],
             [self switchRow:FBPKeyFeedLike title:FBPL(@"row.feedlike.title")
                        desc:FBPL(@"row.feedlike.desc")
                        icon:@"alert" color:UIColor.systemGreenColor],

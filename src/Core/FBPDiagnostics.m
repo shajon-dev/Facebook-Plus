@@ -22,6 +22,7 @@ static NSArray<NSString *> *FBPWatchedClasses(void) {
         // Feed cleanup
         @"FBMemModelObject",
         @"FBMemGroupsYouShouldJoinFeedUnit",
+        @"FBMemPagesYouMayLikeFeedUnit",
         // Stories
         @"FBSnacksBucketViewController",
         @"FBSnacksThreadSwitcherViewController",

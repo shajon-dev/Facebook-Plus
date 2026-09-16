@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "«yeni threads keşfet» kartını gizler.";
 "row.nogroups.title" = "Grup Önerilerini Kaldır";
 "row.nogroups.desc" = "«katılabileceğin gruplar» bölümlerini gizler.";
+"row.nosuggestedpages.title" = "Önerilen Sayfaları Kaldır";
+"row.nosuggestedpages.desc" = "“Senin için önerilen sayfalar” bölümlerini gizler.";
 "row.feedlike.title" = "Gönderi Beğenilerini Onayla";
 "row.feedlike.desc" = "Beğeni gönderilmeden önce sorar.";
 "row.reelslike.title" = "Reels Beğenilerini Onayla";

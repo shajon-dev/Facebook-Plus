@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Blendet die Karte „Neue Threads entdecken“ aus.";
 "row.nogroups.title" = "Gruppenvorschläge entfernen";
 "row.nogroups.desc" = "Blendet die Blöcke „Gruppen für dich“ aus.";
+"row.nosuggestedpages.title" = "Vorgeschlagene Seiten entfernen";
+"row.nosuggestedpages.desc" = "Blendet die „Vorgeschlagene Seiten für dich“-Einheiten aus.";
 "row.feedlike.title" = "„Gefällt mir“ bestätigen";
 "row.feedlike.desc" = "Fragt nach, bevor ein „Gefällt mir“ gesendet wird.";
 "row.reelslike.title" = "Reels-„Gefällt mir“ bestätigen";

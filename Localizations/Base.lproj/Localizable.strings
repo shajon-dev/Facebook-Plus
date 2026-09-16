@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Hides the “discover new threads” card.";
 "row.nogroups.title" = "Remove Group Suggestions";
 "row.nogroups.desc" = "Hides the “groups you should join” units.";
+"row.nosuggestedpages.title" = "Remove Suggested Pages";
+"row.nosuggestedpages.desc" = "Hides the “suggested pages for you” units.";
 "row.feedlike.title" = "Confirm Post Likes";
 "row.feedlike.desc" = "Asks before a like is sent.";
 "row.reelslike.title" = "Confirm Reels Likes";

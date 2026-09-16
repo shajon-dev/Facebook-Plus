@@ -146,6 +146,15 @@ static BOOL FBPShouldFilterModel(id model) {
         if ([className containsString:@"GroupsYouShouldJoin"]) return YES;
     }
 
+    // "Suggested Pages for you" — the pages-you-may-like unit. Like the group
+    // suggestions above it arrives as its own FBMem* model class (the plain,
+    // Paginated and Creative variants all share the "PagesYouMayLike" infix) and
+    // does not override -initWithFBPandoTree:, so it reaches this base hook.
+    if (FBPEnabled(FBPKeyNoSuggestedPages)) {
+        NSString *className = NSStringFromClass([model class]);
+        if ([className containsString:@"PagesYouMayLike"]) return YES;
+    }
+
     // The story-tray PYMK bucket is distinct from the feed-level one.
     if (FBPEnabled(FBPKeyNoStoryPYMK) &&
         [model respondsToSelector:@selector(storyBucketType)]) {

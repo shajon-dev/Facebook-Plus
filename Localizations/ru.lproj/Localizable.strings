@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Скрывает карточку «откройте новые треды».";
 "row.nogroups.title" = "Убрать предложения групп";
 "row.nogroups.desc" = "Скрывает блоки «группы для вступления».";
+"row.nosuggestedpages.title" = "Убрать рекомендуемые страницы";
+"row.nosuggestedpages.desc" = "Скрывает блоки «рекомендуемые страницы».";
 "row.feedlike.title" = "Подтверждать «Нравится»";
 "row.feedlike.desc" = "Спрашивает перед отправкой отметки «Нравится».";
 "row.reelslike.title" = "Подтверждать «Нравится» в Reels";

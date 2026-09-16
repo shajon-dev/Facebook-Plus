@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "'새로운 스레드 둘러보기' 카드를 숨깁니다.";
 "row.nogroups.title" = "그룹 추천 제거";
 "row.nogroups.desc" = "'가입할 만한 그룹' 항목을 숨깁니다.";
+"row.nosuggestedpages.title" = "추천 페이지 제거";
+"row.nosuggestedpages.desc" = "“회원님을 위한 추천 페이지” 항목을 숨깁니다.";
 "row.feedlike.title" = "게시물 좋아요 확인";
 "row.feedlike.desc" = "좋아요를 보내기 전에 확인합니다.";
 "row.reelslike.title" = "릴스 좋아요 확인";

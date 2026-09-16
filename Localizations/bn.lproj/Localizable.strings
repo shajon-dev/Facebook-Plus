@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "«নতুন threads আবিষ্কার করুন» কার্ড লুকায়।";
 "row.nogroups.title" = "গ্রুপ সাজেশন সরান";
 "row.nogroups.desc" = "«যে গ্রুপে যোগ দিতে পারেন» অংশ লুকায়।";
+"row.nosuggestedpages.title" = "প্রস্তাবিত পেজ সরান";
+"row.nosuggestedpages.desc" = "“আপনার জন্য প্রস্তাবিত পেজ” ইউনিটগুলো লুকায়।";
 "row.feedlike.title" = "পোস্ট লাইক নিশ্চিত করুন";
 "row.feedlike.desc" = "লাইক পাঠানোর আগে জিজ্ঞাসা করে।";
 "row.reelslike.title" = "Reels লাইক নিশ্চিত করুন";

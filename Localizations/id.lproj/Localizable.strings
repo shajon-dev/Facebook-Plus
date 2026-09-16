@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Menyembunyikan kartu «temukan threads baru».";
 "row.nogroups.title" = "Hapus Saran Grup";
 "row.nogroups.desc" = "Menyembunyikan unit «grup untuk diikuti».";
+"row.nosuggestedpages.title" = "Hapus Halaman yang Disarankan";
+"row.nosuggestedpages.desc" = "Menyembunyikan unit “halaman untuk Anda”.";
 "row.feedlike.title" = "Konfirmasi Suka Postingan";
 "row.feedlike.desc" = "Bertanya sebelum suka dikirim.";
 "row.reelslike.title" = "Konfirmasi Suka Reels";

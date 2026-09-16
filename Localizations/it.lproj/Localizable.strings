@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Nasconde la scheda «scopri nuovi thread».";
 "row.nogroups.title" = "Rimuovi i suggerimenti di gruppi";
 "row.nogroups.desc" = "Nasconde i blocchi «gruppi da seguire».";
+"row.nosuggestedpages.title" = "Rimuovi pagine suggerite";
+"row.nosuggestedpages.desc" = "Nasconde i blocchi “pagine che potrebbero piacerti”.";
 "row.feedlike.title" = "Conferma i Mi piace";
 "row.feedlike.desc" = "Chiede prima di inviare un Mi piace.";
 "row.reelslike.title" = "Conferma i Mi piace dei Reels";

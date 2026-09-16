@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "يُخفي بطاقة «اكتشف threads جديدة».";
 "row.nogroups.title" = "إزالة اقتراحات المجموعات";
 "row.nogroups.desc" = "يُخفي وحدات «مجموعات يمكنك الانضمام إليها».";
+"row.nosuggestedpages.title" = "إزالة الصفحات المقترحة";
+"row.nosuggestedpages.desc" = "يخفي وحدات “صفحات قد تعجبك”.";
 "row.feedlike.title" = "تأكيد الإعجاب بالمنشور";
 "row.feedlike.desc" = "يسأل قبل إرسال الإعجاب.";
 "row.reelslike.title" = "تأكيد الإعجاب بمقاطع Reels";

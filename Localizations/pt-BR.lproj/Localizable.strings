@@ -13,6 +13,8 @@
 "row.nothreads.desc" = "Oculta o cartão «descobrir novos threads».";
 "row.nogroups.title" = "Remover sugestões de grupos";
 "row.nogroups.desc" = "Oculta os blocos «grupos para participar».";
+"row.nosuggestedpages.title" = "Remover páginas sugeridas";
+"row.nosuggestedpages.desc" = "Oculta as seções de “páginas sugeridas para você”.";
 "row.feedlike.title" = "Confirmar curtidas";
 "row.feedlike.desc" = "Pergunta antes de enviar uma curtida.";
 "row.reelslike.title" = "Confirmar curtidas nos Reels";
