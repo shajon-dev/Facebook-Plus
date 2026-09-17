@@ -36,7 +36,7 @@
     </tr>
     <tr>
       <td nowrap>📖 <b>Stories</b></td>
-      <td>Watch stories anonymously (Ghost Mode)<br>Disable auto-advance<br>Remove "People you may know"<br> Save <b>Stories</b> (video & photo) to Photos</td>
+      <td>Watch stories anonymously (Ghost Mode)<br>Disable auto-advance<br>Hide Story Suggestions<br> Save <b>Stories</b> (video & photo) to Photos</td>
     </tr>
     <tr>
       <td nowrap>🧭 <b>Links</b></td>
@@ -46,10 +46,14 @@
       <td nowrap>🎨 <b>Appearance</b></td>
       <td><b>OLED Dark Mode</b> (True black)<br>Custom App-Icon Picker (Seamless integration with <code>CFBundleAlternateIcons</code>)</td>
     </tr>
+    <tr>
+      <td nowrap>🔔 <b>Updates</b></td>
+      <td>Built-in <b>update checker</b> — notified in-app when a new version ships, with the changelog and one-tap download from GitHub or Telegram<br>Manual re-check from <b>Settings → Check for Update</b></td>
+    </tr>
   </tbody>
 </table>
 
-💡 **Settings:** Long-press any **tab bar item** (classic or the new iOS 26 liquid-glass bar)
+💡 **Settings:** Long-press any **tab bar item** (classic or the new iOS 26 liquid-glass bar) or the **native Facebook settings button**.
 
 ---
 
@@ -88,9 +92,14 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
      | `rootfull` | `Facebook-Plus-v<version>-rootfull.deb` |
 
    - If a decrypted `.ipa` is present, injects the **rootless** build into it with
-     `cyan`, merging any custom app icons (`fbplus_*.png` in `resources/logo/`)
-     into `CFBundleAlternateIcons` via `scripts/icon_plist.py` — Facebook's native
-     icons preserved — and writes `packages/com.facebook.Facebook-injected.ipa`.
+     `cyan` and writes `packages/Facebook-Plus-v<facebook-version>-rootless.ipa`.
+     The same `cyan` run also:
+     - builds every Safari web extension under `OpenInFacebookSafariExtension/`
+       from source and injects the resulting `.appex` into the app's `PlugIns/`;
+     - merges any custom app icons (`fbplus_*.png` in `resources/logo/`) into
+       `CFBundleAlternateIcons` via `scripts/icon_plist.py`, preserving
+       Facebook's native icons;
+     - fakesigns every injected binary for sideloading.
 
 
 <details>
@@ -132,7 +141,8 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 │   │   ├── Menu        # Diagnostics for blocking server-driven menu sections
 │   │   ├── OLED        # True dark mode implementation
 │   │   ├── Onboarding  # Welcome screen controller
-│   │   └── Stories     # Story-related hooks (Ghost mode, auto-advance block)
+│   │   ├── Stories     # Story-related hooks (Ghost mode, auto-advance block)
+│   │   └── Update      # In-app update checker + update screen (GitHub Releases)
 │   ├── PluginsInject   # Sideload compatibility layer (Keychain / App-Group / CloudKit)
 │   ├── Settings        # The Facebook Plus in-app settings UI
 │   └── UI              # Shared UI components
@@ -147,7 +157,7 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 
 - **Idea & Inspiration:** The core concept of this tweak was inspired by the closed-source Facebook tweak **[Glow](https://github.com/dayanch96/Glow)**. This project is a clean reimplementation based on its behavioral analysis.
 - **Story & Reels Downloader:** The media download feature (`src/Features/Downloads/`) was contributed by **[ttlongdl](https://github.com/ttlongdl/Facebook-Plus)** via their GPLv3 fork, and is integrated here with attribution as required by the license.
-- **"Open in Facebook" Safari Extension:** The bundled Safari web extension (`OpenInFacebookSafariExtension/`, built from source into the IPA) is an independent, clean-room implementation. Its behaviour was informed by **[BillyCurtis/OpenInstagramSafariExtension](https://github.com/BillyCurtis/OpenInstagramSafariExtension)** (the "Open in <app>" pattern); no third-party binary or source is bundled. See `OpenInFacebookSafariExtension/README.md` for details.
+- **"Open in Facebook" Safari Extension:** The bundled Safari web extension (`OpenInFacebookSafariExtension/`, built from source into the IPA) is our own, independently written implementation — its own `NSExtension` host, manifest and link-routing scripts, with no third-party binary or source bundled. See `OpenInFacebookSafariExtension/README.md` for details.
 - **Compatibility Layer:** The sideloading compatibility layer (`src/PluginsInject/`) is copied and derived directly from **[zxPluginsInject](https://github.com/asdfzxcvbn/zxPluginsInject)**.
 - **Symbol Rebinding:** Uses **[fishhook](https://github.com/facebook/fishhook)** for dynamic symbol rebinding.
 

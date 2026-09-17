@@ -22,18 +22,22 @@ search results so they route straight into the app.
 
 ### Layout
 
-```
-src/
-  Makefile                       # theos appex target (APPEX_NAME)
-  SafariWebExtensionHandler.h/.m # native host
-  Resources/                     # copied to the .appex root by theos
-    Info.plist                   # NSExtension (com.apple.Safari.web-extension)
-    manifest.json
-    content.js                   # facebook.com → fb:// routing
-    google.js                    # unwrap Google result links → fb://
-    background.js
-    popup.html / popup.css
-    _locales/en/messages.json
-    images/                      # icons generated from resources/logo.png
+```text
+OpenInFacebookSafariExtension
+└── src                              # theos appex project (APPEX_NAME)
+    ├── Makefile                     # builds the .appex
+    ├── SafariWebExtensionHandler.h  # native host interface
+    ├── SafariWebExtensionHandler.m  # native host (all routing is in JS)
+    └── Resources                    # copied to the .appex root by theos
+        ├── Info.plist               # NSExtension (com.apple.Safari.web-extension)
+        ├── manifest.json            # matches + content-script registration
+        ├── content.js               # facebook.com → fb:// routing
+        ├── google.js                # unwrap Google result links → fb://
+        ├── background.js            # (no-op service worker)
+        ├── popup.html               # extension popup
+        ├── popup.css
+        ├── _locales
+        │   └── en/messages.json     # extension name + description
+        └── images                   # icons generated from resources/logo.png
 ```
 
