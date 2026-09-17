@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "Посмотреть, какие функции активны.";
 "row.welcome.title" = "Показать экран приветствия";
 "row.reset.title" = "Сбросить все настройки";
+"row.linksinsafari.title" = "Открывать ссылки в Safari";
+"row.linksinsafari.desc" = "Открывает внешние ссылки в браузере по умолчанию вместо встроенного.";
 "row.language.title" = "Язык";
 "footer.by" = "Facebook Plus · от ";
 "reset.title" = "Сбросить все настройки";

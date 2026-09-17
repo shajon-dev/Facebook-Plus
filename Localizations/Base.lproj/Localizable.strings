@@ -37,6 +37,8 @@
 "row.diagnostics.desc" = "See which features are active.";
 "row.welcome.title" = "Show Welcome Screen";
 "row.reset.title" = "Reset All Settings";
+"row.linksinsafari.title" = "Open Links in Safari";
+"row.linksinsafari.desc" = "Opens external links in your default browser instead of the in-app browser.";
 "row.language.title" = "Language";
 "footer.by" = "Facebook Plus · by ";
 "reset.title" = "Reset All Settings";

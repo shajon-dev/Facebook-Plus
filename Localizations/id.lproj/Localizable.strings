@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "Lihat fitur mana yang aktif.";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";
 "row.reset.title" = "Setel Ulang Semua Pengaturan";
+"row.linksinsafari.title" = "Buka Tautan di Safari";
+"row.linksinsafari.desc" = "Membuka tautan eksternal di browser default alih-alih browser dalam aplikasi.";
 "row.language.title" = "Bahasa";
 "footer.by" = "Facebook Plus · oleh ";
 "reset.title" = "Setel Ulang Semua Pengaturan";

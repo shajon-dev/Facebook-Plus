@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "どの機能が有効か確認します。";
 "row.welcome.title" = "ようこそ画面を表示";
 "row.reset.title" = "すべての設定をリセット";
+"row.linksinsafari.title" = "リンクを Safari で開く";
+"row.linksinsafari.desc" = "外部リンクをアプリ内ブラウザではなく既定のブラウザで開きます。";
 "row.language.title" = "言語";
 "footer.by" = "Facebook Plus · 制作 ";
 "reset.title" = "すべての設定をリセット";

@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "معرفة الميزات المُفعّلة.";
 "row.welcome.title" = "عرض شاشة الترحيب";
 "row.reset.title" = "إعادة تعيين كل الإعدادات";
+"row.linksinsafari.title" = "فتح الروابط في Safari";
+"row.linksinsafari.desc" = "يفتح الروابط الخارجية في متصفحك الافتراضي بدلاً من المتصفح المدمج.";
 "row.language.title" = "اللغة";
 "footer.by" = "Facebook Plus · بواسطة ";
 "reset.title" = "إعادة تعيين كل الإعدادات";

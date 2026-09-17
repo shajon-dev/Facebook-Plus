@@ -79,6 +79,11 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBBaseAppDelegate : UIResponder <UIApplicationDelegate>
 @end
 
+// Facebook's in-app browser (IAB). Its initial-URL load is intercepted to hand
+// external links to the default browser.
+@interface FBWebViewController : UIViewController
+@end
+
 #pragma mark - OLED targets
 //
 // The chrome and feed container views whose background fills the screen. Forcing

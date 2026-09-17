@@ -39,6 +39,7 @@ FacebookPlus_FILES = \
 	src/Features/Menu/FBPMenuHooks.xm \
 	src/Features/Downloads/FBPReelsDownloader.xm \
 	src/Features/Downloads/FBPStoryDownloader.xm \
+	src/Features/Links/FBPLinkHooks.xm \
 	src/PluginsInject/PluginsInject.mm \
 	src/PluginsInject/Paths.mm \
 	src/PluginsInject/SecRebinds.xm \

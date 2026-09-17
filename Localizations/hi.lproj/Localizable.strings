@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "देखें कौन-सी सुविधाएँ सक्रिय हैं।";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
+"row.linksinsafari.title" = "लिंक Safari में खोलें";
+"row.linksinsafari.desc" = "बाहरी लिंक इन-ऐप ब्राउज़र के बजाय आपके डिफ़ॉल्ट ब्राउज़र में खोलता है।";
 "row.language.title" = "भाषा";
 "footer.by" = "Facebook Plus · द्वारा ";
 "reset.title" = "सभी सेटिंग रीसेट करें";

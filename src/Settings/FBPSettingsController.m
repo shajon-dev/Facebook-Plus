@@ -372,6 +372,9 @@ compatibleWithTraitCollection:nil]
                kRowIcon : @"app.badge.fill", kRowColor : UIColor.systemBlueColor },
         ]},
         @{ @"header" : @"General", @"rows" : @[
+            [self switchRow:FBPKeyLinksInSafari title:FBPL(@"row.linksinsafari.title")
+                       desc:FBPL(@"row.linksinsafari.desc")
+                       icon:@"safari.fill" color:UIColor.systemBlueColor],
             @{ kRowKey : kActionLanguage, kRowType : kTypeAction, kRowNav : @YES,
                kRowTitle : FBPL(@"row.language.title"),
                kRowIcon : @"globe", kRowColor : UIColor.systemBlueColor },

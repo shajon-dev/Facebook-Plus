@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "어떤 기능이 활성화됐는지 확인합니다.";
 "row.welcome.title" = "시작 화면 표시";
 "row.reset.title" = "모든 설정 초기화";
+"row.linksinsafari.title" = "링크를 Safari에서 열기";
+"row.linksinsafari.desc" = "외부 링크를 인앱 브라우저 대신 기본 브라우저에서 엽니다.";
 "row.language.title" = "언어";
 "footer.by" = "Facebook Plus · 제작 ";
 "reset.title" = "모든 설정 초기화";

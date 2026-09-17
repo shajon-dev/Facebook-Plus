@@ -130,8 +130,33 @@ if [ -f "$IPA_IN" ]; then
 	MERGE_ARGS=()
 	if [ -n "$ICON_MERGE" ]; then MERGE_ARGS=(-l "$ICON_MERGE"); fi
 
-	echo "==> Injecting $DEB_INJECT (+ icons) into $IPA_IN with cyan…"
-	cyan -i "$IPA_IN" -o "$IPA_OUT" -f "$DEB_INJECT" "${LOGOS[@]}" "${MERGE_ARGS[@]}" -uwsgq
+	# Safari web extensions bundled into the app's PlugIns (e.g. "Open in
+	# Facebook", which reopens facebook.com links from Safari in the app). Each
+	# is built from source under OpenInFacebookSafariExtension/*/Makefile; cyan
+	# then places the resulting .appex under PlugIns and fakesigns it (-s below).
+	PLUGINS=()
+	shopt -s nullglob
+	for ext_mk in OpenInFacebookSafariExtension/*/Makefile; do
+		ext_dir="$(dirname "$ext_mk")"
+		echo "==> Building Safari web extension in $ext_dir…"
+		make -C "$ext_dir" FINALPACKAGE=1 >/dev/null
+		# Only the final bundle at .theos/obj/*.appex carries the resources and
+		# Info.plist; the per-arch intermediates under obj/<arch>/ hold just the
+		# binary, so restrict to maxdepth 1 and require a readable Info.plist.
+		appex=""
+		for candidate in "$ext_dir"/.theos/obj/*.appex; do
+			if [ -f "$candidate/Info.plist" ]; then appex="$candidate"; break; fi
+		done
+		if [ -n "$appex" ]; then
+			PLUGINS+=("$appex")
+		else
+			echo "warning: no complete .appex produced in $ext_dir — skipping." >&2
+		fi
+	done
+	shopt -u nullglob
+
+	echo "==> Injecting $DEB_INJECT (+ icons${PLUGINS:+ + ${#PLUGINS[@]} extension(s)}) into $IPA_IN with cyan…"
+	cyan -i "$IPA_IN" -o "$IPA_OUT" -f "$DEB_INJECT" "${LOGOS[@]}" "${PLUGINS[@]}" "${MERGE_ARGS[@]}" -uwsgq
 
 	echo "==> Done. Injected IPA: $IPA_OUT"
 else

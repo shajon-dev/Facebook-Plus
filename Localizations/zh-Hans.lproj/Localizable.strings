@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "查看哪些功能已启用。";
 "row.welcome.title" = "显示欢迎界面";
 "row.reset.title" = "重置所有设置";
+"row.linksinsafari.title" = "在 Safari 中打开链接";
+"row.linksinsafari.desc" = "在默认浏览器而非应用内浏览器中打开外部链接。";
 "row.language.title" = "语言";
 "footer.by" = "Facebook Plus · 作者 ";
 "reset.title" = "重置所有设置";

@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "কোন ফিচারগুলো সক্রিয় দেখুন।";
 "row.welcome.title" = "স্বাগত স্ক্রিন দেখান";
 "row.reset.title" = "সব সেটিং রিসেট করুন";
+"row.linksinsafari.title" = "লিংক Safari-তে খুলুন";
+"row.linksinsafari.desc" = "external লিংক in-app browser-এর বদলে ডিফল্ট ব্রাউজারে খোলে।";
 "row.language.title" = "ভাষা";
 "footer.by" = "Facebook Plus · তৈরি করেছেন ";
 "reset.title" = "সব সেটিং রিসেট করুন";

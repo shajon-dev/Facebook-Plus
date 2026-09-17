@@ -74,6 +74,9 @@ extern NSString *const FBPKeyFeedLike;          // Confirm post like
 // Appearance
 extern NSString *const FBPKeyOLED;              // True-black background in dark mode
 
+// Links
+extern NSString *const FBPKeyLinksInSafari;     // Open external links in the default browser
+
 // Other
 extern NSString *const FBPKeyNotifyUpdates;
 extern NSString *const FBPKeyAutoClearCache;

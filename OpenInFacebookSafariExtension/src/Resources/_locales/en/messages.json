@@ -1,0 +1,10 @@
+{
+  "extension_name": {
+    "message": "Open in Facebook",
+    "description": "The display name for the extension."
+  },
+  "extension_description": {
+    "message": "Reopens Facebook links from Safari in the sideloaded Facebook app.",
+    "description": "The extension description."
+  }
+}

@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "Ver quais recursos estão ativos.";
 "row.welcome.title" = "Mostrar tela de boas-vindas";
 "row.reset.title" = "Redefinir todas as configurações";
+"row.linksinsafari.title" = "Abrir links no Safari";
+"row.linksinsafari.desc" = "Abre links externos no seu navegador padrão em vez do navegador interno.";
 "row.language.title" = "Idioma";
 "footer.by" = "Facebook Plus · por ";
 "reset.title" = "Redefinir todas as configurações";

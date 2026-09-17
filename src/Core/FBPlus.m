@@ -30,6 +30,8 @@ NSString *const FBPKeyFeedLike         = @"feedLike";
 
 NSString *const FBPKeyOLED             = @"oledMode";
 
+NSString *const FBPKeyLinksInSafari    = @"linksInSafari";
+
 NSString *const FBPKeyNotifyUpdates    = @"notifyUpdates";
 NSString *const FBPKeyAutoClearCache   = @"autoClearCache";
 NSString *const FBPKeyLanguage         = @"uiLanguage";

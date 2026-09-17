@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "Sehen, welche Funktionen aktiv sind.";
 "row.welcome.title" = "Willkommensbildschirm anzeigen";
 "row.reset.title" = "Alle Einstellungen zurücksetzen";
+"row.linksinsafari.title" = "Links in Safari öffnen";
+"row.linksinsafari.desc" = "Öffnet externe Links im Standardbrowser statt im In-App-Browser.";
 "row.language.title" = "Sprache";
 "footer.by" = "Facebook Plus · von ";
 "reset.title" = "Alle Einstellungen zurücksetzen";

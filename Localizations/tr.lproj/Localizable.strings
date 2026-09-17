@@ -36,6 +36,8 @@
 "row.diagnostics.desc" = "Hangi özelliklerin etkin olduğunu gör.";
 "row.welcome.title" = "Karşılama Ekranını Göster";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
+"row.linksinsafari.title" = "Bağlantıları Safari'de aç";
+"row.linksinsafari.desc" = "Harici bağlantıları uygulama içi tarayıcı yerine varsayılan tarayıcında açar.";
 "row.language.title" = "Dil";
 "footer.by" = "Facebook Plus · geliştiren ";
 "reset.title" = "Tüm Ayarları Sıfırla";

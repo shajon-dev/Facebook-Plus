@@ -37,6 +37,8 @@
 "row.diagnostics.desc" = "Xem những tính năng đang hoạt động.";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
 "row.reset.title" = "Đặt lại tất cả cài đặt";
+"row.linksinsafari.title" = "Mở liên kết trong Safari";
+"row.linksinsafari.desc" = "Mở liên kết ngoài trong trình duyệt mặc định thay vì trình duyệt trong ứng dụng.";
 "row.language.title" = "Ngôn ngữ";
 "footer.by" = "Facebook Plus · bởi ";
 "reset.title" = "Đặt lại tất cả cài đặt";

@@ -39,6 +39,10 @@
       <td>Watch stories anonymously (Ghost Mode)<br>Disable auto-advance<br>Remove "People you may know"<br> Save <b>Stories</b> (video & photo) to Photos</td>
     </tr>
     <tr>
+      <td nowrap>🧭 <b>Links</b></td>
+      <td>Open external links in your <b>default browser</b> instead of the in-app browser<br><b>Open in Facebook</b> Safari extension — reopens facebook.com links from Safari in the app</td>
+    </tr>
+    <tr>
       <td nowrap>🎨 <b>Appearance</b></td>
       <td><b>OLED Dark Mode</b> (True black)<br>Custom App-Icon Picker (Seamless integration with <code>CFBundleAlternateIcons</code>)</td>
     </tr>
@@ -108,6 +112,7 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 
 ```text
 ├── Localizations       # Translations (ar, bn, de, es, fr, hi, id, it, ja, ko, etc.)
+├── OpenInFacebookSafariExtension  # Safari web extension built into PlugIns ("Open in Facebook")
 ├── resources           # Assets (App icons, SVGs, and asset bundles)
 │   ├── bundle          # Compiled UI images and tweak resources
 │   ├── logo            # Custom app-icons drop folder for build.sh injection
@@ -123,6 +128,7 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 │   │   ├── Feed        # Feed-related hooks (ads, suggestions, Reels)
 │   │   ├── Language    # UI language override hooks
 │   │   ├── LikeConfirmation # Confirm before liking logic
+│   │   ├── Links       # Open external links in the default browser (not the IAB)
 │   │   ├── Menu        # Diagnostics for blocking server-driven menu sections
 │   │   ├── OLED        # True dark mode implementation
 │   │   ├── Onboarding  # Welcome screen controller
@@ -141,6 +147,7 @@ This generates `compile_commands.json`. Re-run this after adding new source file
 
 - **Idea & Inspiration:** The core concept of this tweak was inspired by the closed-source Facebook tweak **[Glow](https://github.com/dayanch96/Glow)**. This project is a clean reimplementation based on its behavioral analysis.
 - **Story & Reels Downloader:** The media download feature (`src/Features/Downloads/`) was contributed by **[ttlongdl](https://github.com/ttlongdl/Facebook-Plus)** via their GPLv3 fork, and is integrated here with attribution as required by the license.
+- **"Open in Facebook" Safari Extension:** The bundled Safari web extension (`OpenInFacebookSafariExtension/`, built from source into the IPA) is an independent, clean-room implementation. Its behaviour was informed by **[BillyCurtis/OpenInstagramSafariExtension](https://github.com/BillyCurtis/OpenInstagramSafariExtension)** (the "Open in <app>" pattern); no third-party binary or source is bundled. See `OpenInFacebookSafariExtension/README.md` for details.
 - **Compatibility Layer:** The sideloading compatibility layer (`src/PluginsInject/`) is copied and derived directly from **[zxPluginsInject](https://github.com/asdfzxcvbn/zxPluginsInject)**.
 - **Symbol Rebinding:** Uses **[fishhook](https://github.com/facebook/fishhook)** for dynamic symbol rebinding.
 

@@ -1,0 +1,27 @@
+:root { color-scheme: light dark; }
+body {
+  margin: 0;
+  font: -apple-system-body, system-ui, sans-serif;
+  background: transparent;
+}
+.card {
+  width: 240px;
+  padding: 20px 18px;
+  text-align: center;
+}
+.logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
+}
+h1 {
+  margin: 12px 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
+p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  opacity: 0.7;
+}
