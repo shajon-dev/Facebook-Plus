@@ -7,7 +7,7 @@
 #import "FBPResources.h"
 #import "FBPSheet.h"
 
-static NSString *const kTelegramURL = @"https://t.me/SHAJON";
+static NSString *const kTelegramURL = @"https://t.me/ReFacebookPlus";
 static NSString *const kGitHubURL   = @"https://github.com/SHAJON-404";
 
 static const CGFloat kLogoSize      = 46.0;

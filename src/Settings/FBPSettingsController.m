@@ -43,7 +43,7 @@ static NSString *const kActionCheckUpdate  = @"checkUpdate";
 
 static NSString *const kCellIdentifier   = @"fbp.settings.row";
 
-static NSString *const kTelegramURL = @"https://t.me/SHAJON";
+static NSString *const kTelegramURL = @"https://t.me/ReFacebookPlus";
 
 static const CGFloat kCardInset    = 16.0;
 static const CGFloat kContentInset = 16.0;
