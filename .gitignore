@@ -24,7 +24,6 @@ compile_commands.json
 .cache/
 .clangd
 .clangd.template
-.vscode/
 
 # ---------------------------------------------------------------------------
 # Python tooling (scripts/ and test/ helpers: svg2png.py, previews, etc.)

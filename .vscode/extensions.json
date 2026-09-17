@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "llvm-vs-code-extensions.vscode-clangd"
+  ],
+  // The Microsoft C/C++ extension works too, but running both at once gives you
+  // two sets of duplicate diagnostics. Pick one.
+  "unwantedRecommendations": []
+}

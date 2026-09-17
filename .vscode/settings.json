@@ -1,0 +1,49 @@
+{
+  // Logos sources. VS Code has no grammar for .xm, so without this they get no
+  // syntax highlighting at all. Objective-C is the closest fit; the %hook and
+  // %orig directives will still look odd, which is expected — logos.pl rewrites
+  // them before any compiler sees the file.
+  "files.associations": {
+    "*.xm": "objective-c",
+    "*.xmi": "objective-cpp",
+    "*.x": "objective-c",
+    "*.xi": "objective-c",
+    "*.pch": "objective-c"
+  },
+  // Generated and build output — noise in the file tree and in search results.
+  "files.exclude": {
+    "**/.theos": true
+  },
+  "search.exclude": {
+    "**/.theos": true,
+    "**/packages": true,
+    "compile_commands.json": true
+  },
+  // clangd reads .clangd and compile_commands.json from the workspace root.
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}",
+    "--header-insertion=never",
+    "--background-index"
+  ],
+  // If you use the Microsoft C/C++ extension instead of clangd, leave its
+  // IntelliSense off — running both at once produces two sets of duplicate,
+  // often contradictory diagnostics.
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  // Never auto-format. These are Logos sources: clang-format mangles the
+  // %hook/%group/%orig directives (it inserts a space after "%"), which breaks
+  // the build. The repo's .clang-format already sets DisableFormat, but turn the
+  // editor's own format triggers off too so a stray save can't reformat anything.
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "[objective-c]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false
+  },
+  "[objective-cpp]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false
+  }
+}

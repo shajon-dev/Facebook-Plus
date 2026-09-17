@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "configurations": [
+    {
+      "name": "theos-ios",
+      "compileCommands": "${workspaceFolder}/compile_commands.json",
+      "intelliSenseMode": "clang-arm64",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "includePath": [
+        "${workspaceFolder}/src/**",
+        "${env:HOME}/theos/include",
+        "${env:HOME}/theos/include/iphone",
+        "${env:HOME}/theos/vendor/include",
+        "${env:HOME}/theos/include/_fallback"
+      ],
+      "macFrameworkPath": [
+        "${env:HOME}/theos/sdks/*.sdk/System/Library/Frameworks",
+        "${env:HOME}/theos/sdks/*.sdk/System/Library/PrivateFrameworks"
+      ],
+      "defines": [
+        "TARGET_IPHONE=1",
+        "DEBUG",
+        "THEOS_PACKAGE_INSTALL_PREFIX=\"/var/jb\""
+      ]
+    }
+  ]
+}
