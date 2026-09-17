@@ -34,6 +34,8 @@
 "row.clearcache.title" = "مسح ذاكرة التخزين الآن";
 "row.diagnostics.title" = "التشخيص";
 "row.diagnostics.desc" = "معرفة الميزات المُفعّلة.";
+"row.checkupdate.title" = "التحقق من وجود تحديث";
+"row.checkupdate.desc" = "تحقّق مما إذا كان هناك إصدار أحدث.";
 "row.welcome.title" = "عرض شاشة الترحيب";
 "row.reset.title" = "إعادة تعيين كل الإعدادات";
 "row.linksinsafari.title" = "فتح الروابط في Safari";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "أعاد Facebook CDN رمز HTTP %ld.";
 "download.reel.tmpFailed" = "تعذّر إنشاء ملف الفيديو المؤقت.";
 "download.reel.noLink" = "تعذّر الحصول على رابط هذا الفيديو.";
+
+/* Update screen */
+"update.title" = "يتوفر تحديث";
+"update.subtitle" = "الإصدار %@ متاح الآن.";
+"update.whatsnew" = "ما الجديد";
+"update.nochangelog" = "لا يوجد سجل تغييرات لهذا الإصدار.";
+"update.telegram" = "التنزيل من Telegram";
+"update.github" = "التنزيل من GitHub";
+"update.later" = "لاحقًا";
+"update.uptodate" = "أنت تستخدم أحدث إصدار.";
+"update.failed" = "تعذّر التحقق من التحديثات.";

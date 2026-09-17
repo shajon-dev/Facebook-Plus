@@ -34,6 +34,8 @@
 "row.clearcache.title" = "अभी कैश साफ़ करें";
 "row.diagnostics.title" = "डायग्नोस्टिक्स";
 "row.diagnostics.desc" = "देखें कौन-सी सुविधाएँ सक्रिय हैं।";
+"row.checkupdate.title" = "अपडेट जाँचें";
+"row.checkupdate.desc" = "देखें कि कोई नया संस्करण उपलब्ध है या नहीं।";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
 "row.linksinsafari.title" = "लिंक Safari में खोलें";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN ने HTTP %ld लौटाया।";
 "download.reel.tmpFailed" = "अस्थायी वीडियो फ़ाइल नहीं बनाई जा सकी।";
 "download.reel.noLink" = "इस वीडियो का लिंक नहीं मिल सका।";
+
+/* Update screen */
+"update.title" = "अपडेट उपलब्ध";
+"update.subtitle" = "संस्करण %@ अब उपलब्ध है।";
+"update.whatsnew" = "नया क्या है";
+"update.nochangelog" = "इस रिलीज़ के लिए कोई changelog नहीं है।";
+"update.telegram" = "Telegram से डाउनलोड करें";
+"update.github" = "GitHub से डाउनलोड करें";
+"update.later" = "बाद में";
+"update.uptodate" = "आप नवीनतम संस्करण पर हैं।";
+"update.failed" = "अपडेट जाँच नहीं सका।";

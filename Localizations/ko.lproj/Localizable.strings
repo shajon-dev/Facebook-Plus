@@ -34,6 +34,8 @@
 "row.clearcache.title" = "지금 캐시 지우기";
 "row.diagnostics.title" = "진단";
 "row.diagnostics.desc" = "어떤 기능이 활성화됐는지 확인합니다.";
+"row.checkupdate.title" = "업데이트 확인";
+"row.checkupdate.desc" = "최신 버전이 있는지 확인합니다.";
 "row.welcome.title" = "시작 화면 표시";
 "row.reset.title" = "모든 설정 초기화";
 "row.linksinsafari.title" = "링크를 Safari에서 열기";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN이 HTTP %ld을(를) 반환했습니다.";
 "download.reel.tmpFailed" = "임시 동영상 파일을 만들지 못했습니다.";
 "download.reel.noLink" = "이 동영상의 링크를 가져오지 못했습니다.";
+
+/* Update screen */
+"update.title" = "업데이트 있음";
+"update.subtitle" = "버전 %@ 을(를) 사용할 수 있습니다.";
+"update.whatsnew" = "새로운 기능";
+"update.nochangelog" = "이 릴리스에 대한 변경 사항이 없습니다.";
+"update.telegram" = "Telegram에서 다운로드";
+"update.github" = "GitHub에서 다운로드";
+"update.later" = "나중에";
+"update.uptodate" = "최신 버전을 사용 중입니다.";
+"update.failed" = "업데이트를 확인하지 못했습니다.";

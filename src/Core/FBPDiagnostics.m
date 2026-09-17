@@ -8,6 +8,10 @@
 
 #import "FBPHeaders.h"
 
+#ifndef FBP_VERSION
+#define FBP_VERSION @"0.0.0"
+#endif
+
 /// Generous, because the point is to capture a whole session, but bounded so a
 /// runaway call site cannot exhaust memory.
 static const NSUInteger kMaxLines = 4000;
@@ -75,7 +79,7 @@ static NSArray<NSString *> *FBPWatchedClasses(void) {
     uname(&system);
     NSDictionary *info = NSBundle.mainBundle.infoDictionary;
     [self log:@"boot" format:@"Facebook Plus %@ in Facebook %@ (%@)",
-        @"1.0.0",
+        FBP_VERSION,
         info[@"CFBundleShortVersionString"] ?: @"?",
         info[@"CFBundleVersion"] ?: @"?"];
     [self log:@"boot" format:@"%s, iOS %@",

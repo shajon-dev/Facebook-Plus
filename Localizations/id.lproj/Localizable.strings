@@ -34,6 +34,8 @@
 "row.clearcache.title" = "Bersihkan Cache Sekarang";
 "row.diagnostics.title" = "Diagnostik";
 "row.diagnostics.desc" = "Lihat fitur mana yang aktif.";
+"row.checkupdate.title" = "Periksa Pembaruan";
+"row.checkupdate.desc" = "Lihat apakah ada versi yang lebih baru.";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";
 "row.reset.title" = "Setel Ulang Semua Pengaturan";
 "row.linksinsafari.title" = "Buka Tautan di Safari";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN mengembalikan HTTP %ld.";
 "download.reel.tmpFailed" = "Tidak dapat membuat file video sementara.";
 "download.reel.noLink" = "Tidak dapat mengambil tautan video ini.";
+
+/* Update screen */
+"update.title" = "Pembaruan Tersedia";
+"update.subtitle" = "Versi %@ kini tersedia.";
+"update.whatsnew" = "Yang Baru";
+"update.nochangelog" = "Tidak ada catatan perubahan untuk rilis ini.";
+"update.telegram" = "Unduh dari Telegram";
+"update.github" = "Unduh dari GitHub";
+"update.later" = "Nanti";
+"update.uptodate" = "Anda menggunakan versi terbaru.";
+"update.failed" = "Tidak dapat memeriksa pembaruan.";

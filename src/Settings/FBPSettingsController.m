@@ -16,6 +16,7 @@
 #import "FBPAppIconController.h"
 #import "FBPLanguageController.h"
 #import "FBPWelcomeController.h"
+#import "FBPUpdateChecker.h"
 
 #import <objc/runtime.h>
 
@@ -38,6 +39,7 @@ static NSString *const kActionAppIcon     = @"appIcon";
 static NSString *const kActionWelcome     = @"welcome";
 static NSString *const kActionReset       = @"reset";
 static NSString *const kActionLanguage    = @"language";
+static NSString *const kActionCheckUpdate  = @"checkUpdate";
 
 static NSString *const kCellIdentifier   = @"fbp.settings.row";
 
@@ -386,6 +388,9 @@ compatibleWithTraitCollection:nil]
             @{ kRowKey : kActionDiagnostics, kRowType : kTypeAction, kRowNav : @YES,
                kRowTitle : FBPL(@"row.diagnostics.title"), kRowDesc : FBPL(@"row.diagnostics.desc"),
                kRowIcon : @"waveform.path.ecg", kRowColor : UIColor.systemGreenColor },
+            @{ kRowKey : kActionCheckUpdate, kRowType : kTypeAction,
+               kRowTitle : FBPL(@"row.checkupdate.title"), kRowDesc : FBPL(@"row.checkupdate.desc"),
+               kRowIcon : @"arrow.down.circle", kRowColor : UIColor.systemBlueColor },
             @{ kRowKey : kActionWelcome, kRowType : kTypeAction, kRowNav : @YES,
                kRowTitle : FBPL(@"row.welcome.title"),
                kRowIcon : @"hand.wave.fill", kRowColor : FBPTintColor() },
@@ -562,6 +567,8 @@ compatibleWithTraitCollection:nil]
         [self confirmReset];
     } else if ([key isEqualToString:kActionLanguage]) {
         [self presentInNavigation:[[FBPLanguageController alloc] init]];
+    } else if ([key isEqualToString:kActionCheckUpdate]) {
+        [FBPUpdateChecker checkManuallyFromViewController:self];
     }
 }
 

@@ -34,6 +34,8 @@
 "row.clearcache.title" = "Очистить кэш сейчас";
 "row.diagnostics.title" = "Диагностика";
 "row.diagnostics.desc" = "Посмотреть, какие функции активны.";
+"row.checkupdate.title" = "Проверить обновление";
+"row.checkupdate.desc" = "Проверьте, доступна ли более новая версия.";
 "row.welcome.title" = "Показать экран приветствия";
 "row.reset.title" = "Сбросить все настройки";
 "row.linksinsafari.title" = "Открывать ссылки в Safari";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN вернул HTTP %ld.";
 "download.reel.tmpFailed" = "Не удалось создать временный видеофайл.";
 "download.reel.noLink" = "Не удалось получить ссылку на это видео.";
+
+/* Update screen */
+"update.title" = "Доступно обновление";
+"update.subtitle" = "Версия %@ уже доступна.";
+"update.whatsnew" = "Что нового";
+"update.nochangelog" = "Список изменений для этой версии отсутствует.";
+"update.telegram" = "Скачать из Telegram";
+"update.github" = "Скачать с GitHub";
+"update.later" = "Позже";
+"update.uptodate" = "У вас последняя версия.";
+"update.failed" = "Не удалось проверить обновления.";

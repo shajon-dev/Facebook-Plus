@@ -34,6 +34,8 @@
 "row.clearcache.title" = "今すぐキャッシュを消去";
 "row.diagnostics.title" = "診断";
 "row.diagnostics.desc" = "どの機能が有効か確認します。";
+"row.checkupdate.title" = "アップデートを確認";
+"row.checkupdate.desc" = "新しいバージョンがあるか確認します。";
 "row.welcome.title" = "ようこそ画面を表示";
 "row.reset.title" = "すべての設定をリセット";
 "row.linksinsafari.title" = "リンクを Safari で開く";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN が HTTP %ld を返しました。";
 "download.reel.tmpFailed" = "一時動画ファイルを作成できませんでした。";
 "download.reel.noLink" = "この動画のリンクを取得できませんでした。";
+
+/* Update screen */
+"update.title" = "アップデートがあります";
+"update.subtitle" = "バージョン %@ が利用可能です。";
+"update.whatsnew" = "新機能";
+"update.nochangelog" = "このリリースの変更履歴はありません。";
+"update.telegram" = "Telegram からダウンロード";
+"update.github" = "GitHub からダウンロード";
+"update.later" = "後で";
+"update.uptodate" = "最新バージョンを使用中です。";
+"update.failed" = "アップデートを確認できませんでした。";

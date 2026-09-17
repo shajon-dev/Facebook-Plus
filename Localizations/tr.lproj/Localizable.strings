@@ -34,6 +34,8 @@
 "row.clearcache.title" = "Önbelleği Şimdi Temizle";
 "row.diagnostics.title" = "Tanılama";
 "row.diagnostics.desc" = "Hangi özelliklerin etkin olduğunu gör.";
+"row.checkupdate.title" = "Güncelleme denetle";
+"row.checkupdate.desc" = "Daha yeni bir sürüm olup olmadığını kontrol et.";
 "row.welcome.title" = "Karşılama Ekranını Göster";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
 "row.linksinsafari.title" = "Bağlantıları Safari'de aç";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN HTTP %ld döndürdü.";
 "download.reel.tmpFailed" = "Geçici video dosyası oluşturulamadı.";
 "download.reel.noLink" = "Bu videonun bağlantısı alınamadı.";
+
+/* Update screen */
+"update.title" = "Güncelleme mevcut";
+"update.subtitle" = "%@ sürümü şimdi mevcut.";
+"update.whatsnew" = "Yenilikler";
+"update.nochangelog" = "Bu sürüm için değişiklik günlüğü yok.";
+"update.telegram" = "Telegram'dan indir";
+"update.github" = "GitHub'dan indir";
+"update.later" = "Sonra";
+"update.uptodate" = "En son sürümü kullanıyorsun.";
+"update.failed" = "Güncellemeler denetlenemedi.";

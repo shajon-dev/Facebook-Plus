@@ -34,6 +34,8 @@
 "row.clearcache.title" = "এখনই ক্যাশ পরিষ্কার করুন";
 "row.diagnostics.title" = "ডায়াগনস্টিকস";
 "row.diagnostics.desc" = "কোন ফিচারগুলো সক্রিয় দেখুন।";
+"row.checkupdate.title" = "আপডেট চেক করুন";
+"row.checkupdate.desc" = "নতুন সংস্করণ আছে কিনা দেখুন।";
 "row.welcome.title" = "স্বাগত স্ক্রিন দেখান";
 "row.reset.title" = "সব সেটিং রিসেট করুন";
 "row.linksinsafari.title" = "লিংক Safari-তে খুলুন";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN HTTP %ld ফেরত দিয়েছে।";
 "download.reel.tmpFailed" = "অস্থায়ী ভিডিও ফাইল তৈরি করা যায়নি।";
 "download.reel.noLink" = "এই ভিডিওর লিংক পাওয়া যায়নি।";
+
+/* Update screen */
+"update.title" = "আপডেট উপলব্ধ";
+"update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";
+"update.whatsnew" = "নতুন কী আছে";
+"update.nochangelog" = "এই রিলিজের কোনো changelog নেই।";
+"update.telegram" = "Telegram থেকে ডাউনলোড";
+"update.github" = "GitHub থেকে ডাউনলোড";
+"update.later" = "পরে";
+"update.uptodate" = "আপনি সর্বশেষ সংস্করণে আছেন।";
+"update.failed" = "আপডেট চেক করা যায়নি।";

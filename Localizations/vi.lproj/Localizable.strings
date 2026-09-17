@@ -35,6 +35,8 @@
 "row.clearcache.title" = "Xóa bộ nhớ đệm ngay";
 "row.diagnostics.title" = "Chẩn đoán";
 "row.diagnostics.desc" = "Xem những tính năng đang hoạt động.";
+"row.checkupdate.title" = "Kiểm tra cập nhật";
+"row.checkupdate.desc" = "Xem có phiên bản mới hơn không.";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
 "row.reset.title" = "Đặt lại tất cả cài đặt";
 "row.linksinsafari.title" = "Mở liên kết trong Safari";
@@ -69,3 +71,14 @@
 "download.reel.httpError" = "Facebook CDN trả HTTP %ld.";
 "download.reel.tmpFailed" = "Không tạo được file video tạm.";
 "download.reel.noLink" = "Chưa lấy được link của video này.";
+
+/* Update screen */
+"update.title" = "Đã có bản cập nhật";
+"update.subtitle" = "Phiên bản %@ hiện đã có.";
+"update.whatsnew" = "Có gì mới";
+"update.nochangelog" = "Không có nhật ký thay đổi cho bản phát hành này.";
+"update.telegram" = "Tải từ Telegram";
+"update.github" = "Tải từ GitHub";
+"update.later" = "Để sau";
+"update.uptodate" = "Bạn đang dùng phiên bản mới nhất.";
+"update.failed" = "Không thể kiểm tra cập nhật.";

@@ -34,6 +34,8 @@
 "row.clearcache.title" = "立即清理缓存";
 "row.diagnostics.title" = "诊断";
 "row.diagnostics.desc" = "查看哪些功能已启用。";
+"row.checkupdate.title" = "检查更新";
+"row.checkupdate.desc" = "查看是否有更新的版本。";
 "row.welcome.title" = "显示欢迎界面";
 "row.reset.title" = "重置所有设置";
 "row.linksinsafari.title" = "在 Safari 中打开链接";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN 返回了 HTTP %ld。";
 "download.reel.tmpFailed" = "无法创建临时视频文件。";
 "download.reel.noLink" = "无法获取此视频的链接。";
+
+/* Update screen */
+"update.title" = "有可用更新";
+"update.subtitle" = "版本 %@ 现已可用。";
+"update.whatsnew" = "更新内容";
+"update.nochangelog" = "此版本没有更新日志。";
+"update.telegram" = "从 Telegram 下载";
+"update.github" = "从 GitHub 下载";
+"update.later" = "稍后";
+"update.uptodate" = "你使用的是最新版本。";
+"update.failed" = "无法检查更新。";

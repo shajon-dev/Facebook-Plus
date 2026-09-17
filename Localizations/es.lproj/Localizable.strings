@@ -34,6 +34,8 @@
 "row.clearcache.title" = "Vaciar caché ahora";
 "row.diagnostics.title" = "Diagnóstico";
 "row.diagnostics.desc" = "Ver qué funciones están activas.";
+"row.checkupdate.title" = "Buscar actualización";
+"row.checkupdate.desc" = "Comprueba si hay una versión más reciente.";
 "row.welcome.title" = "Mostrar pantalla de bienvenida";
 "row.reset.title" = "Restablecer todos los ajustes";
 "row.linksinsafari.title" = "Abrir enlaces en Safari";
@@ -68,3 +70,14 @@
 "download.reel.httpError" = "Facebook CDN devolvió HTTP %ld.";
 "download.reel.tmpFailed" = "No se pudo crear el archivo de vídeo temporal.";
 "download.reel.noLink" = "No se pudo obtener el enlace de este vídeo.";
+
+/* Update screen */
+"update.title" = "Actualización disponible";
+"update.subtitle" = "La versión %@ ya está disponible.";
+"update.whatsnew" = "Novedades";
+"update.nochangelog" = "No hay registro de cambios para esta versión.";
+"update.telegram" = "Descargar de Telegram";
+"update.github" = "Descargar de GitHub";
+"update.later" = "Más tarde";
+"update.uptodate" = "Tienes la última versión.";
+"update.failed" = "No se pudieron comprobar las actualizaciones.";

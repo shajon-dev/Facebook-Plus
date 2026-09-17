@@ -40,16 +40,24 @@ FacebookPlus_FILES = \
 	src/Features/Downloads/FBPReelsDownloader.xm \
 	src/Features/Downloads/FBPStoryDownloader.xm \
 	src/Features/Links/FBPLinkHooks.xm \
+	src/Features/Update/FBPUpdateController.m \
+	src/Features/Update/FBPUpdateChecker.m \
 	src/PluginsInject/PluginsInject.mm \
 	src/PluginsInject/Paths.mm \
 	src/PluginsInject/SecRebinds.xm \
 	src/PluginsInject/SideloadFix.xm \
 	fishhook/fishhook.c
 
+# The tweak's own version, read from control, exposed to the code as FBP_VERSION
+# (an NSString literal) so the update checker can compare against GitHub releases.
+FBP_VERSION := $(shell awk -F': ' '/^Version:/{print $$2; exit}' control)
+
 FacebookPlus_CFLAGS  = -fobjc-arc -Wno-deprecated-declarations \
+	-DFBP_VERSION='@"$(FBP_VERSION)"' \
 	-Isrc/Core -Isrc/UI/Toast -Isrc/UI/Sheet -Isrc/Settings \
 	-Isrc/Features/Onboarding -Isrc/Features/Diagnostics \
-	-Isrc/Features/AppIcons -Isrc/Features/Language -Isrc/PluginsInject
+	-Isrc/Features/AppIcons -Isrc/Features/Language \
+	-Isrc/Features/Update -Isrc/PluginsInject
 FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics AVFoundation CoreMedia Security
 
 include $(THEOS_MAKE_PATH)/tweak.mk

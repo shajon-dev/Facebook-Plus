@@ -7,6 +7,7 @@
 #import "FBPResources.h"
 #import "FBPSettingsController.h"
 #import "FBPWelcomeController.h"
+#import "FBPUpdateChecker.h"
 #import "FBPSheet.h"
 #import "FBPToast.h"
 
@@ -173,6 +174,13 @@ static void FBPInterceptSettingsButton(UIView *root) {
     }
 
     [FBPWelcomeController presentIfNeeded];
+
+    // Check GitHub for a newer release a few seconds in, once the UI has settled
+    // (silent unless a newer version the user hasn't seen is available).
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4.0 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        [FBPUpdateChecker checkOnLaunch];
+    });
 
     // Facebook's chrome is not up yet at this point; give it a moment before
     // looking for the settings button.
