@@ -57,6 +57,31 @@
 
 ---
 
+## 🗺️ Roadmap
+
+Planned features and fixes for upcoming releases. Contributions and suggestions
+are welcome — open an issue or a pull request.
+
+**Feed & Content**
+- [ ] Hide the **Reels overlay** (comment/like/share controls layered over Reels)
+- [ ] Hide **Stories** row from the main feed
+- [ ] Hide **ads on Facebook Marketplace**
+
+**Downloads**
+- [ ] **Multiple-quality** download picker for Reels & videos (choose resolution before saving)
+
+**Appearance**
+- [ ] Enhance **OLED Mode** — restore the missing **post divider** (separators not shown between posts in OLED mode)
+- [ ] Fix the **unwanted box** rendered beside the app-icon image
+
+**Navigation**
+- [ ] Remove the **"Also from Meta"** section from the left sidebar
+
+> [!NOTE]
+> This list tracks intended work; items are unchecked until shipped in a release.
+
+---
+
 ## 🚀 Installation
 
 Download the pre-built `.ipa` file from the **[Releases](../../releases)** section and install it on your device using **Feather**, **Ksing**, or any other sideloading tool of your choice.
