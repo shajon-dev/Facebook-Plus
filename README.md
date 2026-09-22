@@ -108,10 +108,10 @@ publishes the result as a draft release on your fork.
 3. Click **Run workflow** on the right.
 4. Fill in the inputs:
    - **Direct download URL to the decrypted Facebook IPA** — upload your decrypted
-     `.ipa` to a file host (e.g. [filebin.net](https://filebin.net),
-     [filemail.com](https://filemail.com), or Dropbox) and paste the
-     **direct download link**. A link to a *web page* instead of the file itself
-     will fail validation.
+     `.ipa` to [**filebin.net**](https://filebin.net) and paste the **direct
+     download link** to the file. filebin is the recommended host and the one this
+     workflow has been tested with. A link to a *web page* instead of the file
+     itself will fail validation.
    - **Bundle identifier** *(optional)* — leave blank to keep `com.facebook.Facebook`.
      Set a custom id to install alongside the stock app. The tweak is
      bundle-id-agnostic, so it activates under whatever id you choose — no other

@@ -73,6 +73,11 @@ jobs:
 
       - name: Build tweak and inject into IPA
         env:
+          # A UTF-8 locale so bash parses the script's non-ASCII output (the "…"
+          # in its progress messages) correctly; the runner otherwise defaults to
+          # the C locale, which can mis-tokenize a variable followed by "…".
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
           # Build both packaging schemes so the release carries the rootless and
           # rootfull .deb alongside the injected .ipa.
           SCHEMES: rootless rootfull
