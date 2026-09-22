@@ -40,10 +40,12 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
 
 %ctor {
     @autoreleasepool {
-        // Only ever inject into Facebook. The Filter plist already restricts
-        // this, but an IPA-embedded build has no filter to rely on.
-        NSString *bundleID = NSBundle.mainBundle.bundleIdentifier;
-        if (![bundleID isEqualToString:@"com.facebook.Facebook"]) return;
+        // The tweak is bound to the app it ships in, not to a fixed bundle id:
+        // the Filter plist scopes the substrate build to Facebook, and an
+        // IPA-embedded build only ever loads inside the app cyan injected it into.
+        // We therefore do not hardcode a bundle id here — that lets a re-signed
+        // IPA use a custom identifier (to run alongside the stock app) and still
+        // activate.
 
         // Registers defaults before any hook can read a preference.
         (void)FBPPrefs.shared;
@@ -52,6 +54,8 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
         FBPInstallHooks();
         _dyld_register_func_for_add_image(&FBPImageDidLoad);
 
-        FBPLog(@"loaded into %@", bundleID);
+        // Inlined (not a local) so the release build, where FBPLog is a no-op,
+        // does not trip -Werror=unused-variable.
+        FBPLog(@"loaded into %@", NSBundle.mainBundle.bundleIdentifier);
     }
 }

@@ -130,6 +130,13 @@ if [ -f "$IPA_IN" ]; then
 	MERGE_ARGS=()
 	if [ -n "$ICON_MERGE" ]; then MERGE_ARGS=(-l "$ICON_MERGE"); fi
 
+	# Optional bundle-id override. When BUNDLE_ID is set (e.g. by the build-ipa
+	# GitHub Action), cyan rewrites the app's CFBundleIdentifier. The tweak is
+	# bundle-id-agnostic (see FBPEntry.xm), so it still activates under the new id.
+	# Left empty, the IPA keeps Facebook's own bundle id.
+	RENAME_ARGS=()
+	if [ -n "${BUNDLE_ID:-}" ]; then RENAME_ARGS+=(-b "$BUNDLE_ID"); fi
+
 	# Safari web extensions bundled into the app's PlugIns (e.g. "Open in
 	# Facebook", which reopens facebook.com links from Safari in the app). Each
 	# is built from source under OpenInFacebookSafariExtension/*/Makefile; cyan
@@ -156,7 +163,7 @@ if [ -f "$IPA_IN" ]; then
 	shopt -u nullglob
 
 	echo "==> Injecting $DEB_INJECT (+ icons${PLUGINS:+ + ${#PLUGINS[@]} extension(s)}) into $IPA_IN with cyan…"
-	cyan -i "$IPA_IN" -o "$IPA_OUT" -f "$DEB_INJECT" "${LOGOS[@]}" "${PLUGINS[@]}" "${MERGE_ARGS[@]}" -uwsgq
+	cyan -i "$IPA_IN" -o "$IPA_OUT" -f "$DEB_INJECT" "${LOGOS[@]}" "${PLUGINS[@]}" "${MERGE_ARGS[@]}" "${RENAME_ARGS[@]}" -uwsgq
 
 	echo "==> Done. Injected IPA: $IPA_OUT"
 else

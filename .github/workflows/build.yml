@@ -1,4 +1,4 @@
-name: Build
+name: Build Tweak (.deb)
 
 # Verify the tweak compiles on every pull request and push to main by running
 # the project's own build.sh.

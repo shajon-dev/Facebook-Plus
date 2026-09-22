@@ -44,7 +44,7 @@
     </tr>
     <tr>
       <td nowrap>🎨 <b>Appearance</b></td>
-      <td><b>OLED Dark Mode</b> (True black)<br>Custom App-Icon Picker (Seamless integration with <code>CFBundleAlternateIcons</code>)</td>
+      <td><b>OLED Dark Mode</b> (True black)<br>Custom App-Icon Picker</td>
     </tr>
     <tr>
       <td nowrap>🔔 <b>Updates</b></td>
@@ -60,6 +60,45 @@
 ## 🚀 Installation
 
 Download the pre-built `.ipa` file from the **[Releases](../../releases)** section and install it on your device using **Feather**, **Ksing**, or any other sideloading tool of your choice.
+
+## ⚡ Build your own IPA with GitHub Actions
+
+No Mac required. The **Build Facebook Plus (.ipa)** workflow builds the tweak from
+source and injects it into a decrypted Facebook IPA that **you** provide, then
+publishes the result as a draft release on your fork.
+
+> [!IMPORTANT]
+> You must supply your own **decrypted** Facebook `.ipa`. We cannot distribute one
+> for legal reasons.
+
+**First time only:**
+
+1. **Fork** this repository (top-right **Fork** button).
+2. On your fork, open the **Actions** tab and click **I understand my workflows, go ahead and enable them**.
+
+**To build:**
+
+1. If your fork is behind, click **Sync fork → Update branch**.
+2. Go to **Actions → Build Facebook Plus (.ipa)**.
+3. Click **Run workflow** on the right.
+4. Fill in the inputs:
+   - **Direct download URL to the decrypted Facebook IPA** — upload your decrypted
+     `.ipa` to a file host (e.g. [filebin.net](https://filebin.net),
+     [filemail.com](https://filemail.com), or Dropbox) and paste the
+     **direct download link**. A link to a *web page* instead of the file itself
+     will fail validation.
+   - **Bundle identifier** *(optional)* — leave blank to keep `com.facebook.Facebook`.
+     Set a custom id to install alongside the stock app. The tweak is
+     bundle-id-agnostic, so it activates under whatever id you choose — no other
+     change needed.
+5. Click **Run workflow** and wait for it to finish (≈10–15 min).
+6. Download the IPA from your fork's **Releases** section. The release is created as
+   a **draft** — open it, review, and publish. (If you don't see Releases, append
+   `/releases` to your fork's URL, e.g. `github.com/<you>/Facebook-Plus/releases`.)
+
+The workflow reuses [`build.sh`](build.sh), so your IPA gets the exact same
+injection as a local build — the tweak, the custom app-icons, and the bundled
+**Open in Facebook** Safari extension, all fakesigned for sideloading.
 
 ## 🛠️ Building from Source & Automated Injection
 

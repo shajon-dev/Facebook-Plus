@@ -1,0 +1,114 @@
+name: Build Facebook Plus (.ipa)
+
+# Build a sideloadable Facebook Plus IPA from a decrypted Facebook IPA you supply.
+#
+# We ship no decrypted Facebook IPA (we cannot, for legal reasons), so you provide
+# a direct download URL to your own. The workflow builds the tweak from source
+# (Theos), then reuses build.sh to inject it — together with the custom app-icons
+# and the "Open in Facebook" Safari extension — into your IPA with cyan and
+# publishes the result as a draft release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ipa_url:
+        description: "Direct download URL to the decrypted Facebook IPA"
+        default: ""
+        required: true
+        type: string
+
+      bundle_id:
+        description: "Bundle identifier (leave blank to keep 'com.facebook.Facebook')"
+        default: ""
+        required: false
+        type: string
+
+# Only one injection run per branch at a time; a newer run cancels the older one.
+concurrency:
+  group: build-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Inject tweak into IPA
+    # macOS so Theos uses Xcode's toolchain and iOS SDK directly.
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      THEOS: ${{ github.workspace }}/theos
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Keep the user-supplied IPA URL (which may contain access tokens) out of
+      # the logs. Display name and bundle id are harmless, so they stay visible.
+      - name: Hide sensitive inputs
+        uses: levibostian/action-hide-sensitive-inputs@v1
+        with:
+          exclude_inputs: display_name,bundle_id
+
+      - name: Download and validate IPA
+        run: |
+          mkdir -p test
+          wget "${{ inputs.ipa_url }}" --no-verbose -O test/com.facebook.Facebook.ipa
+
+          file_type=$(file --mime-type -b test/com.facebook.Facebook.ipa)
+          if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
+            echo "::error::Validation failed: the downloaded file is not a valid IPA (detected: $file_type). Make sure the URL is a direct download link, not a web page."
+            exit 1
+          fi
+
+      - name: Install build dependencies
+        run: brew install ldid dpkg xz
+
+      - name: Set up Theos
+        run: git clone --quiet --recursive https://github.com/theos/theos.git "$THEOS"
+
+      - name: Install cyan
+        run: pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
+
+      - name: Build tweak and inject into IPA
+        env:
+          # Build both packaging schemes so the release carries the rootless and
+          # rootfull .deb alongside the injected .ipa.
+          SCHEMES: rootless rootfull
+          # cyan (-b) rewrites the app's bundle id. The tweak is bundle-id-agnostic
+          # (see FBPEntry.xm), so it activates whatever id you choose here.
+          BUNDLE_ID: ${{ inputs.bundle_id }}
+        run: ./build.sh
+
+      - name: Collect build outputs
+        id: meta
+        run: |
+          # build.sh writes space-free filenames whose versions are derived
+          # automatically — never hardcoded:
+          #   Facebook-Plus-v{fb_version}-rootless.ipa   (from the IPA's Info.plist)
+          #   Facebook-Plus-v{tweak_version}-rootless.deb  (from ./control)
+          #   Facebook-Plus-v{tweak_version}-rootfull.deb  (from ./control)
+          if ! ls packages/*.ipa >/dev/null 2>&1; then
+            echo "::error::No injected IPA was produced."
+            exit 1
+          fi
+          version=$(awk -F': ' '/^Version:/{print $2; exit}' control)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release assets:"
+          ls -1 packages/*.ipa packages/*.deb
+
+      - name: Publish draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}-${{ github.run_number }}
+          name: Facebook Plus v${{ steps.meta.outputs.version }}
+          # Each file is uploaded as its own separate release asset.
+          files: |
+            packages/*.ipa
+            packages/*.deb
+          draft: true
+          generate_release_notes: true
+
+      - name: Output release URL
+        run: echo "::notice::Draft release ready at https://github.com/${{ github.repository }}/releases"
