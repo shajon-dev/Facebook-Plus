@@ -169,13 +169,13 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
 <details>
 <summary><b>Code Editor Setup</b></summary>
 
-Theos does not emit a compilation database by default, causing editors to fail at finding the iOS SDK. You can generate one using [`bear`](https://github.com/rizsotto/Bear):
+Theos does not emit a compilation database by default, causing editors to fail at finding the iOS SDK. Generate one with [`bear`](https://github.com/rizsotto/Bear):
 
 ```bash
 make compile-commands
 ```
 
-This generates `compile_commands.json`. Re-run this after adding new source files. Note: Logos `.xm` files cannot be fully parsed by clang, so `.clangd` suppresses false diagnostics while ensuring they compile correctly.
+This writes a per-machine `.clangd` (with your theos path and SDK baked in) and a `compile_commands.json`. The database is produced with `bear parse-sh` from theos's own dry-run (`make -n`) rather than by intercepting the build, because macOS strips the interception mechanism (`DYLD_INSERT_LIBRARIES`) from the Xcode toolchain's Apple-signed clang, leaving a plain `bear -- make` empty. Re-run it after adding new source files. Note: Logos `.xm` files cannot be fully parsed by clang, so `.clangd` suppresses false diagnostics while ensuring they compile correctly.
 
 </details>
 

@@ -46,8 +46,10 @@ static const CGFloat kButtonHeight  = 54.0;
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // A self-contained dark look, independent of the app's current appearance,
-    // so the light colours below always read correctly over the gradient.
+    // A self-contained dark look, independent of the app's current appearance.
+    // The colours below are pinned (static white / white-alpha, not the dynamic
+    // UIColor.whiteColor) so toggling the host app's light/dark/OLED setting
+    // never repaints this screen; the override style only fixes the UISwitch.
     self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
     self.view.backgroundColor = UIColor.blackColor;
 
@@ -144,7 +146,7 @@ static const CGFloat kButtonHeight  = 54.0;
     UILabel *name = [[UILabel alloc] init];
     name.text = @"Facebook Plus";
     name.font = [UIFont systemFontOfSize:30 weight:UIFontWeightBold];
-    name.textColor = UIColor.labelColor;
+    name.textColor = UIColor.whiteColor;
     [row addArrangedSubview:name];
 
     // Wrap so the logo+name group is centred as a unit.
@@ -170,14 +172,14 @@ static const CGFloat kButtonHeight  = 54.0;
 
     UIImageView *glyph = [[UIImageView alloc] initWithImage:[UIImage fbp_imageNamed:imageName]];
     glyph.contentMode = UIViewContentModeScaleAspectFit;
-    glyph.tintColor = UIColor.labelColor;
+    glyph.tintColor = UIColor.whiteColor;
     glyph.translatesAutoresizingMaskIntoConstraints = NO;
     [rowView addSubview:glyph];
 
     UILabel *titleLabel = [[UILabel alloc] init];
     titleLabel.text = title;
     titleLabel.font = [UIFont systemFontOfSize:19 weight:UIFontWeightSemibold];
-    titleLabel.textColor = UIColor.labelColor;
+    titleLabel.textColor = UIColor.whiteColor;
     titleLabel.numberOfLines = 0;
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [rowView addSubview:titleLabel];
@@ -185,7 +187,7 @@ static const CGFloat kButtonHeight  = 54.0;
     UILabel *descLabel = [[UILabel alloc] init];
     descLabel.text = description;
     descLabel.font = [UIFont systemFontOfSize:15];
-    descLabel.textColor = [UIColor.labelColor colorWithAlphaComponent:0.62];
+    descLabel.textColor = [UIColor colorWithWhite:1.0 alpha:0.62];
     descLabel.numberOfLines = 0;
     descLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [rowView addSubview:descLabel];
@@ -216,7 +218,7 @@ static const CGFloat kButtonHeight  = 54.0;
     bar.translatesAutoresizingMaskIntoConstraints = NO;
 
     UIView *hairline = [[UIView alloc] init];
-    hairline.backgroundColor = [UIColor.labelColor colorWithAlphaComponent:0.12];
+    hairline.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.12];
     hairline.translatesAutoresizingMaskIntoConstraints = NO;
     [bar addSubview:hairline];
 
@@ -227,7 +229,7 @@ static const CGFloat kButtonHeight  = 54.0;
     UILabel *dontShowLabel = [[UILabel alloc] init];
     dontShowLabel.text = @"Don't show this popup again";
     dontShowLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    dontShowLabel.textColor = UIColor.labelColor;
+    dontShowLabel.textColor = UIColor.whiteColor;
     dontShowLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [toggleCard addSubview:dontShowLabel];
 
@@ -249,7 +251,7 @@ static const CGFloat kButtonHeight  = 54.0;
     [footerCard addSubview:github];
 
     UIView *divider = [[UIView alloc] init];
-    divider.backgroundColor = [UIColor.labelColor colorWithAlphaComponent:0.14];
+    divider.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.14];
     divider.translatesAutoresizingMaskIntoConstraints = NO;
     [footerCard addSubview:divider];
 
@@ -319,7 +321,7 @@ static const CGFloat kButtonHeight  = 54.0;
 /// A rounded, faintly filled container used to group a control into its own card.
 - (UIView *)cardView {
     UIView *card = [[UIView alloc] init];
-    card.backgroundColor = [UIColor.labelColor colorWithAlphaComponent:0.08];
+    card.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.08];
     card.layer.cornerRadius = 16;
     card.layer.cornerCurve = kCACornerCurveContinuous;
     card.translatesAutoresizingMaskIntoConstraints = NO;
@@ -361,17 +363,17 @@ static const CGFloat kButtonHeight  = 54.0;
         cfg.image = icon;
         cfg.attributedTitle = [[NSAttributedString alloc] initWithString:title attributes:attrs];
         cfg.imagePadding = 8;
-        cfg.baseForegroundColor = UIColor.labelColor;
+        cfg.baseForegroundColor = UIColor.whiteColor;
         cfg.contentInsets = NSDirectionalEdgeInsetsMake(0, 0, 0, 0);
         button = [UIButton buttonWithConfiguration:cfg primaryAction:nil];
     } else {
         button = [UIButton buttonWithType:UIButtonTypeSystem];
         [button setImage:icon forState:UIControlStateNormal];
         [button setTitle:[@"  " stringByAppendingString:title] forState:UIControlStateNormal];
-        [button setTitleColor:UIColor.labelColor forState:UIControlStateNormal];
+        [button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
         button.titleLabel.font = attrs[NSFontAttributeName];
     }
-    button.tintColor = UIColor.labelColor;
+    button.tintColor = UIColor.whiteColor;
     button.translatesAutoresizingMaskIntoConstraints = NO;
     [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
     return button;

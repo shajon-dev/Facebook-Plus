@@ -9,6 +9,7 @@ INSTALL_TARGET_PROCESSES = Facebook
 # Set to 1 (or export in your environment) when building for a roothide
 # jailbreak, which needs the .jbroot loader-path indirection.
 THEOS_PACKAGE_SCHEME ?= rootless
+THEOS ?= $(HOME)/theos
 
 include $(THEOS)/makefiles/common.mk
 
@@ -67,8 +68,17 @@ include $(THEOS_MAKE_PATH)/aggregate.mk
 
 # Editor support. Without a compilation database, clangd and the VS Code C/C++
 # extension cannot find the iOS SDK and every Foundation type reads as
-# "Unknown type name". bear records the flags theos actually used, so this needs
-# a clean build to see every file.
+# "Unknown type name".
+#
+# We cannot let bear *intercept* the build: theos compiles with the Xcode
+# toolchain's Apple-signed clang, and macOS strips DYLD_INSERT_LIBRARIES (bear's
+# interception mechanism) from hardened-runtime Apple binaries, so `bear -- make`
+# only ever records an empty "[]". Instead we use bear's `parse-sh`, which reads
+# theos's own dry-run (`make -n`) and turns each compile into a database entry
+# with the real flags — no interception, works on any macOS. theos wraps every
+# compile in a `( … )` subshell that parse-sh would skip, so the sed first
+# unwraps it to a bare command. Logos .xm files appear as their preprocessed
+# .theos/obj/…/<name>.xm.mm; editing the original .xm is covered by .clangd above.
 .PHONY: compile-commands
 compile-commands:
 	@command -v bear >/dev/null 2>&1 || { \
@@ -77,12 +87,48 @@ compile-commands:
 		echo "       macOS:         brew install bear"; \
 		exit 1; \
 	}
-	@if [ -f .clangd.template ]; then \
-		echo "==> Generating .clangd from template…"; \
-		sed "s|@@THEOS@@|$(THEOS)|g" .clangd.template > .clangd; \
-		rm -f .clangd.template; \
-	fi
+	@echo "==> Generating .clangd…"
+	@sdk=$$(ls -d "$(THEOS)"/sdks/iPhoneOS*.sdk 2>/dev/null | sort -V | tail -1); \
+	if [ -z "$$sdk" ]; then \
+		echo "error: no iPhoneOS SDK found under $(THEOS)/sdks"; exit 1; \
+	fi; \
+	sdkver=$$(basename "$$sdk" .sdk | sed 's/^iPhoneOS//'); \
+	{ \
+		echo "CompileFlags:"; \
+		echo "  Add:"; \
+		echo "    - -target"; \
+		echo "    - arm64-apple-ios$$sdkver"; \
+		echo "    - -isysroot"; \
+		echo "    - $$sdk"; \
+		echo "    - -I$(THEOS)/include"; \
+		echo "    - -I$(THEOS)/include/iphone"; \
+		echo "    - -I$(THEOS)/vendor/include"; \
+		echo "    - -I$(THEOS)/include/_fallback"; \
+		echo "    - -F$$sdk/System/Library/Frameworks"; \
+		echo "    - -F$$sdk/System/Library/PrivateFrameworks"; \
+		echo "    - -Isrc/Core"; \
+		echo "    - -Isrc/UI/Toast"; \
+		echo "    - -Isrc/UI/Sheet"; \
+		echo "    - -Isrc/Settings"; \
+		echo "    - -Isrc/Features/Onboarding"; \
+		echo "    - -Isrc/Features/Diagnostics"; \
+		echo "    - -Isrc/Features/AppIcons"; \
+		echo "    - -Isrc/Features/Language"; \
+		echo "    - -Isrc/Features/Update"; \
+		echo "    - -Isrc/PluginsInject"; \
+		echo "    - -DTARGET_IPHONE=1"; \
+		echo "    - -DDEBUG"; \
+		echo "    - -fobjc-arc"; \
+		echo "    - -Wno-deprecated-declarations"; \
+		echo ""; \
+		echo "Diagnostics:"; \
+		echo "  Suppress:"; \
+		echo "    - unknown_type_name"; \
+		echo "    - undeclared_var_use"; \
+		echo "    - duplicate_decl_context"; \
+	} > .clangd
 	@echo "==> Recording compile commands with bear…"
 	@$(MAKE) clean >/dev/null
-	@bear -- $(MAKE) >/dev/null
+	@$(MAKE) -n | sed -E 's/.*set -o pipefail; \(//; s/\)[[:space:]]*$$//' \
+		| bear parse-sh -o compile_commands.json 2>/dev/null
 	@echo "==> Wrote compile_commands.json"
