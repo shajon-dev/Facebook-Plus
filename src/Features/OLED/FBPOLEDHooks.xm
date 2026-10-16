@@ -79,10 +79,21 @@ static UIColor *FBPResolve(UIColor *color) {
     return color;
 }
 
-/// YES for an opaque-ish background that should be deepened to black. A grey
-/// surface (Facebook's base *and* its lighter elevated cards) counts up to a
-/// mid-grey; a coloured surface only counts when genuinely dark, so accent
-/// controls like the blue buttons keep their colour.
+/// YES only for one of Facebook's own dark *background* greys — the surfaces that
+/// should go true-black. Facebook's dark palette (FDSColor / FBColorPaletteConfig
+/// -greyColorWithShade:) paints every surface from a small ladder of near-neutral
+/// greys that tops out around #3A3B3C (base #18191A, card #242526, elevated
+/// #3A3B3C). We match exactly that band — near-neutral and no lighter than
+/// ~#3A3B3C — instead of a loose "is it darkish" luma test.
+///
+/// This is deliberately tight: the old test blackened anything up to a mid-grey
+/// (luma < 0.48), which also caught dividers, pressed/hover states, elevated
+/// chips and placeholders and painted them as solid black rectangles — the
+/// "square box" artefacts. Lighter greys, tinted surfaces, accents and photos are
+/// now left untouched, so only real backgrounds deepen to black.
+static const CGFloat kFBPBgMaxLuma    = 0.26;   // just above #3A3B3C (luma ~0.231)
+static const CGFloat kFBPBgMaxChroma  = 0.05;   // near-neutral only (FB greys are ~neutral)
+
 static BOOL FBPColorIsDark(UIColor *color) {
     if (!color) return NO;
     CGFloat r = 0, g = 0, b = 0, a = 0;
@@ -90,12 +101,12 @@ static BOOL FBPColorIsDark(UIColor *color) {
         if (a < 0.2) return NO;
         CGFloat mx = MAX(r, MAX(g, b)), mn = MIN(r, MIN(g, b));
         CGFloat luma = 0.299 * r + 0.587 * g + 0.114 * b;
-        return (mx - mn) < 0.12 ? (luma < 0.48) : (luma < 0.20);
+        return (mx - mn) < kFBPBgMaxChroma && luma < kFBPBgMaxLuma;
     }
     CGFloat w = 0, wa = 0;
     if ([color getWhite:&w alpha:&wa]) {
         if (wa < 0.2) return NO;
-        return w < 0.48;
+        return w < kFBPBgMaxLuma;
     }
     return NO;
 }
@@ -126,6 +137,53 @@ static UIColor *FBPBlackKeepingAlpha(UIColor *color) {
 static CGColorRef FBPBlackCGKeepingAlpha(CGColorRef cg) {
     CGFloat alpha = cg ? CGColorGetAlpha(cg) : 1.0;
     return [UIColor colorWithWhite:0.0 alpha:alpha].CGColor;
+}
+
+#pragma mark - Dividers
+
+// Pure black merges Facebook's cards into their background, so the hairline
+// separators between posts, list rows and sections vanish. Facebook draws them
+// with FBLineComponentInternalView (and plain ~1–2pt hairline views); in OLED
+// mode we paint those a faint white instead of black, so the structure the
+// native dark theme has stays readable — a true-black look that still has lines.
+static const CGFloat kFBPDividerAlpha = 0.22;   // faint white on black
+
+static UIColor *FBPDividerColor(void) {
+    static UIColor *color = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ color = [UIColor colorWithWhite:1.0 alpha:kFBPDividerAlpha]; });
+    return color;
+}
+
+/// YES for a separator line we should lighten rather than blacken: Facebook's
+/// FBLineComponentInternalView, or a thin (≤2pt) neutral/near-black hairline. A
+/// *coloured* thin bar — a selected-tab underline, a progress bar — is not a
+/// divider (its colour isn't dark), so it is left alone.
+static BOOL FBPViewLooksLikeDivider(UIView *view) {
+    if ([NSStringFromClass(view.class) containsString:@"LineComponent"]) return YES;
+    CGSize size = view.bounds.size;
+    BOOL thin = (size.height > 0 && size.height <= 2.0 && size.width  >= 40) ||
+                (size.width  > 0 && size.width  <= 2.0 && size.height >= 40);
+    if (!thin) return NO;
+    UIColor *bg = view.backgroundColor;
+    if (bg) return FBPColorIsDark(FBPResolve(bg));
+    if (view.layer.backgroundColor) return FBPCGColorIsDark(view.layer.backgroundColor);
+    return view.layer.sublayers.count > 0;   // line drawn on a sublayer
+}
+
+/// Paints a divider faint-white across the ways Facebook draws its line — the
+/// view's background, its own layer, and any line-drawing sublayer.
+static void FBPLightenDivider(UIView *view) {
+    UIColor *light = FBPDividerColor();
+    view.backgroundColor = light;
+    view.layer.backgroundColor = light.CGColor;
+    for (CALayer *sub in [view.layer.sublayers copy]) {
+        if ([sub.delegate isKindOfClass:UIView.class]) continue;
+        if ([sub isKindOfClass:CAShapeLayer.class]) {
+            ((CAShapeLayer *)sub).fillColor = light.CGColor;
+        }
+        sub.backgroundColor = light.CGColor;
+    }
 }
 
 /// Blackens the dark colours a view paints *directly onto its own layer's
@@ -279,9 +337,16 @@ static void FBPApplyForcedAppearance(void) {
 %hook UIView
 
 - (void)setBackgroundColor:(UIColor *)color {
-    if (gOLEDEnabled && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
-        %orig(FBPBlackKeepingAlpha(color));
-        return;
+    if (gOLEDEnabled && !FBPOLEDSkip(self)) {
+        // A separator line keeps a faint white instead of vanishing into black.
+        if ([NSStringFromClass(self.class) containsString:@"LineComponent"]) {
+            %orig(FBPDividerColor());
+            return;
+        }
+        if (FBPColorIsDark(FBPResolve(color))) {
+            %orig(FBPBlackKeepingAlpha(color));
+            return;
+        }
     }
     %orig(color);
 }
@@ -289,6 +354,12 @@ static void FBPApplyForcedAppearance(void) {
 - (void)layoutSubviews {
     %orig;
     if (!gOLEDEnabled || FBPOLEDSkip(self)) return;
+
+    // Dividers are lightened, not blackened, so posts/rows stay visually separated.
+    if (FBPViewLooksLikeDivider(self)) {
+        FBPLightenDivider(self);
+        return;
+    }
 
     UIColor *bg = self.backgroundColor;
     if (bg) {
