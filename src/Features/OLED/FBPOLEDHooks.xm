@@ -186,6 +186,74 @@ static void FBPLightenDivider(UIView *view) {
     }
 }
 
+#pragma mark - Profile avatars
+
+// A profile avatar stacks an unmasked square image — a low-res placeholder /
+// backing — behind the circular photo. On Facebook's grey cards its grey corners
+// blend in, but on the OLED-black background they poke past the circle as a
+// visible grey "box".
+//
+// Facebook builds avatars several different ways, but the box always comes from
+// a square image that isn't being clipped to the avatar circle. Two shapes cover
+// every case seen (feed headers, comments, video/AI posts):
+//
+//   A. A circular container (cornerRadius ~= half its square size) whose
+//      masksToBounds is OFF, so the square image/placeholder inside bleeds out to
+//      the corners. Turning masksToBounds on clips everything inside to the
+//      circle. The online-status dot lives OUTSIDE this container, so it stays.
+//   B. A container holding a *masked* MRCImageComponentView (the circular photo)
+//      next to a bare, unmasked square UIImageView (a placeholder behind it).
+//      Rounding that bare image to a circle removes its corners.
+//
+// Scoped to small, square-ish containers so rectangular post photos (which also
+// use MRCImageComponentView) and larger media are never touched.
+static void FBPFixAvatarBox(UIView *container) {
+    CGSize size = container.bounds.size;
+    if (size.width < 16.0 || size.width > 72.0) return;        // avatar-sized only
+    CGFloat boxDiff = size.width > size.height ? size.width - size.height
+                                               : size.height - size.width;
+    if (boxDiff > 6.0) return;                                  // square-ish only
+
+    UIView *maskedAvatar = nil;
+    UIImageView *bareImages[8];
+    NSUInteger bareCount = 0;
+    BOOL hasImageContent = NO;
+
+    for (UIView *sub in container.subviews) {
+        if ([NSStringFromClass([sub class]) containsString:@"MRCImageComponent"]) {
+            hasImageContent = YES;
+            if (sub.layer.masksToBounds) maskedAvatar = sub;
+            continue;
+        }
+        if (![sub isKindOfClass:UIImageView.class]) continue;
+        hasImageContent = YES;
+        if (sub.layer.cornerRadius > 0.5 || sub.layer.masksToBounds) continue;
+        CGFloat w = sub.bounds.size.width, h = sub.bounds.size.height;
+        CGFloat d = w > h ? w - h : h - w;
+        if (w < 16.0 || d > 6.0) continue;                      // square-ish image
+        if (bareCount < 8) bareImages[bareCount++] = (UIImageView *)sub;
+    }
+
+    // Case A: a circular container holding image content but not clipping it.
+    CGFloat cr = container.layer.cornerRadius;
+    CGFloat crDiff = cr > size.width / 2.0 ? cr - size.width / 2.0
+                                           : size.width / 2.0 - cr;
+    if (hasImageContent && crDiff < 3.0 && !container.layer.masksToBounds) {
+        container.layer.masksToBounds = YES;
+        container.clipsToBounds = YES;
+    }
+
+    // Case B: a masked avatar next to bare square placeholder image(s).
+    if (maskedAvatar) {
+        for (NSUInteger i = 0; i < bareCount; i++) {
+            UIImageView *img = bareImages[i];
+            img.layer.cornerRadius = img.bounds.size.width / 2.0;
+            img.layer.masksToBounds = YES;
+            img.clipsToBounds = YES;
+        }
+    }
+}
+
 /// Blackens the dark colours a view paints *directly onto its own layer's
 /// sublayers* — the gradient/shape/plain CALayers ComponentKit uses for rounded
 /// card backgrounds and Facebook uses for the header fade and status-bar strip.
@@ -359,6 +427,16 @@ static void FBPApplyForcedAppearance(void) {
     if (FBPViewLooksLikeDivider(self)) {
         FBPLightenDivider(self);
         return;
+    }
+
+    // Round the square placeholder stacked behind a circular profile avatar, so
+    // its grey corners don't show as a box against the OLED-black background.
+    // Trigger both when the avatar container lays out and, more reliably, when
+    // the masked image component itself mounts (then fix its siblings).
+    FBPFixAvatarBox(self);
+    if ([NSStringFromClass(self.class) containsString:@"MRCImageComponent"] &&
+        self.layer.masksToBounds) {
+        FBPFixAvatarBox(self.superview);
     }
 
     UIColor *bg = self.backgroundColor;
