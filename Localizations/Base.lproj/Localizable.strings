@@ -22,6 +22,8 @@
 "row.downloadstories.desc" = "Show the download button while viewing Stories.";
 
 "row.reelslike.title" = "Confirm Reels Likes";
+"row.hideoverlay.title" = "Hide Overlay Toggle";
+"row.hideoverlay.desc" = "Add an eye button to Reels that hides all the on-screen chrome — likes, comments, share, caption — leaving just the video.";
 "row.anonstories.title" = "Watch Stories Anonymously";
 "row.anonstories.desc" = "View stories without sending a read receipt.";
 "row.noautonext.title" = "Disable Auto-Advance";
@@ -71,6 +73,8 @@
 "download.reel.httpError" = "Facebook CDN returned HTTP %ld.";
 "download.reel.tmpFailed" = "Couldn’t create the temporary video file.";
 "download.reel.noLink" = "Couldn’t get this video’s link.";
+
+"reels.hideOverlay.a11y" = "Hide Reel overlay";
 
 /* Update screen */
 "update.title" = "Update Available";

@@ -63,6 +63,7 @@ extern NSString *const FBPKeyStoryDownloaderEnabled;
 
 // Reels
 extern NSString *const FBPKeyReelsLike;         // Confirm reels like
+extern NSString *const FBPKeyReelsHideOverlay;  // Show the "hide overlay" toggle on Reels
 
 // Stories
 extern NSString *const FBPKeyAnonymousStories;

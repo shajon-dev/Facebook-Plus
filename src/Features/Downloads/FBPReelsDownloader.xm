@@ -35,16 +35,137 @@ static void (*gOriginalPlayerViewDidDisappear)(
 static NSURL *gCurrentDownloadURL = nil;
 static NSString *gCurrentVideoID = nil;
 
+static void (*gOriginalHitTestLayoutSubviews)(
+    id, SEL
+) = NULL;
+
 static BOOL gPlayerHookInstalled = NO;
 static BOOL gSidebarHookInstalled = NO;
 static BOOL gLifecycleHooksInstalled = NO;
+static BOOL gHitTestHookInstalled = NO;
 
 static __weak id gMediaOwnerPlayerVC = nil;
 
 static const NSInteger kFBPDownloadButtonTag =
     0x46425044;
 
+static const NSInteger kFBPHideOverlayButtonTag =
+    0x46425048;
+
+// Vertical gap between the download button and the hide-overlay toggle stacked
+// above it.
+static const CGFloat kFBPButtonGap = 10.0;
+
 static NSHashTable<UIView *> *gSidebars = nil;
+
+#pragma mark - Hide-overlay state
+
+// Session-only "cinema mode": while YES, every Reel's chrome (gradients,
+// caption, author, and the whole like/comment/share/save/more sidebar) is
+// hidden, leaving only the video plus our own download + toggle buttons. The
+// user turns it on/off with the eye toggle; it persists across reel swipes
+// until they untoggle, and resets to shown on relaunch.
+static BOOL gOverlayHidden = NO;
+
+// The overlay container views we have hidden, held weakly so recycled
+// ComponentKit views don't keep us alive. Used to restore them on untoggle.
+static NSHashTable<UIView *> *gHiddenOverlays = nil;
+
+// Marks a view as hidden by us (not by Facebook) so the sidebar-visibility
+// check can tell "the reel left the screen" apart from "we stripped its chrome".
+static const void *kFBPHiddenByUsKey = &kFBPHiddenByUsKey;
+
+static BOOL FBPViewHiddenByUs(UIView *view) {
+    return [objc_getAssociatedObject(view, kFBPHiddenByUsKey) boolValue];
+}
+
+static void FBPSetViewHiddenByUs(UIView *view, BOOL hidden) {
+    objc_setAssociatedObject(
+        view,
+        kFBPHiddenByUsKey,
+        hidden ? @YES : nil,
+        OBJC_ASSOCIATION_RETAIN_NONATOMIC
+    );
+}
+
+// Walk up from a sidebar to the Shorts overlay container that holds every chrome
+// element. Matched by class-name substring because it is a Swift class whose
+// mangled ObjC name is not stable to hardcode. The video is rendered by an
+// ancestor OUTSIDE this view, so hiding it never touches the video.
+static UIView *FBPOverlayForSidebar(UIView *sidebar) {
+    UIView *view = sidebar;
+    while (view) {
+        if ([NSStringFromClass([view class])
+                containsString:@"ShortsViewerOverlay"]) {
+            return view;
+        }
+        view = view.superview;
+    }
+    return nil;
+}
+
+// Hide the overlay container of every Reel currently laid out in this window.
+// Re-run each frame so a reel swiped in while hide-mode is on is stripped too.
+static void FBPHideOverlaysForWindow(UIWindow *window) {
+    if (!window || !gSidebars)
+        return;
+
+    if (!gHiddenOverlays)
+        gHiddenOverlays = [NSHashTable weakObjectsHashTable];
+
+    for (UIView *sidebar in gSidebars.allObjects) {
+        if (sidebar.window != window)
+            continue;
+
+        UIView *overlay = FBPOverlayForSidebar(sidebar);
+        if (!overlay)
+            continue;
+
+        if (!overlay.hidden)
+            overlay.hidden = YES;
+
+        FBPSetViewHiddenByUs(overlay, YES);
+        [gHiddenOverlays addObject:overlay];
+    }
+}
+
+// Hide the Shorts overlay component(s) parented by a given container (the
+// hit-test view). Used from the synchronous layout hook so a reel swiped in is
+// stripped in the same layout pass Facebook re-shows it — no one-frame flash.
+static void FBPHideOverlayChildrenOf(UIView *container) {
+    if (!container)
+        return;
+
+    if (!gHiddenOverlays)
+        gHiddenOverlays = [NSHashTable weakObjectsHashTable];
+
+    for (UIView *sub in container.subviews) {
+        if (![NSStringFromClass([sub class])
+                containsString:@"ShortsViewerOverlay"])
+            continue;
+
+        if (!sub.hidden)
+            sub.hidden = YES;
+
+        FBPSetViewHiddenByUs(sub, YES);
+        [gHiddenOverlays addObject:sub];
+    }
+}
+
+// Restore every overlay we hid and forget them.
+static void FBPUnhideAllOverlays(void) {
+    if (!gHiddenOverlays)
+        return;
+
+    for (UIView *overlay in gHiddenOverlays.allObjects) {
+        if (!overlay)
+            continue;
+        FBPSetViewHiddenByUs(overlay, NO);
+        overlay.hidden = NO;
+    }
+
+    [gHiddenOverlays removeAllObjects];
+}
 
 #pragma mark - Runtime helpers
 
@@ -994,7 +1115,13 @@ static BOOL FBPCaptureActivePlaybackController(UIButton *sender) {
 - (void)downloadButtonPressed:
     (UIButton *)sender;
 
+- (void)hideOverlayButtonPressed:
+    (UIButton *)sender;
+
 @end
+
+// Forward declaration — defined with the window-button helpers below.
+static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
 
 @implementation FBPReelDownloadHandler
 
@@ -1068,6 +1195,24 @@ static BOOL FBPCaptureActivePlaybackController(UIButton *sender) {
     [[FBPReelDownloadManager shared]
         startDownloadWithURL:url
         videoID:videoID];
+}
+
+- (void)hideOverlayButtonPressed:
+    (UIButton *)sender {
+
+    sender.alpha = 1.0;
+
+    gOverlayHidden = !gOverlayHidden;
+
+    if (gOverlayHidden) {
+        // Strip the current reel immediately so the tap feels instant; the
+        // display-link tracker keeps newly-swiped reels stripped from here on.
+        FBPHideOverlaysForWindow(sender.window);
+    } else {
+        FBPUnhideAllOverlays();
+    }
+
+    FBPUpdateHideOverlayButtonIcon(sender);
 }
 
 @end
@@ -1339,6 +1484,109 @@ FBPGetOrCreateWindowButton(
     return button;
 }
 
+#pragma mark - Hide-overlay toggle button
+
+// The glyph reflects the action the tap performs: an open eye while chrome is
+// visible (tap to hide), a slashed eye while it is hidden (tap to reveal).
+static void FBPUpdateHideOverlayButtonIcon(UIButton *button) {
+    if (!button)
+        return;
+
+    NSString *symbol =
+        gOverlayHidden ? @"eye.slash.fill" : @"eye.fill";
+
+    UIImage *image =
+        [UIImage fbp_symbolNamed:symbol
+                            size:21.0
+                          weight:UIImageSymbolWeightSemibold];
+
+    [button setImage:image forState:UIControlStateNormal];
+}
+
+static UIButton *
+FBPGetOrCreateHideOverlayButton(
+    UIWindow *window
+) {
+    if (!window)
+        return nil;
+
+    UIButton *button =
+        (UIButton *)
+            [window
+                viewWithTag:
+                    kFBPHideOverlayButtonTag];
+
+    if (button) {
+        return button;
+    }
+
+    button =
+        [UIButton
+            buttonWithType:
+                UIButtonTypeCustom];
+
+    button.tag =
+        kFBPHideOverlayButtonTag;
+
+    button.userInteractionEnabled =
+        YES;
+
+    button.exclusiveTouch =
+        YES;
+
+    button.backgroundColor =
+        [UIColor clearColor];
+
+    // Set the image BEFORE touching -imageView so the image view is realized on
+    // the main thread with its content already in place. Otherwise an
+    // accessibility query of -accessibilityLabel (which internally calls
+    // -imageView) can lazily build the image view on a background thread and
+    // trip UIKit's main-queue assertion. This mirrors the download button.
+    FBPUpdateHideOverlayButtonIcon(button);
+
+    button.imageView.contentMode =
+        UIViewContentModeScaleAspectFit;
+
+    button.contentEdgeInsets =
+        UIEdgeInsetsMake(10, 10, 10, 10);
+
+    button.tintColor =
+        [UIColor whiteColor];
+
+    button.accessibilityLabel =
+        FBPL(@"reels.hideOverlay.a11y");
+
+    FBPReelDownloadHandler *handler =
+        [FBPReelDownloadHandler shared];
+
+    [button
+        addTarget:handler
+        action:
+            @selector(downloadTouchDown:)
+        forControlEvents:
+            UIControlEventTouchDown];
+
+    [button
+        addTarget:handler
+        action:
+            @selector(downloadTouchFinished:)
+        forControlEvents:
+            UIControlEventTouchCancel |
+            UIControlEventTouchDragExit |
+            UIControlEventTouchUpOutside];
+
+    [button
+        addTarget:handler
+        action:
+            @selector(hideOverlayButtonPressed:)
+        forControlEvents:
+            UIControlEventTouchUpInside];
+
+    [window addSubview:button];
+
+    return button;
+}
+
 #pragma mark - Display-link tracker
 
 @interface FBPReelButtonTracker : NSObject
@@ -1347,7 +1595,6 @@ FBPGetOrCreateWindowButton(
 @property(nonatomic, assign) CGRect lastCandidateFrame;
 @property(nonatomic, assign) BOOL hasLastCandidateFrame;
 @property(nonatomic, assign) NSInteger stableFrames;
-@property(nonatomic, assign) BOOL buttonShown;
 + (instancetype)shared;
 - (void)start;
 - (void)registerSidebar:(UIView *)sidebar;
@@ -1378,12 +1625,15 @@ FBPGetOrCreateWindowButton(
     [self start];
 }
 
+// Per-button show/hide. Dedupe is read off the button's own state rather than a
+// shared flag, so the download button and the hide-overlay toggle can be driven
+// independently.
 - (void)setButton:(UIButton *)button visible:(BOOL)visible {
     if (!button) return;
 
     if (visible) {
-        if (self.buttonShown && !button.hidden && button.alpha > 0.99) return;
-        self.buttonShown = YES;
+        if (!button.hidden && button.alpha > 0.99 &&
+            button.userInteractionEnabled) return;
         button.hidden = NO;
         button.userInteractionEnabled = YES;
         [UIView animateWithDuration:0.10
@@ -1394,8 +1644,7 @@ FBPGetOrCreateWindowButton(
                          animations:^{ button.alpha = 1.0; }
                          completion:nil];
     } else {
-        if (!self.buttonShown && (button.hidden || button.alpha < 0.01)) return;
-        self.buttonShown = NO;
+        if (button.hidden || button.alpha < 0.01) return;
         button.userInteractionEnabled = NO;
         [UIView animateWithDuration:0.05
                               delay:0.0
@@ -1403,9 +1652,15 @@ FBPGetOrCreateWindowButton(
                                     UIViewAnimationOptionCurveEaseOut
                          animations:^{ button.alpha = 0.0; }
                          completion:^(BOOL finished) {
-            if (finished && !self.buttonShown) button.hidden = YES;
+            if (finished && button.alpha < 0.01) button.hidden = YES;
         }];
     }
+}
+
+// Hide both overlay buttons at once (used on every "not on a reel" path).
+- (void)hideButton:(UIButton *)download andToggle:(UIButton *)toggle {
+    if (download) [self setButton:download visible:NO];
+    if (toggle)   [self setButton:toggle   visible:NO];
 }
 
 /*
@@ -1445,7 +1700,17 @@ FBPGetOrCreateWindowButton(
 
     UIView *view = sidebar;
     while (view && view != window) {
-        if (view.hidden || view.alpha < 0.05) return NO;
+        if (view.hidden || view.alpha < 0.05) {
+            // In hide-overlay mode we deliberately hide the Shorts overlay
+            // container (an ancestor of the sidebar). That must NOT read as the
+            // reel having left the screen — the reel is still there, just
+            // stripped — otherwise our own buttons would vanish with it.
+            if (FBPViewHiddenByUs(view)) {
+                view = view.superview;
+                continue;
+            }
+            return NO;
+        }
         view = view.superview;
     }
     if (view != window) return NO;
@@ -1497,17 +1762,40 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
     }
     if (!window) return;
 
-    // Production gate: OFF means no overlay at all. Also suppress the floating
-    // Reels button while Facebook Plus settings is presented over the still-live
-    // Reels hierarchy (long-press tab case).
-    if (![FBPPrefs.shared boolForKey:FBPKeyReelsDownloaderEnabled] ||
+    BOOL downloaderEnabled =
+        [FBPPrefs.shared boolForKey:FBPKeyReelsDownloaderEnabled];
+    BOOL hideEnabled =
+        [FBPPrefs.shared boolForKey:FBPKeyReelsHideOverlay];
+
+    UIButton *downloadButton =
+        (UIButton *)[window viewWithTag:kFBPDownloadButtonTag];
+    UIButton *toggleButton =
+        (UIButton *)[window viewWithTag:kFBPHideOverlayButtonTag];
+
+    // Toggle feature switched off in settings while chrome was hidden: restore
+    // everything so the user is never stuck looking at a stripped reel.
+    if (!hideEnabled && gOverlayHidden) {
+        FBPUnhideAllOverlays();
+        gOverlayHidden = NO;
+        if (toggleButton) FBPUpdateHideOverlayButtonIcon(toggleButton);
+    }
+
+    // Production gate: both features OFF means no overlay at all. Also suppress
+    // our floating buttons while Facebook Plus settings is presented over the
+    // still-live Reels hierarchy (long-press tab case).
+    if ((!downloaderEnabled && !hideEnabled) ||
         FBPPlusSettingsIsPresented(window)) {
-        UIButton *existingButton = (UIButton *)[window viewWithTag:kFBPDownloadButtonTag];
-        if (existingButton) [self setButton:existingButton visible:NO];
+        [self hideButton:downloadButton andToggle:toggleButton];
         self.lastSidebar = nil;
         self.hasLastCandidateFrame = NO;
         self.stableFrames = 0;
         return;
+    }
+
+    // Keep every reel currently laid out stripped while hide-mode is on, so a
+    // reel swiped in after the toggle was pressed comes up without chrome too.
+    if (gOverlayHidden && hideEnabled) {
+        FBPHideOverlaysForWindow(window);
     }
 
     CGFloat viewportMidY = CGRectGetMidY(window.bounds);
@@ -1542,33 +1830,38 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
     }
 
     if (!bestSidebar) {
-        UIButton *existingButton =
-            (UIButton *)[window viewWithTag:kFBPDownloadButtonTag];
-
-        if (existingButton) {
-            [self setButton:existingButton visible:NO];
-        }
-
+        [self hideButton:downloadButton andToggle:toggleButton];
         self.lastSidebar = nil;
         self.hasLastCandidateFrame = NO;
         self.stableFrames = 0;
         return;
     }
 
-    UIButton *button = FBPGetOrCreateWindowButton(window);
-    if (!button) return;
+    // Create only the buttons whose feature is enabled; take down any button
+    // whose feature was turned off in settings.
+    UIButton *download =
+        downloaderEnabled ? FBPGetOrCreateWindowButton(window) : nil;
+    UIButton *toggle =
+        hideEnabled ? FBPGetOrCreateHideOverlayButton(window) : nil;
+
+    if (!downloaderEnabled && downloadButton)
+        [self setButton:downloadButton visible:NO];
+    if (!hideEnabled && toggleButton)
+        [self setButton:toggleButton visible:NO];
+
+    if (!download && !toggle) return;
 
     /*
-     * Stop the button from chasing the Reel while it moves.
+     * Stop the buttons from chasing the Reel while it moves.
      *
      * - A finger dragging the UIScrollView => hide immediately, do NOT move the
-     *   button's frame.
+     *   buttons' frames.
      * - After the finger lifts, Facebook still decelerates / snaps => the
      *   candidate keeps changing, so keep hiding.
-     * - Candidate held still for 5 frames => the snap is done: set the frame
+     * - Candidate held still for 5 frames => the snap is done: set the frames
      *   ONCE and then show.
      *
-     * This way the button never appears at an intermediate position mid-swipe.
+     * This way the buttons never appear at an intermediate position mid-swipe.
      */
     BOOL dragging = [self userIsDraggingSidebar:bestSidebar];
 
@@ -1577,7 +1870,7 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
         self.lastSidebar = bestSidebar;
         self.lastCandidateFrame = bestButtonFrame;
         self.hasLastCandidateFrame = YES;
-        [self setButton:button visible:NO];
+        [self hideButton:download andToggle:toggle];
         return;
     }
 
@@ -1586,7 +1879,7 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
         self.lastCandidateFrame = bestButtonFrame;
         self.hasLastCandidateFrame = YES;
         self.stableFrames = 0;
-        [self setButton:button visible:NO];
+        [self hideButton:download andToggle:toggle];
         return;
     }
 
@@ -1598,7 +1891,7 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
     /* Deceleration / snap is still running. */
     if (dx > 0.35 || dy > 0.35) {
         self.stableFrames = 0;
-        [self setButton:button visible:NO];
+        [self hideButton:download andToggle:toggle];
         return;
     }
 
@@ -1606,20 +1899,58 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
 
     /*
      * Wait for 5 genuinely still frames before showing. Do not animate the
-     * position. The frame is only updated at the moment the button is still
-     * hidden.
+     * position. The frames are only updated at the moment the buttons are still
+     * hidden. The toggle sits one slot directly above the download button.
      */
     if (self.stableFrames >= 5) {
-        CGRect finalFrame = CGRectIntegral(bestButtonFrame);
-        button.frame = finalFrame;
-        [window bringSubviewToFront:button];
+        CGRect base = CGRectIntegral(bestButtonFrame);
 
-        [self setButton:button visible:YES];
+        if (download) {
+            download.frame = base;
+            [window bringSubviewToFront:download];
+            [self setButton:download visible:YES];
+        }
 
+        if (toggle) {
+            CGRect toggleFrame = base;
+            toggleFrame.origin.y -= (base.size.height + kFBPButtonGap);
+            toggle.frame = CGRectIntegral(toggleFrame);
+            [window bringSubviewToFront:toggle];
+            [self setButton:toggle visible:YES];
+        }
     }
 }
 
 @end
+
+#pragma mark - Anti-flash layout hook
+
+// FBShortsCustomHitTestView is the container that parents the overlay component.
+// It re-lays-out whenever a (recycled) cell is reconfigured for a newly-swiped
+// reel — the same runloop pass in which Facebook re-shows the overlay. Re-hiding
+// it here, synchronously, means the frame never renders with chrome, so there is
+// no brief flash before the display-link tracker catches it next frame.
+static void
+FBPHitTestLayoutSubviews(
+    id self,
+    SEL _cmd
+) {
+    if (gOriginalHitTestLayoutSubviews) {
+        gOriginalHitTestLayoutSubviews(self, _cmd);
+    }
+
+    if (!gOverlayHidden)
+        return;
+
+    if (![self isKindOfClass:[UIView class]])
+        return;
+
+    UIView *hitTest = (UIView *)self;
+    if (!hitTest.window)
+        return;
+
+    FBPHideOverlayChildrenOf(hitTest);
+}
 
 #pragma mark - Sidebar hook
 
@@ -1646,6 +1977,19 @@ FBPSidebarDidMoveToWindow(
 
     if (!sidebar.window)
         return;
+
+    // If hide-mode is already on when a fresh reel's sidebar moves on screen,
+    // strip it right away rather than waiting for the next display-link tick.
+    if (gOverlayHidden) {
+        UIView *overlay = FBPOverlayForSidebar(sidebar);
+        if (overlay && !overlay.hidden) {
+            overlay.hidden = YES;
+            FBPSetViewHiddenByUs(overlay, YES);
+            if (!gHiddenOverlays)
+                gHiddenOverlays = [NSHashTable weakObjectsHashTable];
+            [gHiddenOverlays addObject:overlay];
+        }
+    }
 
     dispatch_async(
         dispatch_get_main_queue(), ^{
@@ -1766,6 +2110,11 @@ FBPPlayerViewDidDisappear(
     dispatch_async(
         dispatch_get_main_queue(), ^{
 
+        // Leaving the player: restore any chrome we stripped so recycled Shorts
+        // views never leak a hidden state elsewhere. gOverlayHidden is kept, so
+        // returning to Reels re-strips automatically.
+        FBPUnhideAllOverlays();
+
         for (UIScene *scene in
              [UIApplication sharedApplication].connectedScenes) {
 
@@ -1776,15 +2125,18 @@ FBPPlayerViewDidDisappear(
             for (UIWindow *window in
                  ((UIWindowScene *)scene).windows) {
 
-                UIButton *button =
-                    (UIButton *)
-                    [window
-                        viewWithTag:
-                            kFBPDownloadButtonTag];
+                NSInteger tags[] = { kFBPDownloadButtonTag,
+                                     kFBPHideOverlayButtonTag };
 
-                if (button) {
-                    button.hidden = YES;
-                    button.alpha = 0.0;
+                for (size_t i = 0; i < sizeof(tags) / sizeof(tags[0]); i++) {
+
+                    UIButton *button =
+                        (UIButton *)[window viewWithTag:tags[i]];
+
+                    if (button) {
+                        button.hidden = YES;
+                        button.alpha = 0.0;
+                    }
                 }
             }
         }
@@ -1977,8 +2329,72 @@ FBPInstallSidebarHook(void) {
 
 }
 
+static void
+FBPInstallHitTestHook(void) {
+
+    if (gHitTestHookInstalled)
+        return;
+
+    Class cls =
+        NSClassFromString(
+            @"FBShortsCustomHitTestView"
+        );
+
+    if (!cls)
+        return;
+
+    SEL sel =
+        @selector(layoutSubviews);
+
+    // Only hook if this class defines -layoutSubviews itself. If it merely
+    // inherited UIView's, hooking here would swizzle UIView globally.
+    Class superCls =
+        class_getSuperclass(cls);
+
+    if (superCls &&
+        class_getMethodImplementation(cls, sel) ==
+            class_getMethodImplementation(superCls, sel))
+        return;
+
+    Method method =
+        class_getInstanceMethod(
+            cls,
+            sel
+        );
+
+    if (!method ||
+        method_getNumberOfArguments(method) != 2)
+        return;
+
+    char *returnType =
+        method_copyReturnType(method);
+
+    BOOL valid =
+        returnType &&
+        returnType[0] == 'v';
+
+    if (returnType)
+        free(returnType);
+
+    if (!valid)
+        return;
+
+    MSHookMessageEx(
+        cls,
+        sel,
+        (IMP)FBPHitTestLayoutSubviews,
+        (IMP *)
+            &gOriginalHitTestLayoutSubviews
+    );
+
+    gHitTestHookInstalled =
+        YES;
+
+}
+
 void FBPInitReelsDownloader(void) {
     FBPInstallPlayerHook();
     FBPInstallSidebarHook();
     FBPInstallLifecycleHooks();
+    FBPInstallHitTestHook();
 }

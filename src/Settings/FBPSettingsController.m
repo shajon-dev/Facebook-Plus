@@ -354,6 +354,9 @@ compatibleWithTraitCollection:nil]
         @{ @"header" : @"Reels", @"rows" : @[
             [self switchRow:FBPKeyReelsLike title:FBPL(@"row.reelslike.title") desc:nil
                        icon:@"alert" color:UIColor.systemGreenColor],
+            [self switchRow:FBPKeyReelsHideOverlay title:FBPL(@"row.hideoverlay.title")
+                       desc:FBPL(@"row.hideoverlay.desc")
+                       icon:@"eye" color:UIColor.systemIndigoColor],
         ]},
         @{ @"header" : @"Stories", @"rows" : @[
             [self switchRow:FBPKeyAnonymousStories title:FBPL(@"row.anonstories.title")
