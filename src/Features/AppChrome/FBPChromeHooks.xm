@@ -149,6 +149,52 @@ static void FBPInterceptSettingsButton(UIView *root) {
     if (button) FBPAttachSettingsGesture(button);
 }
 
+#pragma mark - Top "facebook" wordmark
+
+/// The blue "facebook" wordmark in the top navigation bar. It renders as a
+/// UIImageView carrying the "…view selector" accessibility label (its normal tap
+/// opens Facebook's feed/view selector). We find it by that label rather than a
+/// class name, so an app update degrades this one entry point instead of crashing.
+static UIImageView *FBPFindNavLogo(UIView *root) {
+    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
+    NSInteger visited = 0;
+    while (queue.count && visited < 300) {
+        UIView *candidate = queue.firstObject;
+        [queue removeObjectAtIndex:0];
+        visited += 1;
+        if ([candidate isKindOfClass:UIImageView.class]) {
+            NSString *label = candidate.accessibilityLabel.lowercaseString;
+            if ([label containsString:@"view selector"]) {
+                return (UIImageView *)candidate;
+            }
+        }
+        [queue addObjectsFromArray:candidate.subviews];
+    }
+    return nil;
+}
+
+/// Long press on the "facebook" wordmark opens Facebook Plus settings. The
+/// wordmark's normal tap (the view selector) is left untouched: the long-press
+/// recognizer does not cancel touches, so a quick tap still reaches Facebook.
+%group FBPNavLogo
+
+%hook FBNavigationBar
+
+- (void)layoutSubviews {
+    %orig;
+    // FBNavigationBar is not declared as a UIView subclass in our headers, so
+    // cast to reach the view-tree helpers.
+    UIImageView *logo = FBPFindNavLogo((UIView *)self);
+    if (logo) {
+        logo.userInteractionEnabled = YES;
+        FBPAttachSettingsGesture(logo);
+    }
+}
+
+%end
+
+%end // FBPNavLogo
+
 #pragma mark - Launch bootstrap
 
 %group FBPAppDelegate
@@ -223,5 +269,11 @@ void FBPInitChromeHooks(void) {
     if (objc_getClass("FBBaseAppDelegate")) {
         FBP_ONCE(gAppDelegate) { %init(FBPAppDelegate); }
         [FBPDiagnostics.shared recordGroup:@"FBPAppDelegate" installed:YES detail:nil];
+    }
+
+    // Long-press the top "facebook" wordmark to open Facebook Plus settings.
+    if (objc_getClass("FBNavigationBar")) {
+        FBP_ONCE(gNavLogo) { %init(FBPNavLogo); }
+        [FBPDiagnostics.shared recordGroup:@"FBPNavLogo" installed:YES detail:nil];
     }
 }
