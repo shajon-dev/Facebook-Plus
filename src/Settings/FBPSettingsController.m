@@ -12,7 +12,6 @@
 #import "FBPResources.h"
 #import "FBPSheet.h"
 #import "FBPToast.h"
-#import "FBPDiagnosticsController.h"
 #import "FBPAppIconController.h"
 #import "FBPLanguageController.h"
 #import "FBPWelcomeController.h"
@@ -34,7 +33,6 @@ static NSString *const kTypeSwitch = @"bool";
 static NSString *const kTypeAction = @"action";
 
 static NSString *const kActionClearCache  = @"clearCache";
-static NSString *const kActionDiagnostics = @"diagnostics";
 static NSString *const kActionAppIcon     = @"appIcon";
 static NSString *const kActionWelcome     = @"welcome";
 static NSString *const kActionReset       = @"reset";
@@ -391,9 +389,6 @@ compatibleWithTraitCollection:nil]
             @{ kRowKey : kActionClearCache, kRowType : kTypeAction,
                kRowTitle : FBPL(@"row.clearcache.title"),
                kRowIcon : @"trash.fill", kRowColor : UIColor.systemRedColor },
-            @{ kRowKey : kActionDiagnostics, kRowType : kTypeAction, kRowNav : @YES,
-               kRowTitle : FBPL(@"row.diagnostics.title"), kRowDesc : FBPL(@"row.diagnostics.desc"),
-               kRowIcon : @"waveform.path.ecg", kRowColor : UIColor.systemGreenColor },
             @{ kRowKey : kActionCheckUpdate, kRowType : kTypeAction,
                kRowTitle : FBPL(@"row.checkupdate.title"), kRowDesc : FBPL(@"row.checkupdate.desc"),
                kRowIcon : @"arrow.down.circle", kRowColor : UIColor.systemBlueColor },
@@ -563,8 +558,6 @@ compatibleWithTraitCollection:nil]
 
     if ([key isEqualToString:kActionClearCache]) {
         [self clearCache];
-    } else if ([key isEqualToString:kActionDiagnostics]) {
-        [self presentInNavigation:[[FBPDiagnosticsController alloc] init]];
     } else if ([key isEqualToString:kActionAppIcon]) {
         [self presentInNavigation:[[FBPAppIconController alloc] init]];
     } else if ([key isEqualToString:kActionWelcome]) {

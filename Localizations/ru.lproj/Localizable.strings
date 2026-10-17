@@ -32,8 +32,6 @@
 "row.appicon.desc" = "Выбрать другой значок приложения.";
 "row.autoclear.title" = "Очищать кэш при запуске";
 "row.clearcache.title" = "Очистить кэш сейчас";
-"row.diagnostics.title" = "Диагностика";
-"row.diagnostics.desc" = "Посмотреть, какие функции активны.";
 "row.checkupdate.title" = "Проверить обновление";
 "row.checkupdate.desc" = "Проверьте, доступна ли более новая версия.";
 "row.welcome.title" = "Показать экран приветствия";

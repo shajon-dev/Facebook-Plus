@@ -32,8 +32,6 @@
 "row.appicon.desc" = "Alternatif bir uygulama simgesi seç.";
 "row.autoclear.title" = "Açılışta Önbelleği Temizle";
 "row.clearcache.title" = "Önbelleği Şimdi Temizle";
-"row.diagnostics.title" = "Tanılama";
-"row.diagnostics.desc" = "Hangi özelliklerin etkin olduğunu gör.";
 "row.checkupdate.title" = "Güncelleme denetle";
 "row.checkupdate.desc" = "Daha yeni bir sürüm olup olmadığını kontrol et.";
 "row.welcome.title" = "Karşılama Ekranını Göster";

@@ -175,17 +175,15 @@ This writes a per-machine `.clangd` (with your theos path and SDK baked in) and 
 │   └── svg             # Source vector graphics
 ├── scripts             # Python utility scripts (e.g., icon merging, svg rendering)
 ├── src                 # Tweak source code
-│   ├── Core            # Constructor, preferences, resources, and diagnostics
+│   ├── Core            # Constructor, preferences, and resources
 │   ├── Features        # All the hooks for modifying the Facebook app:
 │   │   ├── AppChrome   # UI settings gesture (TabBar & Settings Button)
 │   │   ├── AppIcons    # Custom app-icon picker logic
-│   │   ├── Diagnostics # Diagnostics and logging controllers
 │   │   ├── Downloads   # Reel & Story media downloaders (save to Photos)
 │   │   ├── Feed        # Feed-related hooks (ads, suggestions, Reels)
 │   │   ├── Language    # UI language override hooks
 │   │   ├── LikeConfirmation # Confirm before liking logic
 │   │   ├── Links       # Open external links in the default browser (not the IAB)
-│   │   ├── Menu        # Diagnostics for blocking server-driven menu sections
 │   │   ├── OLED        # True dark mode implementation
 │   │   ├── Onboarding  # Welcome screen controller
 │   │   ├── Stories     # Story-related hooks (Ghost mode, auto-advance block)

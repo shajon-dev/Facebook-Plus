@@ -32,8 +32,6 @@
 "row.appicon.desc" = "Pilih ikon aplikasi alternatif.";
 "row.autoclear.title" = "Bersihkan Cache saat Dibuka";
 "row.clearcache.title" = "Bersihkan Cache Sekarang";
-"row.diagnostics.title" = "Diagnostik";
-"row.diagnostics.desc" = "Lihat fitur mana yang aktif.";
 "row.checkupdate.title" = "Periksa Pembaruan";
 "row.checkupdate.desc" = "Lihat apakah ada versi yang lebih baru.";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";

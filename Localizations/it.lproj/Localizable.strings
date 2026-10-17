@@ -32,8 +32,6 @@
 "row.appicon.desc" = "Scegli un’icona alternativa per l’app.";
 "row.autoclear.title" = "Svuota la cache all’avvio";
 "row.clearcache.title" = "Svuota la cache ora";
-"row.diagnostics.title" = "Diagnostica";
-"row.diagnostics.desc" = "Vedi quali funzioni sono attive.";
 "row.checkupdate.title" = "Controlla aggiornamenti";
 "row.checkupdate.desc" = "Verifica se è disponibile una versione più recente.";
 "row.welcome.title" = "Mostra la schermata di benvenuto";

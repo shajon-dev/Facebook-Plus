@@ -32,8 +32,6 @@
 "row.appicon.desc" = "Ein alternatives App-Symbol wählen.";
 "row.autoclear.title" = "Cache beim Start leeren";
 "row.clearcache.title" = "Cache jetzt leeren";
-"row.diagnostics.title" = "Diagnose";
-"row.diagnostics.desc" = "Sehen, welche Funktionen aktiv sind.";
 "row.checkupdate.title" = "Nach Update suchen";
 "row.checkupdate.desc" = "Prüfen, ob eine neuere Version verfügbar ist.";
 "row.welcome.title" = "Willkommensbildschirm anzeigen";

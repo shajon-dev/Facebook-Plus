@@ -32,8 +32,6 @@
 "row.appicon.desc" = "다른 앱 아이콘을 선택합니다.";
 "row.autoclear.title" = "실행 시 캐시 지우기";
 "row.clearcache.title" = "지금 캐시 지우기";
-"row.diagnostics.title" = "진단";
-"row.diagnostics.desc" = "어떤 기능이 활성화됐는지 확인합니다.";
 "row.checkupdate.title" = "업데이트 확인";
 "row.checkupdate.desc" = "최신 버전이 있는지 확인합니다.";
 "row.welcome.title" = "시작 화면 표시";

@@ -32,8 +32,6 @@
 "row.appicon.desc" = "বিকল্প একটি অ্যাপ আইকন বেছে নিন।";
 "row.autoclear.title" = "চালু হলে ক্যাশ পরিষ্কার করুন";
 "row.clearcache.title" = "এখনই ক্যাশ পরিষ্কার করুন";
-"row.diagnostics.title" = "ডায়াগনস্টিকস";
-"row.diagnostics.desc" = "কোন ফিচারগুলো সক্রিয় দেখুন।";
 "row.checkupdate.title" = "আপডেট চেক করুন";
 "row.checkupdate.desc" = "নতুন সংস্করণ আছে কিনা দেখুন।";
 "row.welcome.title" = "স্বাগত স্ক্রিন দেখান";

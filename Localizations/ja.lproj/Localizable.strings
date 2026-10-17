@@ -32,8 +32,6 @@
 "row.appicon.desc" = "別のアプリアイコンを選びます。";
 "row.autoclear.title" = "起動時にキャッシュを消去";
 "row.clearcache.title" = "今すぐキャッシュを消去";
-"row.diagnostics.title" = "診断";
-"row.diagnostics.desc" = "どの機能が有効か確認します。";
 "row.checkupdate.title" = "アップデートを確認";
 "row.checkupdate.desc" = "新しいバージョンがあるか確認します。";
 "row.welcome.title" = "ようこそ画面を表示";

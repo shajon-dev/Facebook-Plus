@@ -32,8 +32,6 @@
 "row.appicon.desc" = "اختيار أيقونة تطبيق بديلة.";
 "row.autoclear.title" = "مسح ذاكرة التخزين عند التشغيل";
 "row.clearcache.title" = "مسح ذاكرة التخزين الآن";
-"row.diagnostics.title" = "التشخيص";
-"row.diagnostics.desc" = "معرفة الميزات المُفعّلة.";
 "row.checkupdate.title" = "التحقق من وجود تحديث";
 "row.checkupdate.desc" = "تحقّق مما إذا كان هناك إصدار أحدث.";
 "row.welcome.title" = "عرض شاشة الترحيب";

@@ -19,7 +19,6 @@ FacebookPlus_FILES = \
 	src/Core/FBPlus.m \
 	src/Core/FBPPrefs.m \
 	src/Core/FBPResources.m \
-	src/Core/FBPDiagnostics.m \
 	src/Core/FBPEntry.xm \
 	src/UI/Toast/FBPToastWindow.m \
 	src/UI/Toast/FBPToastView.m \
@@ -29,7 +28,6 @@ FacebookPlus_FILES = \
 	src/UI/Sheet/FBPDetentPresentationController.m \
 	src/Settings/FBPSettingsController.m \
 	src/Features/Onboarding/FBPWelcomeController.m \
-	src/Features/Diagnostics/FBPDiagnosticsController.m \
 	src/Features/AppIcons/FBPAppIconController.m \
 	src/Features/Language/FBPLanguageController.m \
 	src/Features/Feed/FBPFeedHooks.xm \
@@ -37,7 +35,6 @@ FacebookPlus_FILES = \
 	src/Features/LikeConfirmation/FBPConfirmHooks.xm \
 	src/Features/AppChrome/FBPChromeHooks.xm \
 	src/Features/OLED/FBPOLEDHooks.xm \
-	src/Features/Menu/FBPMenuHooks.xm \
 	src/Features/Downloads/FBPReelsDownloader.xm \
 	src/Features/Downloads/FBPStoryDownloader.xm \
 	src/Features/Links/FBPLinkHooks.xm \
@@ -56,7 +53,7 @@ FBP_VERSION := $(shell awk -F': ' '/^Version:/{print $$2; exit}' control)
 FacebookPlus_CFLAGS  = -fobjc-arc -Wno-deprecated-declarations \
 	-DFBP_VERSION='@"$(FBP_VERSION)"' \
 	-Isrc/Core -Isrc/UI/Toast -Isrc/UI/Sheet -Isrc/Settings \
-	-Isrc/Features/Onboarding -Isrc/Features/Diagnostics \
+	-Isrc/Features/Onboarding \
 	-Isrc/Features/AppIcons -Isrc/Features/Language \
 	-Isrc/Features/Update -Isrc/PluginsInject
 FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics AVFoundation CoreMedia Security
@@ -111,7 +108,6 @@ compile-commands:
 		echo "    - -Isrc/UI/Sheet"; \
 		echo "    - -Isrc/Settings"; \
 		echo "    - -Isrc/Features/Onboarding"; \
-		echo "    - -Isrc/Features/Diagnostics"; \
 		echo "    - -Isrc/Features/AppIcons"; \
 		echo "    - -Isrc/Features/Language"; \
 		echo "    - -Isrc/Features/Update"; \

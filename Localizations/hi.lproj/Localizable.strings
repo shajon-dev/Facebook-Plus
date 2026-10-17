@@ -32,8 +32,6 @@
 "row.appicon.desc" = "कोई वैकल्पिक ऐप आइकन चुनें।";
 "row.autoclear.title" = "शुरू होने पर कैश साफ़ करें";
 "row.clearcache.title" = "अभी कैश साफ़ करें";
-"row.diagnostics.title" = "डायग्नोस्टिक्स";
-"row.diagnostics.desc" = "देखें कौन-सी सुविधाएँ सक्रिय हैं।";
 "row.checkupdate.title" = "अपडेट जाँचें";
 "row.checkupdate.desc" = "देखें कि कोई नया संस्करण उपलब्ध है या नहीं।";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";

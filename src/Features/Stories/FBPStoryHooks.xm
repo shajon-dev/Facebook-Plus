@@ -2,7 +2,6 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
-#import "FBPDiagnostics.h"
 #import "FBPHeaders.h"
 #import "FBPResources.h"
 #import "FBPToast.h"
@@ -251,13 +250,6 @@ static FBPFDSControl (*FBPControlFromBridge(void))(id) {
 static BOOL FBPCanBuildStoryRow(void) {
     BOOL haveClass = objc_getClass("FDSControl_SwiftBridge") != nil;
     BOOL haveConverter = FBPControlFromBridge() != NULL;
-    static BOOL reported = NO;
-    if (!reported && !(haveClass && haveConverter)) {
-        reported = YES;
-        [FBPDiagnostics.shared recordEvent:
-            @"story: cannot build row (bridge class %@, converter %@)",
-            haveClass ? @"yes" : @"NO", haveConverter ? @"yes" : @"NO"];
-    }
     return haveClass && haveConverter;
 }
 
@@ -312,7 +304,6 @@ static BOOL gStoryRowInstalled = NO;
     if (!bridge) return %orig;
 
     gStoryRowInstalled = YES;
-    [FBPDiagnostics.shared recordEvent:@"story: menu row built"];
     return FBPControlFromBridge()(bridge);
 }
 
@@ -368,7 +359,6 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
     button.layer.shadowRadius = 3.0;
     [host addSubview:button];
     [host bringSubviewToFront:button];
-    [FBPDiagnostics.shared recordEvent:@"story: fallback button installed"];
 
     // A second row rather than a fourth slot in the first.
     //
@@ -406,7 +396,6 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
 - (void)viewDidLayoutSubviews {
     %orig;
     FBPInstallStoryFallbackButton(self);
-    [FBPDiagnostics.shared dumpViewTreeOnce:self.view label:@"story viewer"];
 }
 
 %end
@@ -420,10 +409,8 @@ void FBPInitStoryHooks(void) {
     if (seenManager) {
         if ([seenManager instancesRespondToSelector:FBPMarkSeenModernSelector()]) {
             FBP_ONCE(gSeenModern) { %init(FBPStorySeenModern); }
-        [FBPDiagnostics.shared recordGroup:@"FBPStorySeenModern" installed:YES detail:nil];
         } else if ([seenManager instancesRespondToSelector:FBPMarkSeenLegacySelector()]) {
             FBP_ONCE(gSeenLegacy) { %init(FBPStorySeenLegacy); }
-        [FBPDiagnostics.shared recordGroup:@"FBPStorySeenLegacy" installed:YES detail:nil];
         } else {
             FBPLog(@"no known _markThreadAsSeen: variant — incognito disabled");
         }
@@ -431,19 +418,16 @@ void FBPInitStoryHooks(void) {
 
     if (objc_getClass("FBSnacksThreadSwitcherViewController")) {
         FBP_ONCE(gAdvance) { %init(FBPStoryAdvance); }
-        [FBPDiagnostics.shared recordGroup:@"FBPStoryAdvance" installed:YES detail:nil];
     }
     if (objc_getClass("FBSnacksTrayTileMenuConfiguration") &&
         objc_getClass("FBSnacksSettingsBottomSheetActionHandlerV2") &&
         objc_getClass("FBSnacksBucketViewController")) {
         FBP_ONCE(gStoryMenu) { %init(FBPStoryMenu); }
-        [FBPDiagnostics.shared recordGroup:@"FBPStoryMenu" installed:YES detail:nil];
     } else {
         FBPLog(@"story bottom-sheet classes not found — story menu disabled");
     }
 
     if (objc_getClass("FBSnacksBucketViewController")) {
         FBP_ONCE(gStoryFallback) { %init(FBPStoryFallback); }
-        [FBPDiagnostics.shared recordGroup:@"FBPStoryFallback" installed:YES detail:nil];
     }
 }

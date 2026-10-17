@@ -8,7 +8,6 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
-#import "FBPDiagnostics.h"
 #import "FBPHeaders.h"
 #import "FBPResources.h"
 #import "FBPSheet.h"
@@ -177,7 +176,6 @@ static BOOL gConfirmedPassthrough = NO;
 void FBPInitConfirmHooks(void) {
     if (objc_getClass("CKComponentActionControlForwarder")) {
         FBP_ONCE(gConfirm) { %init(FBPConfirm); }
-        [FBPDiagnostics.shared recordGroup:@"FBPConfirm" installed:YES detail:nil];
     } else {
         FBPLog(@"CKComponentActionControlForwarder not found — confirmations disabled");
     }

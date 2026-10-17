@@ -32,8 +32,6 @@
 "row.appicon.desc" = "选择其他应用图标。";
 "row.autoclear.title" = "启动时清理缓存";
 "row.clearcache.title" = "立即清理缓存";
-"row.diagnostics.title" = "诊断";
-"row.diagnostics.desc" = "查看哪些功能已启用。";
 "row.checkupdate.title" = "检查更新";
 "row.checkupdate.desc" = "查看是否有更新的版本。";
 "row.welcome.title" = "显示欢迎界面";

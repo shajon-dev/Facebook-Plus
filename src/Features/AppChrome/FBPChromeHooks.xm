@@ -2,7 +2,6 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
-#import "FBPDiagnostics.h"
 #import "FBPHeaders.h"
 #import "FBPResources.h"
 #import "FBPSettingsController.h"
@@ -249,31 +248,26 @@ void FBPInitChromeHooks(void) {
     if (objc_getClass("FBTabBarContainerView") ||
         objc_getClass("FBTabBarItemDefaultView")) {
         FBP_ONCE(gTabBar) { %init(FBPTabBar); }
-        [FBPDiagnostics.shared recordGroup:@"FBPTabBar" installed:YES detail:nil];
     }
 
     // iOS 26+ liquid-glass tab bars (present alongside or instead of the classic
     // ones depending on the OS version).
     if (objc_getClass("FBFloatingTabBar") || objc_getClass("FBNativeTabBar")) {
         FBP_ONCE(gLiquidTabBar) { %init(FBPLiquidTabBar); }
-        [FBPDiagnostics.shared recordGroup:@"FBPLiquidTabBar" installed:YES detail:nil];
     }
 
 
     // The offset selector lives on the container controller, not FBTabBar.
     if (objc_getClass("FBTabBarAndContentViewController")) {
         FBP_ONCE(gTabBarOffset) { %init(FBPTabBarOffset); }
-        [FBPDiagnostics.shared recordGroup:@"FBPTabBarOffset" installed:YES detail:nil];
     }
 
     if (objc_getClass("FBBaseAppDelegate")) {
         FBP_ONCE(gAppDelegate) { %init(FBPAppDelegate); }
-        [FBPDiagnostics.shared recordGroup:@"FBPAppDelegate" installed:YES detail:nil];
     }
 
     // Long-press the top "facebook" wordmark to open Facebook Plus settings.
     if (objc_getClass("FBNavigationBar")) {
         FBP_ONCE(gNavLogo) { %init(FBPNavLogo); }
-        [FBPDiagnostics.shared recordGroup:@"FBPNavLogo" installed:YES detail:nil];
     }
 }

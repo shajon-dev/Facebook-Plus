@@ -7,7 +7,6 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
-#import "FBPDiagnostics.h"
 #import "FBPHeaders.h"
 
 #import <objc/message.h>
@@ -134,7 +133,6 @@ static BOOL FBPShouldFilterModel(id model) {
     }
 
     if (FBPEnabled(FBPKeyNoThreads) && FBPIsThreadsUnit(model)) {
-        [FBPDiagnostics.shared recordEvent:@"feed: threads promo hidden"];
         return YES;
     }
 
@@ -217,10 +215,8 @@ void FBPInitFeedHooks(void) {
 
     if ([model instancesRespondToSelector:@selector(initWithFBPandoTree:)]) {
         FBP_ONCE(gFeed) { %init(FBPFeed); }
-        [FBPDiagnostics.shared recordGroup:@"FBPFeed" installed:YES detail:nil];
     }
     if ([model instancesRespondToSelector:@selector(initWithFBTree:)]) {
         FBP_ONCE(gFeedLegacy) { %init(FBPFeedLegacy); }
-        [FBPDiagnostics.shared recordGroup:@"FBPFeedLegacy" installed:YES detail:nil];
     }
 }

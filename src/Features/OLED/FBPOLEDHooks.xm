@@ -34,7 +34,6 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
-#import "FBPDiagnostics.h"
 #import "FBPHeaders.h"
 
 #import <QuartzCore/QuartzCore.h>
@@ -547,5 +546,4 @@ void FBPInitOLEDHooks(void) {
                    dispatch_get_main_queue(), ^{ FBPApplyForcedAppearance(); });
 
     FBP_ONCE(gOLED) { %init(FBPOLEDGlobal); }
-    [FBPDiagnostics.shared recordGroup:@"FBPOLED" installed:YES detail:nil];
 }

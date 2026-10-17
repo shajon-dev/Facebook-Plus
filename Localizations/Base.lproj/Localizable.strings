@@ -37,8 +37,6 @@
 "row.appicon.desc" = "Choose an alternate app icon.";
 "row.autoclear.title" = "Clear Cache on Launch";
 "row.clearcache.title" = "Clear Cache Now";
-"row.diagnostics.title" = "Diagnostics";
-"row.diagnostics.desc" = "See which features are active.";
 "row.checkupdate.title" = "Check for Update";
 "row.checkupdate.desc" = "See if a newer version is available.";
 "row.welcome.title" = "Show Welcome Screen";

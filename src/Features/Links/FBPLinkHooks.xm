@@ -12,7 +12,6 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
-#import "FBPDiagnostics.h"
 #import "FBPHeaders.h"
 
 #import <UIKit/UIKit.h>
@@ -131,6 +130,5 @@ static BOOL FBPTryOpenExternally(UIViewController *webVC, NSURL *url) {
 void FBPInitLinkHooks(void) {
     if (objc_getClass("FBWebViewController")) {
         FBP_ONCE(gLinks) { %init(FBPLinks); }
-        [FBPDiagnostics.shared recordGroup:@"FBPLinks" installed:YES detail:nil];
     }
 }

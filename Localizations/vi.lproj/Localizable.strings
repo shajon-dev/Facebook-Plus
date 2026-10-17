@@ -33,8 +33,6 @@
 "row.appicon.desc" = "Chọn biểu tượng ứng dụng thay thế.";
 "row.autoclear.title" = "Xóa bộ nhớ đệm khi khởi chạy";
 "row.clearcache.title" = "Xóa bộ nhớ đệm ngay";
-"row.diagnostics.title" = "Chẩn đoán";
-"row.diagnostics.desc" = "Xem những tính năng đang hoạt động.";
 "row.checkupdate.title" = "Kiểm tra cập nhật";
 "row.checkupdate.desc" = "Xem có phiên bản mới hơn không.";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
