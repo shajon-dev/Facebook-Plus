@@ -380,6 +380,11 @@ static void FBPApplyForcedAppearance(void) {
                 if (window.overrideUserInterfaceStyle != want) {
                     window.overrideUserInterfaceStyle = want;
                 }
+
+                // Re-query the status bar style so toggling OLED flips the
+                // time / battery / signal glyphs to light (or back) immediately.
+                UIViewController *root = window.rootViewController;
+                if (root) [root setNeedsStatusBarAppearanceUpdate];
             }
         }
     }
@@ -502,6 +507,17 @@ static void FBPApplyForcedAppearance(void) {
     }
     FBPBlackenSublayers(self.layer);
     FBPBlackenHeaderTree(self, 0);
+}
+%end
+
+// The navigation-bar view controller drives the status bar, and it returns
+// darkContent (black time / battery / signal) because Facebook's header is
+// normally light. OLED paints that header black, so black status-bar glyphs
+// vanish. Force light content (white glyphs) while OLED is on.
+%hook FBMovableNavigationBarViewController
+- (UIStatusBarStyle)preferredStatusBarStyle {
+    if (gOLEDEnabled) return UIStatusBarStyleLightContent;
+    return %orig;
 }
 %end
 
