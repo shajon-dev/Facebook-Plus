@@ -6,8 +6,10 @@
 // Resolution order for the native destination:
 //   1. the app link Facebook advertises in <meta property="al:ios:url"> (fb://…)
 //   2. the Smart App Banner's app-argument in <meta name="apple-itunes-app">
-//   3. a generic fallback that reopens the current page inside the app:
-//        fb://facewebmodal/f?href=<current url>
+//   3. the FacebookPlus link bridge, which carries the clean HTTPS URL into the
+//      app so FBPLinkBridge can resolve it through Facebook's Universal Link
+//      handler instead of the facewebmodal path that falls back to Home:
+//        fb://fbplusbridge?url=<current url>
 //
 // A short-lived sessionStorage guard prevents a redirect loop if iOS bounces the
 // viewer back to the same Safari page.
@@ -51,7 +53,7 @@
 
   function genericFallback() {
     const href = markerURL() || window.location.href;
-    return `fb://facewebmodal/f?href=${encodeURIComponent(href)}`;
+    return `fb://fbplusbridge?url=${encodeURIComponent(href)}`;
   }
 
   function nativeDestination() {
