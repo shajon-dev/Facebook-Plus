@@ -1,6 +1,3 @@
-/* Facebook Plus — Deutsch. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Tweak-Einstellungen";
 "row.noads.title" = "Werbung entfernen";
 "row.norecs.title" = "Empfehlungen entfernen";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "Blendet die „Vorgeschlagene Seiten für dich“-Einheiten aus.";
 "row.feedlike.title" = "„Gefällt mir“ bestätigen";
 "row.feedlike.desc" = "Fragt nach, bevor ein „Gefällt mir“ gesendet wird.";
-
 "row.downloadreels.title" = "Reels herunterladen";
 "row.downloadreels.desc" = "Zeigt den Download-Button beim Ansehen von Reels.";
 "row.downloadstories.title" = "Stories herunterladen";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "Das Symbol konnte nicht geändert werden.";
 "common.cancel" = "Abbrechen";
 "common.ok" = "OK";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "Unbekannter Fehler";
 "download.story.saved" = "In Fotos gespeichert";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook-CDN gab HTTP %ld zurück.";
 "download.reel.tmpFailed" = "Temporäre Videodatei konnte nicht erstellt werden.";
 "download.reel.noLink" = "Link dieses Videos konnte nicht abgerufen werden.";
-
-/* Update screen */
 "update.title" = "Update verfügbar";
 "update.subtitle" = "Version %@ ist jetzt verfügbar.";
 "update.whatsnew" = "Neuigkeiten";
@@ -79,3 +71,8 @@
 "update.later" = "Später";
 "update.uptodate" = "Du hast die neueste Version.";
 "update.failed" = "Updates konnten nicht geprüft werden.";
+"row.nostories.title" = "Storys entfernen";
+"row.nostories.desc" = "Blendet die Story-Leiste und einzelne Story-Karten aus dem Feed aus.";
+"row.hideoverlay.title" = "Overlay-Umschalter";
+"row.hideoverlay.desc" = "Fügt in Reels eine Augen-Schaltfläche hinzu, die alle Bedienelemente — „Gefällt mir“, Kommentare, Teilen, Beschreibung — ausblendet und nur das Video übrig lässt.";
+"reels.hideOverlay.a11y" = "Reel-Overlay ausblenden";

@@ -1,6 +1,3 @@
-/* Facebook Plus — العربية. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "تفضيلات التعديل";
 "row.noads.title" = "إزالة الإعلانات";
 "row.norecs.title" = "إزالة التوصيات";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "يخفي وحدات “صفحات قد تعجبك”.";
 "row.feedlike.title" = "تأكيد الإعجاب بالمنشور";
 "row.feedlike.desc" = "يسأل قبل إرسال الإعجاب.";
-
 "row.downloadreels.title" = "تنزيل Reels";
 "row.downloadreels.desc" = "إظهار زر التنزيل أثناء مشاهدة Reels.";
 "row.downloadstories.title" = "تنزيل القصص";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "تعذّر تغيير الأيقونة.";
 "common.cancel" = "إلغاء";
 "common.ok" = "حسنًا";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "خطأ غير معروف";
 "download.story.saved" = "تم الحفظ في الصور";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "أعاد Facebook CDN رمز HTTP %ld.";
 "download.reel.tmpFailed" = "تعذّر إنشاء ملف الفيديو المؤقت.";
 "download.reel.noLink" = "تعذّر الحصول على رابط هذا الفيديو.";
-
-/* Update screen */
 "update.title" = "يتوفر تحديث";
 "update.subtitle" = "الإصدار %@ متاح الآن.";
 "update.whatsnew" = "ما الجديد";
@@ -79,3 +71,8 @@
 "update.later" = "لاحقًا";
 "update.uptodate" = "أنت تستخدم أحدث إصدار.";
 "update.failed" = "تعذّر التحقق من التحديثات.";
+"row.nostories.title" = "إزالة القصص";
+"row.nostories.desc" = "يُخفي شريط القصص وبطاقات القصص الفردية من آخر الأخبار.";
+"row.hideoverlay.title" = "زر إخفاء الطبقة";
+"row.hideoverlay.desc" = "يضيف زر عين إلى Reels يُخفي جميع عناصر الواجهة على الشاشة — الإعجابات والتعليقات والمشاركة والوصف — ويُبقي الفيديو فقط.";
+"reels.hideOverlay.a11y" = "إخفاء طبقة Reel";

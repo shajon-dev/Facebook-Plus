@@ -1,6 +1,3 @@
-/* Facebook Plus — English. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Tweak Preferences";
 "row.noads.title" = "Remove Ads";
 "row.norecs.title" = "Remove Recommendations";
@@ -17,12 +14,10 @@
 "row.nosuggestedpages.desc" = "Hides the “suggested pages for you” units.";
 "row.feedlike.title" = "Confirm Post Likes";
 "row.feedlike.desc" = "Asks before a like is sent.";
-
 "row.downloadreels.title" = "Download Reels";
 "row.downloadreels.desc" = "Show the download button while viewing Reels.";
 "row.downloadstories.title" = "Download Stories";
 "row.downloadstories.desc" = "Show the download button while viewing Stories.";
-
 "row.reelslike.title" = "Confirm Reels Likes";
 "row.hideoverlay.title" = "Hide Overlay Toggle";
 "row.hideoverlay.desc" = "Add an eye button to Reels that hides all the on-screen chrome — likes, comments, share, caption — leaving just the video.";
@@ -56,8 +51,6 @@
 "appicon.error.failed" = "The icon could not be changed.";
 "common.cancel" = "Cancel";
 "common.ok" = "OK";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "Unknown error";
 "download.story.saved" = "Saved to Photos";
@@ -73,10 +66,7 @@
 "download.reel.httpError" = "Facebook CDN returned HTTP %ld.";
 "download.reel.tmpFailed" = "Couldn’t create the temporary video file.";
 "download.reel.noLink" = "Couldn’t get this video’s link.";
-
 "reels.hideOverlay.a11y" = "Hide Reel overlay";
-
-/* Update screen */
 "update.title" = "Update Available";
 "update.subtitle" = "Version %@ is now available.";
 "update.whatsnew" = "What's New";

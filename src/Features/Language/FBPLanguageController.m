@@ -64,6 +64,7 @@ static NSString *const kCell = @"fbp.language.row";
             @{ kCode:@"ja",      kName:@"日本語",             kEng:@"Japanese" },
             @{ kCode:@"ko",      kName:@"한국어",             kEng:@"Korean" },
             @{ kCode:@"zh-Hans", kName:@"简体中文",           kEng:@"Chinese (Simplified)" },
+            @{ kCode:@"zh-Hant", kName:@"繁體中文",           kEng:@"Chinese (Traditional)" },
         ];
     }
     return self;

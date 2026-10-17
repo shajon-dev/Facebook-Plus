@@ -1,6 +1,3 @@
-/* Facebook Plus — Türkçe. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Tweak Tercihleri";
 "row.noads.title" = "Reklamları Kaldır";
 "row.norecs.title" = "Önerileri Kaldır";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "“Senin için önerilen sayfalar” bölümlerini gizler.";
 "row.feedlike.title" = "Gönderi Beğenilerini Onayla";
 "row.feedlike.desc" = "Beğeni gönderilmeden önce sorar.";
-
 "row.downloadreels.title" = "Reels'i İndir";
 "row.downloadreels.desc" = "Reels izlerken indirme düğmesini gösterir.";
 "row.downloadstories.title" = "Hikayeleri İndir";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "Simge değiştirilemedi.";
 "common.cancel" = "İptal";
 "common.ok" = "Tamam";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "Bilinmeyen hata";
 "download.story.saved" = "Fotoğraflar'a kaydedildi";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN HTTP %ld döndürdü.";
 "download.reel.tmpFailed" = "Geçici video dosyası oluşturulamadı.";
 "download.reel.noLink" = "Bu videonun bağlantısı alınamadı.";
-
-/* Update screen */
 "update.title" = "Güncelleme mevcut";
 "update.subtitle" = "%@ sürümü şimdi mevcut.";
 "update.whatsnew" = "Yenilikler";
@@ -79,3 +71,8 @@
 "update.later" = "Sonra";
 "update.uptodate" = "En son sürümü kullanıyorsun.";
 "update.failed" = "Güncellemeler denetlenemedi.";
+"row.nostories.title" = "Hikâyeleri Kaldır";
+"row.nostories.desc" = "Hikâye şeridini ve tekil hikâye kartlarını akıştan gizler.";
+"row.hideoverlay.title" = "Yer Paylaşımını Gizle Düğmesi";
+"row.hideoverlay.desc" = "Reels’e, ekrandaki tüm öğeleri — beğeni, yorum, paylaşım, açıklama — gizleyip yalnızca videoyu bırakan bir göz düğmesi ekler.";
+"reels.hideOverlay.a11y" = "Reel yer paylaşımını gizle";

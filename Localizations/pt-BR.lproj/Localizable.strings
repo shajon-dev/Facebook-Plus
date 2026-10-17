@@ -1,6 +1,3 @@
-/* Facebook Plus — Português (Brasil). Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Preferências do tweak";
 "row.noads.title" = "Remover anúncios";
 "row.norecs.title" = "Remover recomendações";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "Oculta as seções de “páginas sugeridas para você”.";
 "row.feedlike.title" = "Confirmar curtidas";
 "row.feedlike.desc" = "Pergunta antes de enviar uma curtida.";
-
 "row.downloadreels.title" = "Baixar Reels";
 "row.downloadreels.desc" = "Mostra o botão de download ao ver Reels.";
 "row.downloadstories.title" = "Baixar Stories";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "Não foi possível alterar o ícone.";
 "common.cancel" = "Cancelar";
 "common.ok" = "OK";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "Erro desconhecido";
 "download.story.saved" = "Salvo em Fotos";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "O Facebook CDN retornou HTTP %ld.";
 "download.reel.tmpFailed" = "Não foi possível criar o arquivo de vídeo temporário.";
 "download.reel.noLink" = "Não foi possível obter o link deste vídeo.";
-
-/* Update screen */
 "update.title" = "Atualização disponível";
 "update.subtitle" = "A versão %@ já está disponível.";
 "update.whatsnew" = "Novidades";
@@ -79,3 +71,8 @@
 "update.later" = "Depois";
 "update.uptodate" = "Você está na versão mais recente.";
 "update.failed" = "Não foi possível verificar atualizações.";
+"row.nostories.title" = "Remover stories";
+"row.nostories.desc" = "Oculta a barra de stories e os cards de story individuais do feed.";
+"row.hideoverlay.title" = "Botão para ocultar a sobreposição";
+"row.hideoverlay.desc" = "Adiciona um botão de olho nos Reels que oculta todos os controles da tela — curtidas, comentários, compartilhamento, legenda — deixando só o vídeo.";
+"reels.hideOverlay.a11y" = "Ocultar sobreposição do Reel";

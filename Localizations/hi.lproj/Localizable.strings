@@ -1,6 +1,3 @@
-/* Facebook Plus — हिन्दी. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "ट्वीक प्राथमिकताएँ";
 "row.noads.title" = "विज्ञापन हटाएँ";
 "row.norecs.title" = "सुझाव हटाएँ";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "“आपके लिए सुझाए गए पेज” यूनिट छिपाता है।";
 "row.feedlike.title" = "पोस्ट लाइक की पुष्टि करें";
 "row.feedlike.desc" = "लाइक भेजने से पहले पूछता है।";
-
 "row.downloadreels.title" = "Reels डाउनलोड करें";
 "row.downloadreels.desc" = "Reels देखते समय डाउनलोड बटन दिखाता है।";
 "row.downloadstories.title" = "Stories डाउनलोड करें";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "आइकन नहीं बदला जा सका।";
 "common.cancel" = "रद्द करें";
 "common.ok" = "ठीक है";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "अज्ञात त्रुटि";
 "download.story.saved" = "Photos में सहेजा गया";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN ने HTTP %ld लौटाया।";
 "download.reel.tmpFailed" = "अस्थायी वीडियो फ़ाइल नहीं बनाई जा सकी।";
 "download.reel.noLink" = "इस वीडियो का लिंक नहीं मिल सका।";
-
-/* Update screen */
 "update.title" = "अपडेट उपलब्ध";
 "update.subtitle" = "संस्करण %@ अब उपलब्ध है।";
 "update.whatsnew" = "नया क्या है";
@@ -79,3 +71,8 @@
 "update.later" = "बाद में";
 "update.uptodate" = "आप नवीनतम संस्करण पर हैं।";
 "update.failed" = "अपडेट जाँच नहीं सका।";
+"row.nostories.title" = "स्टोरी हटाएँ";
+"row.nostories.desc" = "फ़ीड से स्टोरी पंक्ति और एकल स्टोरी कार्ड छिपाता है।";
+"row.hideoverlay.title" = "ओवरले छिपाने का बटन";
+"row.hideoverlay.desc" = "Reels पर एक आँख बटन जोड़ता है जो स्क्रीन के सभी तत्व — लाइक, कमेंट, शेयर, कैप्शन — छिपाकर सिर्फ़ वीडियो रखता है।";
+"reels.hideOverlay.a11y" = "Reel ओवरले छिपाएँ";

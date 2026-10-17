@@ -1,6 +1,3 @@
-/* Facebook Plus — Français. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Préférences du tweak";
 "row.noads.title" = "Supprimer les publicités";
 "row.norecs.title" = "Supprimer les recommandations";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "Masque les blocs « pages suggérées pour vous ».";
 "row.feedlike.title" = "Confirmer les J’aime";
 "row.feedlike.desc" = "Demande avant d’envoyer un J’aime.";
-
 "row.downloadreels.title" = "Télécharger les Reels";
 "row.downloadreels.desc" = "Affiche le bouton de téléchargement pendant les Reels.";
 "row.downloadstories.title" = "Télécharger les stories";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "Impossible de changer l’icône.";
 "common.cancel" = "Annuler";
 "common.ok" = "OK";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "Erreur inconnue";
 "download.story.saved" = "Enregistré dans Photos";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN a renvoyé HTTP %ld.";
 "download.reel.tmpFailed" = "Impossible de créer le fichier vidéo temporaire.";
 "download.reel.noLink" = "Impossible d'obtenir le lien de cette vidéo.";
-
-/* Update screen */
 "update.title" = "Mise à jour disponible";
 "update.subtitle" = "La version %@ est maintenant disponible.";
 "update.whatsnew" = "Nouveautés";
@@ -79,3 +71,8 @@
 "update.later" = "Plus tard";
 "update.uptodate" = "Vous avez la dernière version.";
 "update.failed" = "Impossible de vérifier les mises à jour.";
+"row.nostories.title" = "Supprimer les stories";
+"row.nostories.desc" = "Masque le bandeau des stories et les cartes de story individuelles du fil.";
+"row.hideoverlay.title" = "Bouton pour masquer l’interface";
+"row.hideoverlay.desc" = "Ajoute un bouton œil sur les Reels qui masque tous les éléments à l’écran — J’aime, commentaires, partage, légende — pour ne laisser que la vidéo.";
+"reels.hideOverlay.a11y" = "Masquer l’interface du Reel";

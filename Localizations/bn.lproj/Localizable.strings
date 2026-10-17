@@ -1,6 +1,3 @@
-/* Facebook Plus — বাংলা. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "টুইক পছন্দসমূহ";
 "row.noads.title" = "বিজ্ঞাপন সরান";
 "row.norecs.title" = "সুপারিশ সরান";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "“আপনার জন্য প্রস্তাবিত পেজ” ইউনিটগুলো লুকায়।";
 "row.feedlike.title" = "পোস্ট লাইক নিশ্চিত করুন";
 "row.feedlike.desc" = "লাইক পাঠানোর আগে জিজ্ঞাসা করে।";
-
 "row.downloadreels.title" = "Reels ডাউনলোড";
 "row.downloadreels.desc" = "Reels দেখার সময় ডাউনলোড বোতাম দেখায়।";
 "row.downloadstories.title" = "Stories ডাউনলোড";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "আইকন পরিবর্তন করা যায়নি।";
 "common.cancel" = "বাতিল";
 "common.ok" = "ঠিক আছে";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "অজানা ত্রুটি";
 "download.story.saved" = "Photos-এ সংরক্ষিত হয়েছে";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN HTTP %ld ফেরত দিয়েছে।";
 "download.reel.tmpFailed" = "অস্থায়ী ভিডিও ফাইল তৈরি করা যায়নি।";
 "download.reel.noLink" = "এই ভিডিওর লিংক পাওয়া যায়নি।";
-
-/* Update screen */
 "update.title" = "আপডেট উপলব্ধ";
 "update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";
 "update.whatsnew" = "নতুন কী আছে";
@@ -79,3 +71,8 @@
 "update.later" = "পরে";
 "update.uptodate" = "আপনি সর্বশেষ সংস্করণে আছেন।";
 "update.failed" = "আপডেট চেক করা যায়নি।";
+"row.nostories.title" = "স্টোরি সরান";
+"row.nostories.desc" = "ফিড থেকে স্টোরি সারি এবং একক স্টোরি কার্ড লুকায়।";
+"row.hideoverlay.title" = "ওভারলে হাইড বোতাম";
+"row.hideoverlay.desc" = "Reels-এ একটি চোখ বোতাম যোগ করে যা স্ক্রিনের সব উপাদান — লাইক, কমেন্ট, শেয়ার, ক্যাপশন — লুকিয়ে শুধু ভিডিও রাখে।";
+"reels.hideOverlay.a11y" = "Reel ওভারলে লুকান";

@@ -1,6 +1,3 @@
-/* Facebook Plus — 日本語. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Tweak 設定";
 "row.noads.title" = "広告を削除";
 "row.norecs.title" = "おすすめを削除";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "「あなたへのおすすめページ」を非表示にします。";
 "row.feedlike.title" = "投稿の「いいね！」を確認";
 "row.feedlike.desc" = "「いいね！」を送る前に確認します。";
-
 "row.downloadreels.title" = "リールをダウンロード";
 "row.downloadreels.desc" = "リールの視聴中にダウンロードボタンを表示します。";
 "row.downloadstories.title" = "ストーリーズをダウンロード";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "アイコンを変更できませんでした。";
 "common.cancel" = "キャンセル";
 "common.ok" = "OK";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "不明なエラー";
 "download.story.saved" = "写真に保存しました";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN が HTTP %ld を返しました。";
 "download.reel.tmpFailed" = "一時動画ファイルを作成できませんでした。";
 "download.reel.noLink" = "この動画のリンクを取得できませんでした。";
-
-/* Update screen */
 "update.title" = "アップデートがあります";
 "update.subtitle" = "バージョン %@ が利用可能です。";
 "update.whatsnew" = "新機能";
@@ -79,3 +71,8 @@
 "update.later" = "後で";
 "update.uptodate" = "最新バージョンを使用中です。";
 "update.failed" = "アップデートを確認できませんでした。";
+"row.nostories.title" = "ストーリーズを削除";
+"row.nostories.desc" = "フィードからストーリーズの列と単体のストーリーズカードを非表示にします。";
+"row.hideoverlay.title" = "オーバーレイ非表示ボタン";
+"row.hideoverlay.desc" = "リールに目のボタンを追加し、画面上のすべての要素（いいね！、コメント、シェア、キャプション）を非表示にして動画だけを残します。";
+"reels.hideOverlay.a11y" = "リールのオーバーレイを非表示";

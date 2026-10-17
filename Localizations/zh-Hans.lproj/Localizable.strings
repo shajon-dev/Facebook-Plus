@@ -1,6 +1,3 @@
-/* Facebook Plus — 简体中文. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "插件偏好设置";
 "row.noads.title" = "移除广告";
 "row.norecs.title" = "移除推荐内容";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "隐藏“你可能喜欢的主页”栏目。";
 "row.feedlike.title" = "确认帖子点赞";
 "row.feedlike.desc" = "发送点赞前先询问。";
-
 "row.downloadreels.title" = "下载 Reels";
 "row.downloadreels.desc" = "观看 Reels 时显示下载按钮。";
 "row.downloadstories.title" = "下载快拍";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "无法更改图标。";
 "common.cancel" = "取消";
 "common.ok" = "好";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "未知错误";
 "download.story.saved" = "已保存到照片";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN 返回了 HTTP %ld。";
 "download.reel.tmpFailed" = "无法创建临时视频文件。";
 "download.reel.noLink" = "无法获取此视频的链接。";
-
-/* Update screen */
 "update.title" = "有可用更新";
 "update.subtitle" = "版本 %@ 现已可用。";
 "update.whatsnew" = "更新内容";
@@ -79,3 +71,8 @@
 "update.later" = "稍后";
 "update.uptodate" = "你使用的是最新版本。";
 "update.failed" = "无法检查更新。";
+"row.nostories.title" = "移除快拍";
+"row.nostories.desc" = "隐藏信息流中的快拍栏和单个快拍卡片。";
+"row.hideoverlay.title" = "隐藏浮层开关";
+"row.hideoverlay.desc" = "在 Reels 上添加一个眼睛按钮，隐藏屏幕上的所有界面元素——点赞、评论、分享、说明——只保留视频。";
+"reels.hideOverlay.a11y" = "隐藏 Reel 浮层";

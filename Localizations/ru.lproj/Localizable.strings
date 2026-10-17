@@ -1,6 +1,3 @@
-/* Facebook Plus — Русский. Auto-generated from test/gen_strings.py.
-   Keep translations in sync via that script; keys match every other .lproj. */
-
 "settings.subtitle" = "Настройки твика";
 "row.noads.title" = "Убрать рекламу";
 "row.norecs.title" = "Убрать рекомендации";
@@ -15,7 +12,6 @@
 "row.nosuggestedpages.desc" = "Скрывает блоки «рекомендуемые страницы».";
 "row.feedlike.title" = "Подтверждать «Нравится»";
 "row.feedlike.desc" = "Спрашивает перед отправкой отметки «Нравится».";
-
 "row.downloadreels.title" = "Скачивать Reels";
 "row.downloadreels.desc" = "Показывает кнопку скачивания при просмотре Reels.";
 "row.downloadstories.title" = "Скачивать истории";
@@ -51,8 +47,6 @@
 "appicon.error.failed" = "Не удалось изменить значок.";
 "common.cancel" = "Отмена";
 "common.ok" = "OK";
-
-/* Downloads — runtime messages */
 "download.appName" = "Facebook Plus";
 "download.error.unknown" = "Неизвестная ошибка";
 "download.story.saved" = "Сохранено в Фото";
@@ -68,8 +62,6 @@
 "download.reel.httpError" = "Facebook CDN вернул HTTP %ld.";
 "download.reel.tmpFailed" = "Не удалось создать временный видеофайл.";
 "download.reel.noLink" = "Не удалось получить ссылку на это видео.";
-
-/* Update screen */
 "update.title" = "Доступно обновление";
 "update.subtitle" = "Версия %@ уже доступна.";
 "update.whatsnew" = "Что нового";
@@ -79,3 +71,8 @@
 "update.later" = "Позже";
 "update.uptodate" = "У вас последняя версия.";
 "update.failed" = "Не удалось проверить обновления.";
+"row.nostories.title" = "Убрать истории";
+"row.nostories.desc" = "Скрывает ленту историй и отдельные карточки историй из ленты.";
+"row.hideoverlay.title" = "Кнопка скрытия наложения";
+"row.hideoverlay.desc" = "Добавляет в Reels кнопку-глаз, которая скрывает все элементы на экране — «Нравится», комментарии, отправку, подпись — оставляя только видео.";
+"reels.hideOverlay.a11y" = "Скрыть наложение Reel";
