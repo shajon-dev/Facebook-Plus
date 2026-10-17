@@ -7,7 +7,6 @@ request.
 ## 🗺️ Roadmap
 
 **Feed & Content**
-- [ ] Hide **Stories** row from the main feed
 - [ ] Hide **ads on Facebook Marketplace**
 
 **Downloads**

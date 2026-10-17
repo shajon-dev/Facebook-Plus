@@ -25,6 +25,7 @@ static NSDictionary<NSString *, NSString *> *FBPCategoryMap(void) {
             @"ENGAGEMENT"    : FBPKeyNoRecs,
             @"ENGAGEMENT_QP" : FBPKeyNoRecs,
             @"FB_SHORTS"     : FBPKeyNoReels,
+            @"MULTI_FB_STORIES_TRAY" : FBPKeyNoStories,
             @"PYMK_STORY"    : FBPKeyNoStoryPYMK,
             @"PYMK"          : FBPKeyNoPYMK,
         };
@@ -153,6 +154,15 @@ static BOOL FBPShouldFilterModel(id model) {
     if (FBPEnabled(FBPKeyNoSuggestedPages)) {
         NSString *className = NSStringFromClass([model class]);
         if ([className containsString:@"PagesYouMayLike"]) return YES;
+    }
+
+    // A single ephemeral story shown inline in the feed (its own card, distinct
+    // from the horizontal tray). It arrives as FBMemStoriesSingleBucketInline
+    // ViewerFeedUnit under an ORGANIC edge, so it is matched by class name rather
+    // than category. Gated by the same Stories toggle as the tray.
+    if (FBPEnabled(FBPKeyNoStories)) {
+        NSString *className = NSStringFromClass([model class]);
+        if ([className containsString:@"SingleBucketInlineViewer"]) return YES;
     }
 
     // The story-tray PYMK bucket is distinct from the feed-level one.

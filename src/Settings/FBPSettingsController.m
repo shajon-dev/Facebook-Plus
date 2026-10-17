@@ -330,6 +330,9 @@ compatibleWithTraitCollection:nil]
                        icon:@"people" color:UIColor.systemBlueColor],
             [self switchRow:FBPKeyNoReels title:FBPL(@"row.noreels.title") desc:nil
                        icon:@"reels" color:UIColor.systemPinkColor],
+            [self switchRow:FBPKeyNoStories title:FBPL(@"row.nostories.title")
+                       desc:FBPL(@"row.nostories.desc")
+                       icon:@"circle.dashed" color:UIColor.systemPurpleColor],
             [self switchRow:FBPKeyNoThreads title:FBPL(@"row.nothreads.title")
                        desc:FBPL(@"row.nothreads.desc")
                        icon:@"at" color:UIColor.systemIndigoColor],

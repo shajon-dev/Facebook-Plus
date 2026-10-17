@@ -7,6 +7,8 @@
 "row.norecs.desc" = "Hides algorithmically suggested posts.";
 "row.nopymk.title" = "Remove People You May Know";
 "row.noreels.title" = "Remove Reels Carousel";
+"row.nostories.title" = "Remove Stories";
+"row.nostories.desc" = "Hides the Stories row and single story cards from the feed.";
 "row.nothreads.title" = "Remove Threads Promo";
 "row.nothreads.desc" = "Hides the “discover new threads” card.";
 "row.nogroups.title" = "Remove Group Suggestions";

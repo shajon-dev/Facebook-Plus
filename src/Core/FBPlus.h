@@ -52,6 +52,7 @@ extern NSString *const FBPKeyNoAds;             // Remove sponsored units
 extern NSString *const FBPKeyNoRecs;            // Remove ENGAGEMENT recommendations
 extern NSString *const FBPKeyNoPYMK;            // Remove "People you may know"
 extern NSString *const FBPKeyNoReels;           // Remove the reels carousel
+extern NSString *const FBPKeyNoStories;         // Remove the stories tray
 extern NSString *const FBPKeyNoStoryPYMK;       // Remove PYMK from the story tray
 extern NSString *const FBPKeyNoThreads;         // Remove the Threads promo unit
 extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should join"
