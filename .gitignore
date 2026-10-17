@@ -25,7 +25,7 @@ compile_commands.json
 .clangd
 
 # ---------------------------------------------------------------------------
-# Python tooling (scripts/ and test/ helpers: svg2png.py, previews, etc.)
+# Python tooling (scripts/ and test/ helpers: svg2png.py, etc.)
 #   venv/         : virtualenv cairosvg renders from
 #   pyrefly.toml  : per-user type-checker config
 # ---------------------------------------------------------------------------
@@ -38,9 +38,6 @@ __pycache__/
 pyrefly.toml
 test/*.py
 
-# preview.py / preview_language.py render output
-*_preview.png
-
 # ---------------------------------------------------------------------------
 # Test inputs
 #   The decrypted Facebook IPA is copyrighted and machine-local — never commit it.
@@ -50,14 +47,17 @@ test/*
 
 
 # ---------------------------------------------------------------------------
-# Scratch space
-#   draft/  : work-in-progress notes and mockups
-#   .temp/  : scratch clones
+# Local-only dev files
+#   draft/   : work-in-progress notes and mockups
+#   .temp/   : scratch clones
+#   .agent/, AGENT.md : AI agent notes
+#   preview/ : XcodeGen UI preview harness (dev tool, not part of the build)
 # ---------------------------------------------------------------------------
 draft/
 .temp/
 .agent/
 AGENT.md
+preview/
 # ---------------------------------------------------------------------------
 # OS cruft
 # ---------------------------------------------------------------------------
