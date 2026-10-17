@@ -12,9 +12,6 @@ request.
 **Downloads**
 - [ ] **Multiple-quality** download picker for Reels & videos (choose resolution before saving)
 
-**Appearance**
-- [ ] Fix the **unwanted box** rendered beside the app-icon image
-
 **Navigation**
 - [ ] Remove the **"Also from Meta"** section from the left sidebar
 
