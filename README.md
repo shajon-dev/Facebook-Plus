@@ -28,11 +28,11 @@
   <tbody>
     <tr>
       <td nowrap>📰 <b>Feed</b></td>
-      <td>Remove Ads & Sponsored Posts<br>Hide "People you may know", Group & Page suggestions<br>Remove Reels carousel & Threads promo<br><b>Confirm before liking</b> (prevents accidental likes)</td>
+      <td>Remove Ads & Sponsored Posts<br>Hide "People you may know", Group & Page suggestions<br>Remove Reels carousel, Threads promo & <b>Stories</b> (tray + single cards)<br><b>Confirm before liking</b> (prevents accidental likes)</td>
     </tr>
     <tr>
       <td nowrap>🎬 <b>Reels</b></td>
-      <td><b>Confirm before liking</b><br>Save <b>Reels</b> to Photos</td>
+      <td><b>Confirm before liking</b><br><b>Hide overlay</b> — one tap strips likes, comments, share & caption, leaving just the video<br>Save <b>Reels</b> to Photos</td>
     </tr>
     <tr>
       <td nowrap>📖 <b>Stories</b></td>
@@ -40,11 +40,11 @@
     </tr>
     <tr>
       <td nowrap>🧭 <b>Links</b></td>
-      <td>Open external links in your <b>default browser</b> instead of the in-app browser<br><b>Open in Facebook</b> Safari extension — reopens facebook.com links from Safari in the app</td>
+      <td>Open external links in your <b>default browser</b> instead of the in-app browser<br><b>Open in Facebook</b> Safari extension — reopens facebook.com links from Safari in the app, on the <b>exact Reel / post / photo / story</b></td>
     </tr>
     <tr>
       <td nowrap>🎨 <b>Appearance</b></td>
-      <td><b>OLED Dark Mode</b> (True black)<br>Custom App-Icon Picker</td>
+      <td><b>OLED Dark Mode</b> (true black — keeps post dividers, avatars & the status bar legible)<br>Custom App-Icon Picker</td>
     </tr>
     <tr>
       <td nowrap>🔔 <b>Updates</b></td>
@@ -53,7 +53,7 @@
   </tbody>
 </table>
 
-💡 **Settings:** Long-press any **tab bar item** (classic or the new iOS 26 liquid-glass bar) or the **native Facebook settings button**.
+💡 **Settings:** Long-press any **tab bar item** (classic or the new iOS 26 liquid-glass bar), the **"facebook" wordmark**, or the **native Facebook settings button**.
 
 ---
 
