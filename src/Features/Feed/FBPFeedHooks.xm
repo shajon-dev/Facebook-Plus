@@ -27,6 +27,11 @@ static NSDictionary<NSString *, NSString *> *FBPCategoryMap(void) {
             @"FB_SHORTS"     : FBPKeyNoReels,
             @"MULTI_FB_STORIES_TRAY" : FBPKeyNoStories,
             @"PYMK_STORY"    : FBPKeyNoStoryPYMK,
+            // The feed-level bucket was renamed PYMK_FEED somewhere before
+            // v585 — the bare "PYMK" token is gone from that build's binary,
+            // which is why the filter silently stopped matching. The old token
+            // stays mapped so older Facebook versions keep working.
+            @"PYMK_FEED"     : FBPKeyNoPYMK,
             @"PYMK"          : FBPKeyNoPYMK,
         };
     });
