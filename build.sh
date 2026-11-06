@@ -289,6 +289,10 @@ if [ -f "$IPA_IN" ]; then
 	# main binary, installing its container redirects a second time.
 	if [ "$NSE_BRIDGE" != "0" ]; then
 		echo "==> Building the NSE session bridge in ${BRIDGE_DIR}…"
+		# Drop any dylib a previous run left behind first: if this build fails we
+		# want the injection step to find nothing and say so, rather than quietly
+		# shipping a stale bridge built from older sources.
+		rm -f "$BRIDGE_DYLIB"
 		if ! make -C "$BRIDGE_DIR" FINALPACKAGE=1 >/dev/null; then
 			echo "warning: the NSE session bridge failed to build — continuing without it." >&2
 		fi
