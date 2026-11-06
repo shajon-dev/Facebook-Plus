@@ -52,6 +52,129 @@ IPA_IN="test/com.facebook.Facebook.ipa"
 
 mkdir -p packages
 
+# Scratch paths the IPA post-processing steps create. One trap removes whatever
+# exists, so a later step cannot drop an earlier step's cleanup by installing its
+# own EXIT handler.
+ICON_MERGE=""
+NSE_WORK=""
+cleanup() {
+	[ -n "$ICON_MERGE" ] && rm -f "$ICON_MERGE"
+	[ -n "$NSE_WORK" ] && rm -rf "$NSE_WORK" "$NSE_WORK.ipa"
+	return 0
+}
+trap cleanup EXIT
+
+# --- NSE session bridge ------------------------------------------------------
+#
+# Facebook's NotificationServiceExtension.appex (the NSE) is what turns a push
+# into real notification text, and it only does so when it can resolve the
+# logged-in session. On a re-signed build it cannot: the session lives in
+# group.com.facebook.* App Groups and the T84QZS65DQ keychain group, neither of
+# which a third-party signer can claim. FBPNotifyBridge.dylib applies the same
+# container/keychain redirects the main app already gets (src/PluginsInject/)
+# inside the extension. See FBPNotifyBridge/README.md.
+#
+# Users sideload the released IPA with their own signer (Feather, AltStore,
+# SideStore, …), which will not inject anything, so the shipped IPA has to carry
+# the bridge already. Set NSE_BRIDGE=0 to build an IPA without it.
+NSE_BRIDGE="${NSE_BRIDGE:-1}"
+BRIDGE_DIR="FBPNotifyBridge/src"
+BRIDGE_DYLIB="$BRIDGE_DIR/.theos/obj/FBPNotifyBridge.dylib"
+
+# Locate cyan's bundled insert_dylib. cyan ships its own per-platform Mach-O
+# tools (insert_dylib, ldid, otool, …) inside its Python package; neither
+# insert_dylib nor optool is on PATH here. The location is a pipx-venv detail, so
+# it is resolved from the cyan entry point at runtime instead of hardcoded.
+cyan_insert_dylib() {
+	local bin real venv_py pkg="" tool candidate
+	bin="$(command -v cyan 2>/dev/null || true)"
+	[ -n "$bin" ] || return 1
+	real="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$bin" 2>/dev/null || true)"
+	[ -n "$real" ] || return 1
+
+	# cyan.__file__ is None (namespace package), so ask for __path__ instead.
+	venv_py="$(dirname "$real")/python3"
+	if [ -x "$venv_py" ]; then
+		pkg="$("$venv_py" -c 'import cyan; print(list(cyan.__path__)[0])' 2>/dev/null || true)"
+	fi
+	if [ -z "$pkg" ]; then
+		for candidate in "$(dirname "$(dirname "$real")")"/lib/python*/site-packages/cyan; do
+			if [ -d "$candidate" ]; then pkg="$candidate"; break; fi
+		done
+	fi
+	[ -n "$pkg" ] || return 1
+
+	tool="$pkg/tools/$(uname)/$(uname -m)/insert_dylib"
+	[ -x "$tool" ] || return 1
+	printf '%s' "$tool"
+}
+
+# Add FBPNotifyBridge.dylib to the NSE inside an already-built IPA. Every failure
+# mode here is a warning, never an error: an IPA without the bridge is still a
+# perfectly valid build of everything else.
+inject_nse_bridge() {
+	local ipa="$1" dylib="$2"
+	local appex_rel="Payload/Facebook.app/PlugIns/NotificationServiceExtension.appex"
+	local tool ipa_abs appex exe ents
+
+	if [ ! -f "$dylib" ]; then
+		echo "warning: $dylib not built — IPA ships without the NSE session bridge." >&2
+		return 0
+	fi
+	if ! command -v ldid >/dev/null 2>&1; then
+		echo "warning: ldid not found — IPA ships without the NSE session bridge." >&2
+		return 0
+	fi
+	tool="$(cyan_insert_dylib || true)"
+	if [ -z "$tool" ]; then
+		echo "warning: cyan's bundled insert_dylib not found (looked for" >&2
+		echo "         <cyan package>/tools/$(uname)/$(uname -m)/insert_dylib) —" >&2
+		echo "         IPA ships without the NSE session bridge." >&2
+		return 0
+	fi
+
+	ipa_abs="$(cd "$(dirname "$ipa")" && pwd)/$(basename "$ipa")"
+	NSE_WORK="$(mktemp -d)"
+
+	echo "==> Injecting the NSE session bridge into $ipa…"
+	unzip -q "$ipa_abs" -d "$NSE_WORK"
+
+	appex="$NSE_WORK/$appex_rel"
+	exe="$appex/NotificationServiceExtension"
+	if [ ! -f "$exe" ]; then
+		echo "warning: $appex_rel/NotificationServiceExtension not in the IPA —" >&2
+		echo "         skipping the NSE session bridge (IPA left as cyan produced it)." >&2
+		rm -rf "$NSE_WORK"; NSE_WORK=""
+		return 0
+	fi
+
+	# Capture the appex's entitlements before insert_dylib strips the signature:
+	# they are Facebook's originals, and preserving them is what makes the
+	# extension work under TrollStore (which honours them as-is).
+	ents="$NSE_WORK/nse.entitlements"
+	ldid -e "$exe" > "$ents" 2>/dev/null || true
+
+	cp "$dylib" "$appex/FBPNotifyBridge.dylib"
+	# Load path relative to the appex executable, which is where the dylib sits.
+	"$tool" --weak --inplace --all-yes "@executable_path/FBPNotifyBridge.dylib" "$exe" >/dev/null
+
+	# Match cyan's -s treatment of everything else: fakesign both the rewritten
+	# appex binary and the dylib we just added.
+	ldid -S "$appex/FBPNotifyBridge.dylib"
+	if [ -s "$ents" ]; then
+		ldid -S"$ents" "$exe"
+	else
+		ldid -S "$exe"
+	fi
+	rm -f "$ents"
+
+	# -y keeps symlinks as symlinks; the app bundle contains some.
+	( cd "$NSE_WORK" && zip -qry "$NSE_WORK.ipa" Payload )
+	mv -f "$NSE_WORK.ipa" "$ipa_abs"
+	rm -rf "$NSE_WORK"; NSE_WORK=""
+	echo "==> NSE session bridge injected (@executable_path/FBPNotifyBridge.dylib)."
+}
+
 # Build one scheme and rename its .deb to the versioned, labelled name.
 build_scheme() {
 	local label="$1"
@@ -119,10 +242,8 @@ if [ -f "$IPA_IN" ]; then
 	LOGOS=(resources/logo/fbplus_*.png)
 	shopt -u nullglob
 
-	ICON_MERGE=""
 	if [ ${#LOGOS[@]} -gt 0 ]; then
 		ICON_MERGE="$(mktemp)"
-		trap 'rm -f "$ICON_MERGE"' EXIT
 		echo "==> Building custom app-icon plist (${#LOGOS[@]} file(s))…"
 		python3 scripts/icon_plist.py "$IPA_IN" "$ICON_MERGE"
 	fi
@@ -162,6 +283,17 @@ if [ -f "$IPA_IN" ]; then
 	done
 	shopt -u nullglob
 
+	# The NSE session bridge is built here but injected after cyan (below): it is
+	# deliberately not a target of the root Makefile, because a second target
+	# would be packaged into the .deb and cyan would then also inject it into the
+	# main binary, installing its container redirects a second time.
+	if [ "$NSE_BRIDGE" != "0" ]; then
+		echo "==> Building the NSE session bridge in ${BRIDGE_DIR}…"
+		if ! make -C "$BRIDGE_DIR" FINALPACKAGE=1 >/dev/null; then
+			echo "warning: the NSE session bridge failed to build — continuing without it." >&2
+		fi
+	fi
+
 	echo "==> Injecting $DEB_INJECT (+ icons${PLUGINS:+ + ${#PLUGINS[@]} extension(s)}) into $IPA_IN with cyan…"
 	# The "${arr[@]+"${arr[@]}"}" form expands to nothing when the array is empty,
 	# instead of tripping `set -u` on bash < 4.4 (the macOS runner's bash), where a
@@ -172,6 +304,12 @@ if [ -f "$IPA_IN" ]; then
 		"${MERGE_ARGS[@]+"${MERGE_ARGS[@]}"}" \
 		"${RENAME_ARGS[@]+"${RENAME_ARGS[@]}"}" \
 		-uwsgq
+
+	if [ "$NSE_BRIDGE" = "0" ]; then
+		echo "==> NSE_BRIDGE=0 — skipped the notification-service bridge."
+	else
+		inject_nse_bridge "$IPA_OUT" "$BRIDGE_DYLIB"
+	fi
 
 	echo "==> Done. Injected IPA: $IPA_OUT"
 else

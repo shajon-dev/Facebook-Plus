@@ -146,7 +146,11 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
      - merges any custom app icons (`fbplus_*.png` in `resources/logo/`) into
      `CFBundleAlternateIcons` via `scripts/icon_plist.py`, preserving
      Facebook's native icons;
-     - fakesigns every injected binary for sideloading.
+     - fakesigns every injected binary for sideloading;
+     - builds `FBPNotifyBridge/src` and adds the resulting dylib to the app's
+       `NotificationServiceExtension.appex` (see
+       [below](#-notifications-on-sideloaded-builds-experimental-unverified));
+       skip it with `NSE_BRIDGE=0 ./build.sh`.
 
 
 <details>
@@ -164,9 +168,47 @@ This writes a per-machine `.clangd` (with your theos path and SDK baked in) and 
 
 ---
 
+## 🔔 Notifications on sideloaded builds (experimental, unverified)
+
+Sideloaded builds show *"You have a new notification"* instead of the real text
+(issues [#12](../../issues/12), [#13](../../issues/13)). Facebook sends a stub
+payload and lets `NotificationServiceExtension.appex` expand it — but that
+extension can only do so if it can find your session, and on a re-signed build it
+cannot: the session lives in Meta's App Groups (`group.com.facebook.*`) and
+keychain group (`T84QZS65DQ.platformFamily`), and Apple will never authorize
+another team's identifiers for your certificate.
+
+The released IPA now carries **`FBPNotifyBridge.dylib`** inside that extension: a
+~70 KB dylib that applies the same container and keychain redirects the main app
+already uses, so both processes read and write the same place. Full write-up in
+**[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
+
+> [!WARNING]
+> **This is UNVERIFIED on a device.** It is a correct implementation of the fix,
+> not a confirmed one. There is also an open question — see the write-up — about
+> whether the extension even launches on a re-signed build.
+
+What you need to know as a user:
+
+- **Your signing certificate must have at least one registered App Group.**
+  Without one there is no container to redirect into and the bridge does nothing.
+- **Using Feather? Turn on "Merge entitlements"** (it is off by default). That
+  re-signs Facebook's keychain groups under *your* team id, which is the other
+  half of the fix. You do **not** need "Inject into app extensions" — the bridge
+  is already inside the IPA — though enabling it is harmless.
+- **Messenger messages are out of scope.** They are end-to-end encrypted with
+  device-bound keys in `group.com.facebook.family`; a redirected container is
+  empty, so there is nothing to decrypt with. This targets **Facebook**
+  notifications: likes, comments, tags, friend requests.
+- **TrollStore users need none of this** — it preserves the original
+  entitlements, so notifications already work.
+
+---
+
 ## 🏗️ Project Architecture
 
 ```text
+├── FBPNotifyBridge     # Slim dylib injected into NotificationServiceExtension.appex (session bridge)
 ├── Localizations       # Translations (ar, bn, de, es, fr, hi, id, it, ja, ko, pl, pt-BR, ru, tr, vi, zh-Hans, zh-Hant)
 ├── OpenInFacebookSafariExtension  # Safari web extension built into PlugIns ("Open in Facebook")
 ├── resources           # Assets (App icons, SVGs, and asset bundles)
