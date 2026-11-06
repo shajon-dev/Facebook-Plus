@@ -8,6 +8,7 @@
 #import <mach-o/dyld.h>
 
 extern void FBPInitFeedHooks(void);
+extern void FBPInitFeedSurveyHooks(void);
 extern void FBPInitAdsHooks(void);
 extern void FBPInitReelsSurveyHooks(void);
 extern void FBPInitStoryHooks(void);
@@ -25,6 +26,7 @@ extern void FBPInitCallBlocker(void);
 /// this repeatedly installs each hook exactly once.
 static void FBPInstallHooks(void) {
     FBPInitFeedHooks();
+    FBPInitFeedSurveyHooks();
     FBPInitAdsHooks();
     FBPInitReelsSurveyHooks();
     FBPInitStoryHooks();
