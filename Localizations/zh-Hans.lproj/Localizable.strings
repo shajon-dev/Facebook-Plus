@@ -61,6 +61,8 @@
 "row.linksinsafari.title" = "在 Safari 中打开链接";
 "row.linksinsafari.desc" = "在默认浏览器而非应用内浏览器中打开外部链接。";
 "row.language.title" = "语言";
+"row.keychainrebind.title" = "钥匙串兼容";
+"row.keychainrebind.desc" = "让重签名应用的钥匙串继续可用。若在个人主页点按“消息”会导致 Facebook 崩溃，请关闭此项。";
 "reset.title" = "重置所有设置";
 "reset.message" = "所有选项将恢复默认值，此操作无法撤销。";
 "reset.confirm" = "重置";

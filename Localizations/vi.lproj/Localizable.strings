@@ -61,6 +61,8 @@
 "row.linksinsafari.title" = "Mở liên kết trong Safari";
 "row.linksinsafari.desc" = "Mở liên kết ngoài trong trình duyệt mặc định thay vì trình duyệt trong ứng dụng.";
 "row.language.title" = "Ngôn ngữ";
+"row.keychainrebind.title" = "Tương thích Keychain";
+"row.keychainrebind.desc" = "Giữ cho keychain của ứng dụng đã ký lại hoạt động. Hãy tắt nếu Facebook bị thoát khi bạn chạm Message trên một trang cá nhân.";
 "reset.title" = "Đặt lại tất cả cài đặt";
 "reset.message" = "Mọi tùy chọn sẽ trở về mặc định. Không thể hoàn tác thao tác này.";
 "reset.confirm" = "Đặt lại";

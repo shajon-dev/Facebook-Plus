@@ -61,6 +61,8 @@
 "row.linksinsafari.title" = "Abrir links no Safari";
 "row.linksinsafari.desc" = "Abre links externos no seu navegador padrão em vez do navegador interno.";
 "row.language.title" = "Idioma";
+"row.keychainrebind.title" = "Compatibilidade do keychain";
+"row.keychainrebind.desc" = "Mantém o keychain de um app reassinado funcionando. Desative se o Facebook fechar ao tocar em «Mensagem» num perfil.";
 "reset.title" = "Redefinir todas as configurações";
 "reset.message" = "Cada opção volta ao padrão. Isso não pode ser desfeito.";
 "reset.confirm" = "Redefinir";

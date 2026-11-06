@@ -8,8 +8,10 @@ NSString *bundleId;
 
 // The app's real keychain access group is not knowable ahead of time, so add
 // (or read back) a throwaway generic-password item and let the keychain report
-// which access group it landed in. Every SecItem* call is then pinned to that
-// group (see SecRebinds.xm) so a sideloaded app's keychain I/O succeeds.
+// which access group it landed in. Keychain calls that need it are then pinned
+// to that group (see SecRebinds.xm) so a sideloaded app's keychain I/O
+// succeeds. If the probe fails, accessGroupId stays nil and SecRebinds leaves
+// every query alone rather than stripping the group the caller asked for.
 static void probeAccessGroup() {
 	NSDictionary *query = @{
 		(__bridge NSString *)kSecClass: (__bridge NSString *)kSecClassGenericPassword,

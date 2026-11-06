@@ -61,6 +61,8 @@
 "row.linksinsafari.title" = "Ouvrir les liens dans Safari";
 "row.linksinsafari.desc" = "Ouvre les liens externes dans votre navigateur par défaut plutôt que dans le navigateur intégré.";
 "row.language.title" = "Langue";
+"row.keychainrebind.title" = "Compatibilité du trousseau";
+"row.keychainrebind.desc" = "Permet au trousseau d’une app resignée de fonctionner. Désactivez-le si Facebook plante quand vous touchez « Message » sur un profil.";
 "reset.title" = "Réinitialiser tous les réglages";
 "reset.message" = "Chaque option revient à sa valeur par défaut. Action irréversible.";
 "reset.confirm" = "Réinitialiser";
