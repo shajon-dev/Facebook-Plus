@@ -79,7 +79,12 @@ trap cleanup EXIT
 # the bridge already. Set NSE_BRIDGE=0 to build an IPA without it.
 NSE_BRIDGE="${NSE_BRIDGE:-1}"
 BRIDGE_DIR="FBPNotifyBridge/src"
-BRIDGE_DYLIB="$BRIDGE_DIR/.theos/obj/FBPNotifyBridge.dylib"
+# Where theos drops it, and where we publish it. The dylib lands in packages/
+# alongside the .deb and .ipa so every build product is in one place — and
+# because packages/ is git-ignored, the binary is never committed: the repository
+# carries only FBPNotifyBridge/src and the IPA build compiles it from source.
+BRIDGE_BUILT="$BRIDGE_DIR/.theos/obj/FBPNotifyBridge.dylib"
+BRIDGE_DYLIB="packages/FBPNotifyBridge.dylib"
 
 # Locate cyan's bundled insert_dylib. cyan ships its own per-platform Mach-O
 # tools (insert_dylib, ldid, otool, …) inside its Python package; neither
@@ -136,7 +141,14 @@ inject_nse_bridge() {
 	ipa_abs="$(cd "$(dirname "$ipa")" && pwd)/$(basename "$ipa")"
 	NSE_WORK="$(mktemp -d)"
 
-	echo "==> Injecting the NSE session bridge into $ipa…"
+	# ${ipa} is braced because macOS's bash 3.2 mis-tokenizes a bare $ipa when the
+	# "…" follows it directly: in a UTF-8 locale it reads the multi-byte U+2026 as
+	# part of the variable name, so `set -u` aborts the build with
+	# "ipa<junk>: unbound variable". Verified on bash 3.2.57: it fails under
+	# LANG=en_US.UTF-8 (what the build-ipa workflow sets, and what an interactive
+	# macOS shell normally has) and only happens to survive under LANG=C. Brace
+	# every variable that is followed immediately by a non-ASCII character.
+	echo "==> Injecting the NSE session bridge into ${ipa}…"
 	unzip -q "$ipa_abs" -d "$NSE_WORK"
 
 	appex="$NSE_WORK/$appex_rel"
@@ -289,13 +301,27 @@ if [ -f "$IPA_IN" ]; then
 	# main binary, installing its container redirects a second time.
 	if [ "$NSE_BRIDGE" != "0" ]; then
 		echo "==> Building the NSE session bridge in ${BRIDGE_DIR}…"
-		# Drop any dylib a previous run left behind first: if this build fails we
-		# want the injection step to find nothing and say so, rather than quietly
-		# shipping a stale bridge built from older sources.
-		rm -f "$BRIDGE_DYLIB"
+		# Drop any dylib an earlier run left behind, in the theos output and in
+		# packages/: if this build fails we want the injection step to find
+		# nothing and say so, rather than quietly shipping a stale bridge built
+		# from older sources.
+		rm -f "$BRIDGE_BUILT" "$BRIDGE_DYLIB"
 		if ! make -C "$BRIDGE_DIR" FINALPACKAGE=1 >/dev/null; then
 			echo "warning: the NSE session bridge failed to build — continuing without it." >&2
+		elif ! cp "$BRIDGE_BUILT" "$BRIDGE_DYLIB" 2>/dev/null; then
+			echo "warning: the NSE session bridge built but could not be copied to" >&2
+			echo "         ${BRIDGE_DYLIB} — continuing without it." >&2
+		else
+			echo "==> NSE session bridge: ${BRIDGE_DYLIB}"
 		fi
+		# This subproject compiles two shared sources through ../../, and theos
+		# mirrors those relative paths into stamp directories *next to* the
+		# subproject: FBPNotifyBridge/src/src/PluginsInject and
+		# FBPNotifyBridge/src/fishhook. They hold nothing but an empty .stamp
+		# marker — the real objects go under .theos/ — so they are removed to keep
+		# the working tree clean. theos recreates them on the next build, and
+		# .gitignore still lists them for anyone running `make -C` by hand.
+		rm -rf "$BRIDGE_DIR/src" "$BRIDGE_DIR/fishhook"
 	fi
 
 	echo "==> Injecting $DEB_INJECT (+ icons${PLUGINS:+ + ${#PLUGINS[@]} extension(s)}) into $IPA_IN with cyan…"

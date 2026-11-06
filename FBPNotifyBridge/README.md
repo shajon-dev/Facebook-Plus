@@ -136,6 +136,11 @@ make -C FBPNotifyBridge/src FINALPACKAGE=1
 # -> FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib
 ```
 
+`build.sh` copies that to **`packages/FBPNotifyBridge.dylib`** and injects from
+there, so every build product sits in `packages/` together. That directory is
+git-ignored, so the compiled dylib is never committed — the repository carries
+only the sources in this folder and each build compiles them again.
+
 It is **deliberately not a target of the root `Makefile`.** A second target there
 would be packaged into the `.deb`, and `cyan` would then inject this dylib into
 the *main* binary as well — installing the `NSFileManager` / `NSUserDefaults`
