@@ -167,20 +167,8 @@ static BOOL FBPShouldFilterModel(id model) {
     // FBMemInlineSurveyStoryActionLink / …SubmitResponsePayload, which belong to
     // a host post that may dereference them, so dropping those risks a crash.
     //
-    // TODO: the in-feed inline card attached to an ordinary post is
-    // FBFeedInlineSurveyComponent, and it is deliberately not touched here.
-    // It is a ComponentKit component hanging off a normal story rather than its
-    // own feed unit, so dropping its model would delete the whole post. The
-    // component implements no layout method of its own (v585 declares only the
-    // answer/dismiss callbacks, -boundsAnimationFromPreviousComponent: and the
-    // +newWithActionLink:… factories), so suppressing it would mean overriding
-    // an inherited CK layout entry point — and CKComponentLayout / CKSizeRange
-    // are not declared anywhere in this tweak, so the struct ABI cannot be
-    // matched safely. Returning nil from the +newWithActionLink:… factory looks
-    // like the most promising route (CK treats nil children as absent), but it
-    // is unverified against Facebook's own call sites, so it is left alone
-    // rather than risk crashing the feed. The Reels surfaces are covered by
-    // FBPReelsSurveyHooks.xm.
+    // The inline card attached to an ordinary post is a component, not a unit —
+    // see FBPFeedSurveyHooks.xm; the Reels surfaces are in FBPReelsSurveyHooks.xm.
     if (FBPEnabled(FBPKeyNoSurveys)) {
         NSString *className = NSStringFromClass([model class]);
         if ([className containsString:@"PositionalFeedSurvey"] ||
