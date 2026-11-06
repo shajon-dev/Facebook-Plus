@@ -88,6 +88,15 @@ extern NSString *const FBPKeyFontScale;         // Custom-font size multiplier (
 // Links
 extern NSString *const FBPKeyLinksInSafari;     // Open external links in the default browser
 
+// Sideload compatibility
+/// Pin keychain calls that need it to the probed access group (see
+/// src/PluginsInject/SecRebinds.xm). On by default; turning it off disables the
+/// SecItem* rewriting entirely, which is the A/B for a keychain-related crash.
+/// SecRebinds.xm is shared with FBPNotifyBridge.dylib, which cannot see this
+/// header, so it reads the raw @c "keychainRebind" key out of the defaults
+/// suite — keep the two in step.
+extern NSString *const FBPKeyKeychainRebind;
+
 // Other
 extern NSString *const FBPKeyNotifyUpdates;
 extern NSString *const FBPKeyAutoClearCache;

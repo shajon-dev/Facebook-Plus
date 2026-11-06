@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Open Links in Safari";
 "row.linksinsafari.desc" = "Opens external links in your default browser instead of the in-app browser.";
 "row.language.title" = "Language";
+"row.keychainrebind.title" = "Keychain Compatibility";
+"row.keychainrebind.desc" = "Keeps a re-signed app’s keychain working. Turn it off if Facebook crashes when you tap Message on a profile.";
 "reset.title" = "Reset All Settings";
 "reset.message" = "Every option returns to its default. This cannot be undone.";
 "reset.confirm" = "Reset";

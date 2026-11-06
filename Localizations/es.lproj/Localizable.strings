@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Abrir enlaces en Safari";
 "row.linksinsafari.desc" = "Abre los enlaces externos en tu navegador predeterminado en vez del navegador integrado.";
 "row.language.title" = "Idioma";
+"row.keychainrebind.title" = "Compatibilidad con el llavero";
+"row.keychainrebind.desc" = "Mantiene funcionando el llavero de una app refirmada. Desactívalo si Facebook se cierra al tocar «Mensaje» en un perfil.";
 "reset.title" = "Restablecer todos los ajustes";
 "reset.message" = "Cada opción vuelve a su valor predeterminado. Esta acción no se puede deshacer.";
 "reset.confirm" = "Restablecer";

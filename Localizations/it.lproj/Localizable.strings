@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Apri i link in Safari";
 "row.linksinsafari.desc" = "Apre i link esterni nel browser predefinito invece che nel browser interno.";
 "row.language.title" = "Lingua";
+"row.keychainrebind.title" = "Compatibilità portachiavi";
+"row.keychainrebind.desc" = "Mantiene funzionante il portachiavi di un’app rifirmata. Disattivalo se Facebook si chiude quando tocchi «Messaggio» in un profilo.";
 "reset.title" = "Ripristina tutte le impostazioni";
 "reset.message" = "Ogni opzione torna al valore predefinito. L’azione non può essere annullata.";
 "reset.confirm" = "Ripristina";

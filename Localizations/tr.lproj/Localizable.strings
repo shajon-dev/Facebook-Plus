@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Bağlantıları Safari'de aç";
 "row.linksinsafari.desc" = "Harici bağlantıları uygulama içi tarayıcı yerine varsayılan tarayıcında açar.";
 "row.language.title" = "Dil";
+"row.keychainrebind.title" = "Anahtar Zinciri Uyumluluğu";
+"row.keychainrebind.desc" = "Yeniden imzalanmış uygulamanın anahtar zincirini çalışır durumda tutar. Bir profilde Mesaj'a dokunduğunda Facebook çöküyorsa kapat.";
 "reset.title" = "Tüm Ayarları Sıfırla";
 "reset.message" = "Her seçenek varsayılanına döner. Bu işlem geri alınamaz.";
 "reset.confirm" = "Sıfırla";

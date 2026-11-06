@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Otwieraj łącza w Safari";
 "row.linksinsafari.desc" = "Otwiera zewnętrzne łącza w domyślnej przeglądarce zamiast w przeglądarce w aplikacji.";
 "row.language.title" = "Język";
+"row.keychainrebind.title" = "Zgodność pęku kluczy";
+"row.keychainrebind.desc" = "Utrzymuje działanie pęku kluczy w podpisanej ponownie aplikacji. Wyłącz, jeśli Facebook zamyka się przy dotknięciu „Wyślij wiadomość” w profilu.";
 "reset.title" = "Zresetuj wszystkie ustawienia";
 "reset.message" = "Wszystkie opcje powrócą do wartości domyślnych. Tej operacji nie można cofnąć.";
 "reset.confirm" = "Resetuj";

@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "लिंक Safari में खोलें";
 "row.linksinsafari.desc" = "बाहरी लिंक इन-ऐप ब्राउज़र के बजाय आपके डिफ़ॉल्ट ब्राउज़र में खोलता है।";
 "row.language.title" = "भाषा";
+"row.keychainrebind.title" = "कीचेन संगति";
+"row.keychainrebind.desc" = "पुनः साइन किए गए ऐप की कीचेन को चालू रखता है। अगर प्रोपाइल पर Message दबाने से Facebook क्रैश हो, तो इसे बंद करें।";
 "reset.title" = "सभी सेटिंग रीसेट करें";
 "reset.message" = "हर विकल्प अपने डिफ़ॉल्ट पर लौट आएगा। इसे पूर्ववत नहीं किया जा सकता।";
 "reset.confirm" = "रीसेट करें";

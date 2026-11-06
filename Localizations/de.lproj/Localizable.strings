@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Links in Safari öffnen";
 "row.linksinsafari.desc" = "Öffnet externe Links im Standardbrowser statt im In-App-Browser.";
 "row.language.title" = "Sprache";
+"row.keychainrebind.title" = "Keychain-Kompatibilität";
+"row.keychainrebind.desc" = "Hält den Schlüsselbund einer neu signierten App funktionsfähig. Schalte es aus, wenn Facebook beim Tippen auf „Nachricht“ in einem Profil abstürzt.";
 "reset.title" = "Alle Einstellungen zurücksetzen";
 "reset.message" = "Jede Option wird auf den Standard zurückgesetzt. Dies kann nicht rückgängig gemacht werden.";
 "reset.confirm" = "Zurücksetzen";

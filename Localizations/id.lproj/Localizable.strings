@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "Buka Tautan di Safari";
 "row.linksinsafari.desc" = "Membuka tautan eksternal di browser default alih-alih browser dalam aplikasi.";
 "row.language.title" = "Bahasa";
+"row.keychainrebind.title" = "Kompatibilitas Keychain";
+"row.keychainrebind.desc" = "Menjaga keychain aplikasi yang ditandatangani ulang tetap berfungsi. Matikan jika Facebook keluar sendiri saat kamu menekan Message di sebuah profil.";
 "reset.title" = "Setel Ulang Semua Pengaturan";
 "reset.message" = "Setiap opsi kembali ke default. Tindakan ini tidak dapat dibatalkan.";
 "reset.confirm" = "Setel Ulang";

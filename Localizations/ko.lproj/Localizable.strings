@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "링크를 Safari에서 열기";
 "row.linksinsafari.desc" = "외부 링크를 인앱 브라우저 대신 기본 브라우저에서 엽니다.";
 "row.language.title" = "언어";
+"row.keychainrebind.title" = "키체인 호환성";
+"row.keychainrebind.desc" = "다시 서명한 앱의 키체인이 계속 작동하도록 합니다. 프로필에서 바로 전송을 눌렀을 때 Facebook이 종료된다면 여기를 끄세요.";
 "reset.title" = "모든 설정 초기화";
 "reset.message" = "모든 옵션이 기본값으로 돌아갑니다. 되돌릴 수 없습니다.";
 "reset.confirm" = "초기화";

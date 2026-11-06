@@ -45,6 +45,7 @@ NSString *const FBPKeyOLED             = @"oledMode";
 NSString *const FBPKeyFont             = @"uiFont";
 NSString *const FBPKeyFontScale        = @"uiFontScale";
 NSString *const FBPKeyLinksInSafari    = @"linksInSafari";
+NSString *const FBPKeyKeychainRebind   = @"keychainRebind";
 NSString *const FBPKeyNotifyUpdates    = @"notifyUpdates";
 NSString *const FBPKeyAutoClearCache   = @"autoClearCache";
 NSString *const FBPKeyLanguage         = @"uiLanguage";

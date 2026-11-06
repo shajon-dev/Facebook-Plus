@@ -58,6 +58,8 @@
 "row.linksinsafari.title" = "লিংক Safari-তে খুলুন";
 "row.linksinsafari.desc" = "বাইরের লিংক অ্যাপের ভেতরের ব্রাউজারের বদলে আপনার ডিফল্ট ব্রাউজারে খোলে।";
 "row.language.title" = "ভাষা";
+"row.keychainrebind.title" = "কীচেইন সামঞ্জস্য";
+"row.keychainrebind.desc" = "পুনরায় সাইন করা অ্যাপের কীচেইন কাজ করতে দেয়। প্রোফাইলে Message চাপলে যদি Facebook ক্র্যাশ করে, অপশনটি বন্ধ করুন।";
 "reset.title" = "সব সেটিং রিসেট করুন";
 "reset.message" = "প্রতিটি অপশন ডিফল্টে ফিরে যাবে। এটি আর ফেরানো যাবে না।";
 "reset.confirm" = "রিসেট";
