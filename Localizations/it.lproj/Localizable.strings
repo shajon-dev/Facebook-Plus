@@ -53,6 +53,9 @@
 "row.clearcache.title" = "Svuota la cache ora";
 "row.checkupdate.title" = "Controlla aggiornamenti";
 "row.checkupdate.desc" = "Verifica se è disponibile una versione più recente.";
+"row.logfeedunits.title" = "Registra i token dei blocchi del feed";
+"row.logfeedunits.desc" = "Scrive il token di categoria di ogni blocco del feed nel registro di sistema.";
+"footer.logfeedunits" = "Serve solo a diagnosticare un filtro che ha smesso di funzionare. Attivalo, scorri il feed una volta, poi leggi il registro in Console.app sotto «com.shajon.fbplus». Lascialo spento il resto del tempo.";
 "row.welcome.title" = "Mostra la schermata di benvenuto";
 "row.reset.title" = "Ripristina tutte le impostazioni";
 "row.linksinsafari.title" = "Apri i link in Safari";

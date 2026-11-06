@@ -53,6 +53,9 @@
 "row.clearcache.title" = "Önbelleği Şimdi Temizle";
 "row.checkupdate.title" = "Güncelleme denetle";
 "row.checkupdate.desc" = "Daha yeni bir sürüm olup olmadığını kontrol et.";
+"row.logfeedunits.title" = "Akış Birimi Belirteçlerini Kaydet";
+"row.logfeedunits.desc" = "Her akış biriminin kategori belirtecini sistem günlüğüne yazar.";
+"footer.logfeedunits" = "Yalnızca çalışmayı bırakan bir süzgeci teşhis etmek için. Aç, akışı bir kez kaydır, sonra günlüğü Console.app’te «com.shajon.fbplus» altında oku. Diğer zamanlarda kapalı bırak.";
 "row.welcome.title" = "Karşılama Ekranını Göster";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
 "row.linksinsafari.title" = "Bağlantıları Safari'de aç";

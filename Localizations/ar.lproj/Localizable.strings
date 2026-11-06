@@ -53,6 +53,9 @@
 "row.clearcache.title" = "مسح ذاكرة التخزين الآن";
 "row.checkupdate.title" = "التحقق من وجود تحديث";
 "row.checkupdate.desc" = "تحقّق مما إذا كان هناك إصدار أحدث.";
+"row.logfeedunits.title" = "تسجيل رموز وحدات آخر الأخبار";
+"row.logfeedunits.desc" = "يكتب رمز فئة كل وحدة في آخر الأخبار إلى سجل النظام.";
+"footer.logfeedunits" = "للتشخيص فقط عندما يتوقف أحد المرشّحات عن العمل. شغّله، ومرّر آخر الأخبار مرة واحدة، ثم اقرأ السجل في Console.app ضمن «com.shajon.fbplus». اتركه مغلقًا فيما عدا ذلك.";
 "row.welcome.title" = "عرض شاشة الترحيب";
 "row.reset.title" = "إعادة تعيين كل الإعدادات";
 "row.linksinsafari.title" = "فتح الروابط في Safari";

@@ -53,6 +53,9 @@
 "row.clearcache.title" = "अभी कैश साफ़ करें";
 "row.checkupdate.title" = "अपडेट जाँचें";
 "row.checkupdate.desc" = "देखें कि कोई नया संस्करण उपलब्ध है या नहीं।";
+"row.logfeedunits.title" = "फ़ीड यूनिट टोकन लॉग करें";
+"row.logfeedunits.desc" = "हर फ़ीड यूनिट का कैटेगरी टोकन सिस्टम लॉग में लिखता है।";
+"footer.logfeedunits" = "यह सिर्य़ तब काम आता है जब कोई फ़िल्टर काम करना बंद कर दे। इसे चालू करें, फ़ीड एक बार स्क्रॉल करें, पिफ़र Console.app में «com.shajon.fbplus» के नीचे लॉग पढ़ें। बाक़ी समय बंद रखें।";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
 "row.linksinsafari.title" = "लिंक Safari में खोलें";

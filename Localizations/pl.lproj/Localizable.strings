@@ -53,6 +53,9 @@
 "row.clearcache.title" = "Wyczyść pamięć podręczną";
 "row.checkupdate.title" = "Sprawdź dostępność aktualizacji";
 "row.checkupdate.desc" = "Sprawdź, czy jest dostępna nowsza wersja.";
+"row.logfeedunits.title" = "Zapisuj tokeny bloków aktualności";
+"row.logfeedunits.desc" = "Zapisuje token kategorii każdego bloku aktualności do dziennika systemowego.";
+"footer.logfeedunits" = "Tylko do diagnozowania filtra, który przestał działać. Włącz, przewiń raz aktualności, a potem przeczytaj dziennik w Console.app pod „com.shajon.fbplus”. W pozostałych przypadkach pozostaw wyłączone.";
 "row.welcome.title" = "Pokaż ekran powitalny";
 "row.reset.title" = "Zresetuj wszystkie ustawienia";
 "row.linksinsafari.title" = "Otwieraj łącza w Safari";

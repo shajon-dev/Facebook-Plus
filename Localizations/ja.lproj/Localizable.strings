@@ -53,6 +53,9 @@
 "row.clearcache.title" = "今すぐキャッシュを消去";
 "row.checkupdate.title" = "アップデートを確認";
 "row.checkupdate.desc" = "新しいバージョンがあるか確認します。";
+"row.logfeedunits.title" = "フィードユニットのトークンを記録";
+"row.logfeedunits.desc" = "各フィードユニットのカテゴリトークンをシステムログに書き出します。";
+"footer.logfeedunits" = "フィルターが効かなくなった原因を調べるためだけの項目です。オンにしてフィードを一度スクロールし、Console.app で「com.shajon.fbplus」のログを確認してください。それ以外はオフのままにしてください。";
 "row.welcome.title" = "ようこそ画面を表示";
 "row.reset.title" = "すべての設定をリセット";
 "row.linksinsafari.title" = "リンクを Safari で開く";
