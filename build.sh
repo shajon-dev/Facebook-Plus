@@ -52,6 +52,16 @@ IPA_IN="test/com.facebook.Facebook.ipa"
 
 mkdir -p packages
 
+# Every run starts from an empty packages/: the previous .deb, .dylib and .ipa
+# are deleted up front and without asking. They are all reproducible from this
+# source tree, and a stale artifact sitting next to a fresh one is exactly how
+# the wrong file ends up signed and shipped — a version bump, for instance,
+# renames the .deb and would otherwise leave the old one behind.
+#
+# Scoped to packages/ on purpose. The input IPA lives in test/ ($IPA_IN) and is
+# never touched: it is not a build product and cannot be regenerated here.
+rm -f packages/*.deb packages/*.dylib packages/*.ipa
+
 # Scratch paths the IPA post-processing steps create. One trap removes whatever
 # exists, so a later step cannot drop an earlier step's cleanup by installing its
 # own EXIT handler.
@@ -241,11 +251,11 @@ if [ -f "$IPA_IN" ]; then
 	FB_VERSION="$(python3 scripts/ipa_version.py "$IPA_IN")"
 	IPA_OUT="packages/Facebook-Plus-v${FB_VERSION}-rootless.ipa"
 
-	# cyan refuses to overwrite an existing output, so clear a previous run first.
-	if [ -f "$IPA_OUT" ]; then
-		echo "==> Removing existing $IPA_OUT"
-		rm -f "$IPA_OUT"
-	fi
+	# packages/ was emptied at the start of the run, so this output should not
+	# exist. Clear it anyway and pass --overwrite below: left to itself cyan stops
+	# on an existing output with an interactive "overwrite it? [Y/n]" prompt,
+	# which would hang a CI run or a build left unattended.
+	rm -f "$IPA_OUT"
 
 	# Custom app-icon logos (shipped in resources/logo/). cyan drops the PNGs at
 	# the .app root via -f; their alternate-icon plist entries are merged via -l,
@@ -333,7 +343,7 @@ if [ -f "$IPA_IN" ]; then
 		"${PLUGINS[@]+"${PLUGINS[@]}"}" \
 		"${MERGE_ARGS[@]+"${MERGE_ARGS[@]}"}" \
 		"${RENAME_ARGS[@]+"${RENAME_ARGS[@]}"}" \
-		-uwsgq
+		--overwrite -uwsgq
 
 	if [ "$NSE_BRIDGE" = "0" ]; then
 		echo "==> NSE_BRIDGE=0 — skipped the notification-service bridge."
