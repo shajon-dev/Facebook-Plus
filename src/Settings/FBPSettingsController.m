@@ -391,6 +391,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPSwitchRow(FBPKeyNoPYMK, FBPL(@"row.nopymk.title"), nil, @"people"),
                 FBPSwitchRow(FBPKeyNoGroupSuggestions, FBPL(@"row.nogroups.title"), nil, @"group"),
                 FBPSwitchRow(FBPKeyNoSuggestedPages, FBPL(@"row.nosuggestedpages.title"), nil, @"group"),
+                FBPSwitchRow(FBPKeyNoSurveys, FBPL(@"row.nosurveys.title"), FBPL(@"row.nosurveys.desc"), @"magic"),
             ]),
         ]},
         @{ kRowTitle : FBPL(@"cat.confirm.title"), kRowDesc : FBPL(@"cat.confirm.summary"),

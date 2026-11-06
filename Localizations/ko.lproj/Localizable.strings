@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "'새로운 스레드 둘러보기' 카드를 숨깁니다.";
 "row.nogroups.title" = "그룹 추천 제거";
 "row.nosuggestedpages.title" = "추천 페이지 제거";
+"row.nosurveys.title" = "설문 카드 제거";
+"row.nosurveys.desc" = "'이 게시물에 관심이 있나요?' 카드를 숨깁니다.";
 "row.feedlike.title" = "좋아요 확인";
 "row.feedlike.desc" = "좋아요를 보내기 전에 확인합니다 — 피드 게시물과 릴스 모두.";
 "row.downloadreels.title" = "릴스 다운로드";

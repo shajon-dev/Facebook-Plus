@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "«yeni threads keşfet» kartını gizler.";
 "row.nogroups.title" = "Grup Önerilerini Kaldır";
 "row.nosuggestedpages.title" = "Önerilen Sayfaları Kaldır";
+"row.nosurveys.title" = "Anketleri Kaldır";
+"row.nosurveys.desc" = "«bu gönderi ilgini çekiyor mu?» kartlarını gizler.";
 "row.feedlike.title" = "Beğenileri Onayla";
 "row.feedlike.desc" = "Beğeni gönderilmeden önce sorar — akış gönderileri ve Reels.";
 "row.downloadreels.title" = "Reels'i İndir";

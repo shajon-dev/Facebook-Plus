@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Ẩn thẻ “khám phá các thread mới”.";
 "row.nogroups.title" = "Xóa đề xuất nhóm";
 "row.nosuggestedpages.title" = "Xóa Trang được đề xuất";
+"row.nosurveys.title" = "Xóa thẻ khảo sát";
+"row.nosurveys.desc" = "Ẩn các thẻ “bạn có thấy bài viết này thú vị không?”.";
 "row.feedlike.title" = "Xác nhận lượt thích";
 "row.feedlike.desc" = "Hỏi trước khi gửi lượt thích — bài viết bảng tin và Reels.";
 "row.downloadreels.title" = "Tải Reels";

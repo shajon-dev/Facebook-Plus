@@ -37,6 +37,7 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyNoThreads        : @YES,
         FBPKeyNoGroupSuggestions : @YES,
         FBPKeyNoSuggestedPages : @YES,
+        FBPKeyNoSurveys        : @YES,
         FBPKeyConfirmComment   : @NO,
         FBPKeyConfirmFriend    : @NO,
         FBPKeyConfirmShare     : @NO,

@@ -160,6 +160,35 @@ static BOOL FBPShouldFilterModel(id model) {
         if ([className containsString:@"PagesYouMayLike"]) return YES;
     }
 
+    // Standalone survey feed units — the "Are you interested in this post?"
+    // card when it arrives as a unit of its own (FBMemXFBPositionalFeedSurvey,
+    // FBMemStoryGallerySurveyFeedUnit). The two infixes are matched rather than
+    // a bare "Survey" or "InlineSurvey": the latter would also catch
+    // FBMemInlineSurveyStoryActionLink / …SubmitResponsePayload, which belong to
+    // a host post that may dereference them, so dropping those risks a crash.
+    //
+    // TODO: the in-feed inline card attached to an ordinary post is
+    // FBFeedInlineSurveyComponent, and it is deliberately not touched here.
+    // It is a ComponentKit component hanging off a normal story rather than its
+    // own feed unit, so dropping its model would delete the whole post. The
+    // component implements no layout method of its own (v585 declares only the
+    // answer/dismiss callbacks, -boundsAnimationFromPreviousComponent: and the
+    // +newWithActionLink:… factories), so suppressing it would mean overriding
+    // an inherited CK layout entry point — and CKComponentLayout / CKSizeRange
+    // are not declared anywhere in this tweak, so the struct ABI cannot be
+    // matched safely. Returning nil from the +newWithActionLink:… factory looks
+    // like the most promising route (CK treats nil children as absent), but it
+    // is unverified against Facebook's own call sites, so it is left alone
+    // rather than risk crashing the feed. The Reels surfaces are covered by
+    // FBPReelsSurveyHooks.xm.
+    if (FBPEnabled(FBPKeyNoSurveys)) {
+        NSString *className = NSStringFromClass([model class]);
+        if ([className containsString:@"PositionalFeedSurvey"] ||
+            [className containsString:@"SurveyFeedUnit"]) {
+            return YES;
+        }
+    }
+
     // A single ephemeral story shown inline in the feed (its own card, distinct
     // from the horizontal tray). It arrives as FBMemStoriesSingleBucketInline
     // ViewerFeedUnit under an ORGANIC edge, so it is matched by class name rather

@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "يُخفي بطاقة «اكتشف threads جديدة».";
 "row.nogroups.title" = "إزالة اقتراحات المجموعات";
 "row.nosuggestedpages.title" = "إزالة الصفحات المقترحة";
+"row.nosurveys.title" = "إزالة بطاقات الاستبيان";
+"row.nosurveys.desc" = "يُخفي بطاقات «هل يهمك هذا المنشور؟».";
 "row.feedlike.title" = "تأكيد الإعجاب";
 "row.feedlike.desc" = "يسأل قبل إرسال أي إعجاب — منشورات الأخبار وReels.";
 "row.downloadreels.title" = "تنزيل Reels";

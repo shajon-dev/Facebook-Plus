@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "«नए threads खोजें» कार्ड छिपाता है।";
 "row.nogroups.title" = "समूह सुझाव हटाएँ";
 "row.nosuggestedpages.title" = "सुझाए गए पेज हटाएँ";
+"row.nosurveys.title" = "सर्वे कार्ड हटाएँ";
+"row.nosurveys.desc" = "«क्या इस पोस्ट में आपकी रुचि है?» कार्ड छिपाता है।";
 "row.feedlike.title" = "लाइक की पुष्टि करें";
 "row.feedlike.desc" = "लाइक भेजने से पहले पूछता है — फ़ीड पोस्ट और Reels दोनों।";
 "row.downloadreels.title" = "Reels डाउनलोड करें";

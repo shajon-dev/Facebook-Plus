@@ -29,6 +29,7 @@ NSString *const FBPKeyNoStoryPYMK      = @"noStoryPYMK";
 NSString *const FBPKeyNoThreads        = @"noThreads";
 NSString *const FBPKeyNoGroupSuggestions = @"noGroupSuggestions";
 NSString *const FBPKeyNoSuggestedPages = @"noSuggestedPages";
+NSString *const FBPKeyNoSurveys        = @"noSurveys";
 NSString *const FBPKeyConfirmComment   = @"confirmComment";
 NSString *const FBPKeyConfirmFriend    = @"confirmFriend";
 NSString *const FBPKeyConfirmShare     = @"confirmShare";

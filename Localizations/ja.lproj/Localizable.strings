@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "「新しいスレッドを見つけよう」カードを非表示にします。";
 "row.nogroups.title" = "グループの提案を削除";
 "row.nosuggestedpages.title" = "おすすめページを非表示";
+"row.nosurveys.title" = "アンケートを削除";
+"row.nosurveys.desc" = "「この投稿に興味がありますか？」カードを非表示にします。";
 "row.feedlike.title" = "「いいね！」を確認";
 "row.feedlike.desc" = "「いいね！」を送る前に確認します（フィード投稿とリールの両方）。";
 "row.downloadreels.title" = "リールをダウンロード";
