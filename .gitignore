@@ -4,6 +4,13 @@
 .theos/
 packages/
 
+# theos also drops empty object-directory stamps *next to* a subproject when
+# that subproject compiles sources from outside its own directory, which
+# FBPNotifyBridge/src does (it shares src/PluginsInject/ and fishhook/ with the
+# root tweak). These two are build droppings, not source.
+FBPNotifyBridge/src/fishhook/
+FBPNotifyBridge/src/src/
+
 # ---------------------------------------------------------------------------
 # Packaging artifacts (build.sh)
 #   - Facebook-Plus.deb : the renamed package build.sh produces
