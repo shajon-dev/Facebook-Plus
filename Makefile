@@ -32,6 +32,7 @@ FacebookPlus_FILES = \
 	src/Features/Language/FBPLanguageController.m \
 	src/Features/Feed/FBPFeedHooks.xm \
 	src/Features/Ads/FBPAdsHooks.xm \
+	src/Features/Reels/FBPReelsSurveyHooks.xm \
 	src/Features/Stories/FBPStoryHooks.xm \
 	src/Features/LikeConfirmation/FBPConfirmHooks.xm \
 	src/Features/Confirmations/FBPActionConfirm.mm \

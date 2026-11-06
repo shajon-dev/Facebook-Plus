@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Oculta o cartão «descobrir novos threads».";
 "row.nogroups.title" = "Remover sugestões de grupos";
 "row.nosuggestedpages.title" = "Remover páginas sugeridas";
+"row.nosurveys.title" = "Remover enquetes";
+"row.nosurveys.desc" = "Oculta os cartões «você tem interesse nesta publicação?».";
 "row.feedlike.title" = "Confirmar curtidas";
 "row.feedlike.desc" = "Pergunta antes de enviar uma curtida — publicações do feed e Reels.";
 "row.downloadreels.title" = "Baixar Reels";

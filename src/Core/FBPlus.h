@@ -57,6 +57,7 @@ extern NSString *const FBPKeyNoStoryPYMK;       // Remove PYMK from the story tr
 extern NSString *const FBPKeyNoThreads;         // Remove the Threads promo unit
 extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should join"
 extern NSString *const FBPKeyNoSuggestedPages;  // Remove "suggested pages for you"
+extern NSString *const FBPKeyNoSurveys;         // Remove "are you interested in this post?" surveys
 
 // Confirmations (opt-in: guard an action behind a prompt)
 extern NSString *const FBPKeyConfirmComment;    // Confirm before posting a comment

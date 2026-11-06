@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Masque la carte « découvrir de nouveaux threads ».";
 "row.nogroups.title" = "Supprimer les suggestions de groupes";
 "row.nosuggestedpages.title" = "Supprimer les pages suggérées";
+"row.nosurveys.title" = "Supprimer les sondages";
+"row.nosurveys.desc" = "Masque les cartes « cette publication vous intéresse-t-elle ? ».";
 "row.feedlike.title" = "Confirmer les J’aime";
 "row.feedlike.desc" = "Demande avant d’envoyer un J’aime — publications du fil et Reels.";
 "row.downloadreels.title" = "Télécharger les Reels";

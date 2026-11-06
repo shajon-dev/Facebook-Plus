@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "隱藏「探索新串文」推薦卡片。";
 "row.nogroups.title" = "移除推薦社團";
 "row.nosuggestedpages.title" = "移除推薦粉絲專頁";
+"row.nosurveys.title" = "移除問卷調查";
+"row.nosurveys.desc" = "隱藏「你對這則貼文有興趣嗎」卡片。";
 "row.feedlike.title" = "確認按讚";
 "row.feedlike.desc" = "送出任何讚之前先詢問——動態貼文與 Reels 皆適用。";
 "row.downloadreels.title" = "下載 Reels";

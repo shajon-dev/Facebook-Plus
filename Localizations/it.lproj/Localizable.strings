@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Nasconde la scheda «scopri nuovi thread».";
 "row.nogroups.title" = "Rimuovi i suggerimenti di gruppi";
 "row.nosuggestedpages.title" = "Rimuovi pagine suggerite";
+"row.nosurveys.title" = "Rimuovi i sondaggi";
+"row.nosurveys.desc" = "Nasconde le schede «ti interessa questo post?».";
 "row.feedlike.title" = "Conferma i Mi piace";
 "row.feedlike.desc" = "Chiede prima di inviare un Mi piace — post del feed e Reels.";
 "row.downloadreels.title" = "Scarica i Reels";

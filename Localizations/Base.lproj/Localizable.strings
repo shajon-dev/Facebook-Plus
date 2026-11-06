@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Hides the “discover new threads” card.";
 "row.nogroups.title" = "Remove Group Suggestions";
 "row.nosuggestedpages.title" = "Remove Suggested Pages";
+"row.nosurveys.title" = "Remove Survey Prompts";
+"row.nosurveys.desc" = "Hides the “are you interested in this post?” cards.";
 "row.feedlike.title" = "Confirm Like";
 "row.feedlike.desc" = "Asks before any like is sent — feed posts and Reels.";
 "row.downloadreels.title" = "Download Reels";

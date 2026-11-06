@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Скрывает карточку «откройте новые треды».";
 "row.nogroups.title" = "Убрать предложения групп";
 "row.nosuggestedpages.title" = "Убрать рекомендуемые страницы";
+"row.nosurveys.title" = "Убрать опросы";
+"row.nosurveys.desc" = "Скрывает карточки «вам интересен этот пост?».";
 "row.feedlike.title" = "Подтверждать «Нравится»";
 "row.feedlike.desc" = "Спрашивает перед отправкой «Нравится» — посты в ленте и Reels.";
 "row.downloadreels.title" = "Скачивать Reels";

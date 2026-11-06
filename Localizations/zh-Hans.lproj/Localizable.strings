@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "隐藏“发现新 threads”卡片。";
 "row.nogroups.title" = "移除小组推荐";
 "row.nosuggestedpages.title" = "移除推荐主页";
+"row.nosurveys.title" = "移除调查问卷";
+"row.nosurveys.desc" = "隐藏“你对这条帖子感兴趣吗”卡片。";
 "row.feedlike.title" = "确认点赞";
 "row.feedlike.desc" = "发送任何点赞前先询问——信息流帖子和 Reels 都包含。";
 "row.downloadreels.title" = "下载 Reels";

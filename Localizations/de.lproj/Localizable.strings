@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Blendet die Karte „Neue Threads entdecken“ aus.";
 "row.nogroups.title" = "Gruppenvorschläge entfernen";
 "row.nosuggestedpages.title" = "Vorgeschlagene Seiten entfernen";
+"row.nosurveys.title" = "Umfragekarten entfernen";
+"row.nosurveys.desc" = "Blendet die Karten „Interessiert dich dieser Beitrag?“ aus.";
 "row.feedlike.title" = "„Gefällt mir“ bestätigen";
 "row.feedlike.desc" = "Fragt nach, bevor ein „Gefällt mir“ gesendet wird — Feed-Beiträge und Reels.";
 "row.downloadreels.title" = "Reels herunterladen";

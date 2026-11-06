@@ -79,6 +79,13 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBShortsSideBarView : UIView
 @end
 
+/// FBSharedFramework (FBShortsKit). Builds and injects the inline survey card
+/// ("Are you interested in this Reel?") into both the Reels tab and the
+/// full-screen viewer — the two surfaces share this one manager.
+@interface FBShortsInlineSurveyInjectionManager : NSObject
+- (void)maybeAddInlineSurveyComponents:(id)arg1;
+@end
+
 @interface CKSurfaceViewControllerImpl : UIViewController
 - (nullable id)viewManager;
 @end

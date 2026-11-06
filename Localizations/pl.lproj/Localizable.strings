@@ -32,6 +32,8 @@
 "row.nothreads.desc" = "Ukrywa kartę „Odkrywaj nowe wątki”.";
 "row.nogroups.title" = "Usuń sugestie grup";
 "row.nosuggestedpages.title" = "Usuń sugerowane strony";
+"row.nosurveys.title" = "Usuń ankiety";
+"row.nosurveys.desc" = "Ukrywa karty „czy ten post Cię interesuje?”.";
 "row.feedlike.title" = "Potwierdzaj polubienia";
 "row.feedlike.desc" = "Pyta przed wysłaniem polubienia — posty w aktualnościach i rolki.";
 "row.downloadreels.title" = "Pobieraj rolki";
