@@ -441,6 +441,10 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPActionRow(kActionClearCache, FBPL(@"row.clearcache.title"), nil, @"trash.fill", NO),
                 FBPActionRow(kActionCheckUpdate, FBPL(@"row.checkupdate.title"), FBPL(@"row.checkupdate.desc"), @"arrow.down.circle", NO),
             ]),
+            FBPSection(FBPL(@"footer.logfeedunits"), @[
+                FBPSwitchRow(FBPKeyLogFeedUnits, FBPL(@"row.logfeedunits.title"),
+                             FBPL(@"row.logfeedunits.desc"), @"ladybug.fill"),
+            ]),
             FBPSection(nil, @[
                 FBPActionRow(kActionWelcome, FBPL(@"row.welcome.title"), nil, @"hand.wave.fill", NO),
                 FBPActionRow(kActionReset, FBPL(@"row.reset.title"), nil, @"arrow.counterclockwise", YES),

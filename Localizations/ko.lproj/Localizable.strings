@@ -53,6 +53,9 @@
 "row.clearcache.title" = "지금 캐시 지우기";
 "row.checkupdate.title" = "업데이트 확인";
 "row.checkupdate.desc" = "최신 버전이 있는지 확인합니다.";
+"row.logfeedunits.title" = "피드 유닛 토큰 기록";
+"row.logfeedunits.desc" = "각 피드 유닛의 카테고리 토큰을 시스템 로그에 기록합니다.";
+"footer.logfeedunits" = "필터가 작동을 멈춘 원인을 찾을 때만 사용합니다. 켜고 피드를 한 번 스크롤한 다음 Console.app에서 'com.shajon.fbplus' 로그를 확인하세요. 그 이언엔 꺼 듐세요.";
 "row.welcome.title" = "시작 화면 표시";
 "row.reset.title" = "모든 설정 초기화";
 "row.linksinsafari.title" = "링크를 Safari에서 열기";

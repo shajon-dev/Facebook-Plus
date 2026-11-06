@@ -53,6 +53,9 @@
 "row.clearcache.title" = "Xóa bộ nhớ đệm ngay";
 "row.checkupdate.title" = "Kiểm tra cập nhật";
 "row.checkupdate.desc" = "Xem có phiên bản mới hơn không.";
+"row.logfeedunits.title" = "Ghi nhật ký mã đơn vị bảng tin";
+"row.logfeedunits.desc" = "Ghi mã phân loại của từng đơn vị bảng tin vào nhật ký hệ thống.";
+"footer.logfeedunits" = "Chỉ dùng để tìm nguyên nhân khi một bộ lọc ngừng hoạt động. Bật lên, cuộn bảng tin một lượt, rồi đọc nhật ký trong Console.app ở «com.shajon.fbplus». Những lúc khác hãy để tắt.";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
 "row.reset.title" = "Đặt lại tất cả cài đặt";
 "row.linksinsafari.title" = "Mở liên kết trong Safari";

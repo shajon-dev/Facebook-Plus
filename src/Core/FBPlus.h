@@ -88,6 +88,9 @@ extern NSString *const FBPKeyFontScale;         // Custom-font size multiplier (
 // Links
 extern NSString *const FBPKeyLinksInSafari;     // Open external links in the default browser
 
+// Diagnostics
+extern NSString *const FBPKeyLogFeedUnits;      // os_log the live feed-unit token set
+
 // Other
 extern NSString *const FBPKeyNotifyUpdates;
 extern NSString *const FBPKeyAutoClearCache;

@@ -10,6 +10,9 @@
 #import "FBPHeaders.h"
 
 #import <objc/message.h>
+#import <os/log.h>
+#import <os/lock.h>
+#import <stdatomic.h>
 
 /// Feed category token -> the preference that suppresses it.
 ///
@@ -119,9 +122,180 @@ static BOOL FBPIsThreadsUnit(id model) {
     return NO;
 }
 
+#pragma mark - Feed-unit token diagnostic
+
+// Why this exists.
+//
+// Every entry in FBPCategoryMap() is a bucket token Facebook can rename at any
+// release, and when it does the toggle keeps its switch and silently stops
+// biting — exactly how the bare "PYMK" token died. Against Facebook
+// 585.0.0.64.71, "FB_SHORTS", "ENGAGEMENT", "ENGAGEMENT_QP" and
+// "MULTI_FB_STORIES_TRAY" are absent as standalone strings from all nineteen
+// Mach-O images in the app bundle, from the Pando flatbuffer blob
+// (lightblue-app-ios_pando_flatbuffer_data.bin), from react_native_routes.json
+// and prepackaged_bloks_config.json, and from main.hbcbundle. Their
+// replacements could not be identified statically: the only surviving
+// category-shaped family is the feed_top_story_min_gap_type cluster (SPONSORED,
+// MP_NETFLIX_PROMOTION, HIGH_VALUE_PROMOTION, FB_STORIES_ENGAGEMENT,
+// FIXED_POSITION, FB_STORIES, SHOWCASE, END_OF_FEED_CONTENT), which has no
+// Reels entry at all, and parts of the enum have evidently gone numeric — the
+// bundled ranking config expresses "is_organic" as `category=1`, the client
+// logs dist_to_min_gap_type_4/5/10, and several classes declare `category` with
+// an integer encoding (Ti / Tq / TQ) rather than T@"NSString".
+//
+// So rather than guess, this logs what the device actually serves. Turn
+// "Log Feed Unit Tokens" on in Settings, scroll the feed once, and read it back
+// in Console.app filtered on subsystem com.shajon.fbplus — the token set that
+// comes out is the ground truth to map in FBPCategoryMap().
+
+static os_log_t FBPFeedUnitLog(void) {
+    static os_log_t log;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        log = os_log_create("com.shajon.fbplus", "FeedUnits");
+    });
+    return log;
+}
+
+/// Cached mirror of FBPKeyLogFeedUnits.
+///
+/// FBPShouldFilterModel runs for every object the Pando tree materialises, so
+/// when the toggle is off the diagnostic has to cost one relaxed load of this
+/// flag and nothing else — an NSUserDefaults lookup per model would be scroll
+/// jank. The mirror is refreshed from the notification the settings panel posts
+/// on commit, so the switch takes effect without a relaunch and without a
+/// rebuild.
+static atomic_bool gFBPLogFeedUnits = false;
+
+static void FBPRefreshFeedUnitLogging(void) {
+    atomic_store_explicit(&gFBPLogFeedUnits,
+                          FBPEnabled(FBPKeyLogFeedUnits) ? true : false,
+                          memory_order_relaxed);
+}
+
+/// Field keys the diagnostic probes.
+///
+/// `category` is what FBPCategoryMap() is matched against. The rest are the
+/// neighbouring accessors v585 actually declares — `feedUnitCategory` (a new
+/// T@"NSString",R,C,N property), `storyCategory`, `storyUnitType` — plus the raw
+/// snake_case Pando keys, because KVC resolves either shape and the Threads
+/// matcher depends on that (see FBPUnitTypeKeys above).
+static NSArray<NSString *> *FBPDiagnosticKeys(void) {
+    static NSArray *keys;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        keys = @[
+            @"category", @"feedUnitCategory", @"feed_unit_category",
+            @"storyCategory", @"story_category",
+            @"storyBucketType", @"story_bucket_type",
+            @"feedUnitType", @"feed_unit_type",
+            @"unitType", @"unit_type", @"inlineUnitType", @"storyUnitType",
+        ];
+    });
+    return keys;
+}
+
+/// One line per distinct finding, not per model.
+///
+/// FBMemModelObject is the base of every Pando object, so a single scroll
+/// materialises tens of thousands of them and logging each one would bury the
+/// answer. Deduping keeps the output to the token set itself, which is the whole
+/// point of the capture.
+static BOOL FBPClaimDiagnosticLine(NSString *line) {
+    static os_unfair_lock lock = OS_UNFAIR_LOCK_INIT;
+    static NSMutableSet<NSString *> *seen;
+
+    os_unfair_lock_lock(&lock);
+    if (!seen) seen = [NSMutableSet set];
+    BOOL fresh = ![seen containsObject:line];
+    if (fresh) {
+        // Values can be unbounded (ids, tracking strings), so cap the set
+        // rather than let a long session grow it without limit.
+        if (seen.count >= 4096) [seen removeAllObjects];
+        [seen addObject:line];
+    }
+    os_unfair_lock_unlock(&lock);
+    return fresh;
+}
+
+/// A printable description of @c key on @c model, or nil when there is no such
+/// field. The leading tag says which path produced it — @c sel for a declared
+/// accessor, @c kvc for a Pando field resolved through -valueForKey:.
+static NSString *FBPDiagnosticDescription(id model, NSString *key) {
+    SEL selector = NSSelectorFromString(key);
+    if ([model respondsToSelector:selector]) {
+        NSMethodSignature *signature = [model methodSignatureForSelector:selector];
+        const char *returnType = signature.methodReturnType;
+        if (returnType && returnType[0] != _C_ID) {
+            // The accessor exists but does not return an object. Reported rather
+            // than read: messaging a scalar result as an id is the undefined
+            // behaviour that previously destabilised the feed, and the encoding
+            // alone is the answer worth having — a scalar-backed field is
+            // precisely what makes an NSString comparison in FBPCategoryMap()
+            // stop matching with no other symptom.
+            return [NSString stringWithFormat:@"sel <scalar '%c'>", returnType[0]];
+        }
+        if (returnType) {
+            @try {
+                id value = ((id (*)(id, SEL))objc_msgSend)(model, selector);
+                if (value) {
+                    return [NSString stringWithFormat:@"sel %@ <%@>",
+                            value, NSStringFromClass([value class])];
+                }
+            } @catch (__unused NSException *exception) {}
+        }
+    }
+    @try {
+        id value = [model valueForKey:key];
+        if (value) {
+            return [NSString stringWithFormat:@"kvc %@ <%@>",
+                    value, NSStringFromClass([value class])];
+        }
+    } @catch (__unused NSException *exception) {}
+    return nil;
+}
+
+/// Kept out of line so the disabled path in FBPShouldFilterModel stays a flag
+/// test and a not-taken branch.
+__attribute__((noinline))
+static void FBPLogFeedUnit(id model) {
+    NSString *className = NSStringFromClass([model class]);
+    BOOL reported = NO;
+
+    for (NSString *key in FBPDiagnosticKeys()) {
+        NSString *description = FBPDiagnosticDescription(model, key);
+        if (!description) continue;
+        // A whole nested model can come back as the value; the token is at the
+        // front, so a bounded prefix is enough and keeps the log readable.
+        if (description.length > 160) {
+            description = [[description substringToIndex:160] stringByAppendingString:@"…"];
+        }
+        NSString *line = [NSString stringWithFormat:@"%@ · %@ = %@",
+                          className, key, description];
+        if (FBPClaimDiagnosticLine(line)) {
+            os_log(FBPFeedUnitLog(), "token %{public}@", line);
+        }
+        reported = YES;
+    }
+
+    if (!reported && [className containsString:@"FeedUnit"]) {
+        // No probed field resolved, but the class name says this is a feed unit
+        // — the inventory of those is worth having too, once per class, since a
+        // class-name match is the fallback the other filters already use.
+        NSString *line = [NSString stringWithFormat:@"%@ · no token", className];
+        if (FBPClaimDiagnosticLine(line)) {
+            os_log(FBPFeedUnitLog(), "unit  %{public}@", line);
+        }
+    }
+}
+
 /// YES when this model should be dropped.
 static BOOL FBPShouldFilterModel(id model) {
     if (!model) return NO;
+
+    if (atomic_load_explicit(&gFBPLogFeedUnits, memory_order_relaxed)) {
+        FBPLogFeedUnit(model);
+    }
 
     // Ads (sponsored units and sponsoredData-backed units) are detected in one
     // place — FBPModelIsBlockedAd in FBPAdsHooks.xm — so every ad rule lives
@@ -246,6 +420,19 @@ void FBPInitFeedHooks(void) {
     if (!model) {
         FBPLog(@"FBMemModelObject not found — feed filtering disabled");
         return;
+    }
+
+    // Seed the diagnostic flag and keep it in step with the settings panel. The
+    // installer is re-run on every dyld image load, so this needs its own latch.
+    FBP_ONCE(gFeedUnitLogging) {
+        FBPRefreshFeedUnitLogging();
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:FBPSettingsDidChangeNotification
+                        object:nil
+                         queue:nil
+                    usingBlock:^(__unused NSNotification *note) {
+            FBPRefreshFeedUnitLogging();
+        }];
     }
 
     if ([model instancesRespondToSelector:@selector(initWithFBPandoTree:)]) {

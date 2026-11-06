@@ -53,6 +53,9 @@
 "row.clearcache.title" = "Bersihkan Cache Sekarang";
 "row.checkupdate.title" = "Periksa Pembaruan";
 "row.checkupdate.desc" = "Lihat apakah ada versi yang lebih baru.";
+"row.logfeedunits.title" = "Catat Token Unit Feed";
+"row.logfeedunits.desc" = "Menulis token kategori setiap unit feed ke log sistem.";
+"footer.logfeedunits" = "Hanya untuk mendiagnosis filter yang berhenti bekerja. Aktifkan, gulir feed sekali, lalu baca log di Console.app pada «com.shajon.fbplus». Biarkan mati di waktu lain.";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";
 "row.reset.title" = "Setel Ulang Semua Pengaturan";
 "row.linksinsafari.title" = "Buka Tautan di Safari";

@@ -53,6 +53,9 @@
 "row.clearcache.title" = "Vider le cache maintenant";
 "row.checkupdate.title" = "Rechercher une mise à jour";
 "row.checkupdate.desc" = "Vérifie si une version plus récente est disponible.";
+"row.logfeedunits.title" = "Journaliser les jetons des blocs du fil";
+"row.logfeedunits.desc" = "Écrit le jeton de catégorie de chaque bloc du fil dans le journal système.";
+"footer.logfeedunits" = "Uniquement pour diagnostiquer un filtre qui ne fonctionne plus. Activez-le, parcourez le fil une fois, puis lisez le journal dans Console.app sous « com.shajon.fbplus ». Laissez-le désactivé le reste du temps.";
 "row.welcome.title" = "Afficher l’écran d’accueil";
 "row.reset.title" = "Réinitialiser tous les réglages";
 "row.linksinsafari.title" = "Ouvrir les liens dans Safari";

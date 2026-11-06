@@ -53,6 +53,9 @@
 "row.clearcache.title" = "立即清除快取";
 "row.checkupdate.title" = "檢查更新";
 "row.checkupdate.desc" = "查看是否有新版本可供使用。";
+"row.logfeedunits.title" = "記錄動態單元標記";
+"row.logfeedunits.desc" = "將每個動態單元的分類標記寫入系統日誌。";
+"footer.logfeedunits" = "只在某個過濾項失效、需要排查時使用。開啟後把動態消息滑一遍，再到 Console.app 查看「com.shajon.fbplus」的日誌。其餘時候請保持關閉。";
 "row.welcome.title" = "顯示歡迎畫面";
 "row.reset.title" = "重設所有設定";
 "row.linksinsafari.title" = "在 Safari 中開啟連結";
