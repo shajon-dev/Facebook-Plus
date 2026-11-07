@@ -7,8 +7,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// One row in an action sheet.
 ///
-/// The row renders @c detail above @c title — the detail small and grey on top,
-/// the title large underneath.
+/// By default the row renders @c detail above @c title — the detail small and
+/// grey on top, the title large underneath. @c titleFirst turns that around for
+/// callers whose title is the thing to read first; see below.
 @interface FBPSheetAction : NSObject
 
 @property (nonatomic, copy) NSString *title;
@@ -17,6 +18,22 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, nullable) NSString *iconName;
 @property (nonatomic, assign) BOOL destructive;
 @property (nonatomic, copy, nullable) dispatch_block_t handler;
+
+/// Short tinted capsule beside the title, e.g. "Best". Nil for no capsule.
+///
+/// Additive: a row that does not set it renders exactly as it did before this
+/// existed.
+@property (nonatomic, copy, nullable) NSString *badge;
+
+/// Put @c title on the first line and @c detail underneath, instead of the
+/// default detail-above-title order.
+///
+/// Defaults to NO, which is the original layout down to the pixel — the two
+/// labels keep their fonts, colours, insets and 2pt gap either way, only their
+/// order changes. Set it when the title carries the decision and the detail only
+/// qualifies it, which is what the download quality picker needs: a row there
+/// has to read "1080p" first and "~24.8 MB, estimated" second.
+@property (nonatomic, assign) BOOL titleFirst;
 
 + (instancetype)actionWithTitle:(NSString *)title
                          detail:(nullable NSString *)detail

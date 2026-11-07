@@ -29,6 +29,22 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// Which of the two tiers above a rendition came from.
+///
+/// @c needsMux is not a substitute: a silent video's DASH rungs have no audio
+/// representation to pair, so they need no merge while still being DASH rows
+/// whose size is an estimate. The picker shows the two facts separately because
+/// they are separate — one is "how big is it, really", the other is "is there a
+/// step that can fail".
+typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
+    /// -HDPlaybackURL / -SDPlaybackURL: one muxed MP4, exact @c byteSize.
+    FBPDownloadVariantTierProgressive = 0,
+    /// The spherical pair on a 360° video. For those this *is* the content.
+    FBPDownloadVariantTierSpherical,
+    /// A representation from the MPD. @c byteSize is bandwidth x duration.
+    FBPDownloadVariantTierDash,
+};
+
 /// One downloadable rendition of a video.
 ///
 /// `pixelHeight`, `bitRate` and `byteSize` are 0 when Facebook did not give us
@@ -53,6 +69,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// @c audioURL != nil. A variant that cannot be saved by downloading one URL.
 @property (nonatomic, assign, readonly) BOOL needsMux;
+
+/// Which tier this rendition came from. Presentation only — the download path
+/// branches on @c needsMux, not on this.
+@property (nonatomic, assign, readonly) FBPDownloadVariantTier tier;
 
 /// Already-localized row title, e.g. "High quality".
 @property (nonatomic, copy, readonly) NSString *title;
@@ -90,6 +110,20 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, readonly, nullable) NSString *videoID;
 /// Best first. Empty when nothing downloadable was found.
 @property (nonatomic, copy, readonly) NSArray<FBPDownloadVariant *> *variants;
+
+/// Facebook's own @c -title for the item, when it has one and it is a string.
+///
+/// Nil is the normal case — most Reels carry no title — and it is presentation
+/// only: the download manager labels a row with it instead of a bare "Reel".
+/// Capped in length so a caption-as-title cannot turn into a wall of text.
+@property (nonatomic, copy, readonly, nullable) NSString *mediaTitle;
+
+/// The item's @c -firstFrameThumbnailURL, when it has one.
+///
+/// A poster frame the download manager can load for its row. Never fetched
+/// here; this is only the URL, and a build that renamed the getter simply has
+/// none, which is why no row depends on it.
+@property (nonatomic, copy, readonly, nullable) NSURL *thumbnailURL;
 
 @end
 

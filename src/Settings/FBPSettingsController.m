@@ -15,6 +15,8 @@
 #import "FBPSheet.h"
 #import "FBPToast.h"
 #import "FBPAppIconController.h"
+#import "FBPDownloadManagerController.h"
+#import "FBPDownloadStore.h"
 #import "FBPFontController.h"
 #import "FBPLanguageController.h"
 #import "FBPWelcomeController.h"
@@ -56,6 +58,7 @@ static NSString *const kActionReset       = @"reset";
 static NSString *const kActionSuspend     = @"suspend";
 static NSString *const kActionLanguage    = @"language";
 static NSString *const kActionCheckUpdate = @"checkUpdate";
+static NSString *const kActionDownloads   = @"downloads";
 
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
@@ -305,6 +308,7 @@ static UIImage *FBPSettingsIcon(NSString *name) {
                            [row[kRowKey] isEqualToString:kActionAppIcon] ||
                            [row[kRowKey] isEqualToString:kActionFonts] ||
                            [row[kRowKey] isEqualToString:kActionLanguage] ||
+                           [row[kRowKey] isEqualToString:kActionDownloads] ||
                            [row[kRowKey] isEqualToString:kActionWelcome];
         if (showChevron) {
             UIImageView *chevron = [[UIImageView alloc] initWithImage:
@@ -370,6 +374,25 @@ static NSDictionary *FBPSection(NSString *footer, NSArray *rows) {
     return s;
 }
 
+/// The download manager row, with the number of running downloads as its
+/// trailing value.
+///
+/// Built by its own function rather than inline because the count is read at
+/// build time and the category list is rebuilt in -viewWillAppear, so walking
+/// back into Settings from anywhere shows a current number.
+static NSDictionary *FBPDownloadManagerRow(void) {
+    NSMutableDictionary *row =
+        [FBPActionRow(kActionDownloads, FBPL(@"download.manager.title"),
+                      FBPL(@"download.manager.rowDesc"), @"arrow.down.circle", NO) mutableCopy];
+
+    NSUInteger active = FBPDownloadStore.shared.activeCount;
+    if (active > 0) {
+        row[kRowValue] = [NSString stringWithFormat:FBPL(@"download.manager.activeCount"),
+                                                    (long)active];
+    }
+    return row;
+}
+
 #pragma mark - Category definitions
 
 /// The six categories; each has a title, summary, menu glyph, and the grouped
@@ -415,6 +438,12 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         ]},
         @{ kRowTitle : FBPL(@"cat.downloads.title"), kRowDesc : FBPL(@"cat.downloads.summary"),
            kRowIcon : @"download", kRowCategory : @[
+            // The manager sits at the top of the category, above the switches
+            // that decide whether downloads happen at all: it is the one row
+            // here the user comes back to repeatedly rather than sets once.
+            FBPSection(nil, @[
+                FBPDownloadManagerRow(),
+            ]),
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyReelsDownloaderEnabled, FBPL(@"row.downloadreels.title"), FBPL(@"row.downloadreels.desc"), @"download"),
                 FBPSwitchRow(FBPKeyStoryDownloaderEnabled, FBPL(@"row.downloadstories.title"), FBPL(@"row.downloadstories.desc"), @"download"),
@@ -517,6 +546,9 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         [self.navigationController pushViewController:[[FBPFontController alloc] init] animated:YES];
     } else if ([action isEqualToString:kActionLanguage]) {
         [self.navigationController pushViewController:[[FBPLanguageController alloc] init] animated:YES];
+    } else if ([action isEqualToString:kActionDownloads]) {
+        [self.navigationController
+            pushViewController:[[FBPDownloadManagerController alloc] init] animated:YES];
     } else if ([action isEqualToString:kActionCheckUpdate]) {
         [FBPUpdateChecker checkManuallyFromViewController:self];
     } else if ([action isEqualToString:kActionWelcome]) {

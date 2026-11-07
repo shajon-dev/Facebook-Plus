@@ -169,7 +169,8 @@ static NSURL *FBPDownloadURLFromObject(id object) {
                      detail:(nullable NSString *)detail
                 pixelHeight:(NSInteger)pixelHeight
                     bitRate:(long long)bitRate
-                   byteSize:(long long)byteSize;
+                   byteSize:(long long)byteSize
+                       tier:(FBPDownloadVariantTier)tier;
 @end
 
 @implementation FBPDownloadVariant
@@ -180,7 +181,8 @@ static NSURL *FBPDownloadURLFromObject(id object) {
                      detail:(NSString *)detail
                 pixelHeight:(NSInteger)pixelHeight
                     bitRate:(long long)bitRate
-                   byteSize:(long long)byteSize {
+                   byteSize:(long long)byteSize
+                       tier:(FBPDownloadVariantTier)tier {
     if ((self = [super init])) {
         _url = [url copy];
         _audioURL = [audioURL copy];
@@ -189,6 +191,7 @@ static NSURL *FBPDownloadURLFromObject(id object) {
         _pixelHeight = pixelHeight;
         _bitRate = bitRate;
         _byteSize = byteSize;
+        _tier = tier;
     }
     return self;
 }
@@ -231,7 +234,8 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
                                                   NSString *detailOverride,
                                                   NSInteger pixelHeight,
                                                   double bitRate,
-                                                  double byteSize) {
+                                                  double byteSize,
+                                                  FBPDownloadVariantTier tier) {
     NSURL *url = FBPDownloadURLFromObject(rawURL);
     if (!url) return nil;
 
@@ -240,13 +244,23 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
 
     NSString *detail = detailOverride ?: FBPDownloadDetailString(pixelHeight, bytes);
 
+    // A progressive row's size is the MP4's real length (-atomSize), so it says
+    // so — that is half of what separates these rows from a DASH rung at the
+    // same quality, and the picker's whole job is to make that visible. Only
+    // when there *is* a size: "720p · exact size" with no number would be a
+    // promise about something not shown.
+    if (!detailOverride && bytes > 0 && detail.length) {
+        detail = [NSString stringWithFormat:FBPL(@"download.quality.exact.detail"), detail];
+    }
+
     return [[FBPDownloadVariant alloc] initWithURL:url
                                           audioURL:nil
                                              title:title
                                             detail:detail
                                        pixelHeight:pixelHeight
                                            bitRate:bits
-                                          byteSize:bytes];
+                                          byteSize:bytes
+                                              tier:tier];
 }
 
 static NSString *FBPDownloadByteString(long long bytes) {
@@ -348,7 +362,14 @@ FBPDownloadMergeDashLadder(id item,
         [unranked addObject:variant];
     }
 
-    NSString *estimateFormat = FBPL(@"download.quality.dash.detail");
+    // Three wordings, because a DASH row can carry two independent caveats: the
+    // size is an estimate (always), and there may be a merge step (only when
+    // there is an audio representation to pair — a silent video's rungs are
+    // complete on their own).
+    NSString *estimateFormat = audio
+        ? FBPL(@"download.quality.dash.mergeDetail")
+        : FBPL(@"download.quality.dash.detail");
+    NSString *sizelessDetail = audio ? FBPL(@"download.quality.merge.detail") : nil;
 
     for (FBPDashRepresentation *representation in manifest.videoRepresentations) {
         NSString *label = representation.displayLabel;
@@ -372,7 +393,7 @@ FBPDownloadMergeDashLadder(id item,
         NSString *sizeText = FBPDownloadByteString(bytes);
         NSString *detail = sizeText
             ? [NSString stringWithFormat:estimateFormat, sizeText]
-            : nil;
+            : sizelessDetail;
 
         if (rank > 0) [covered addObject:@(rank)];
         [ranked addObject:
@@ -382,7 +403,8 @@ FBPDownloadMergeDashLadder(id item,
                                              detail:detail
                                         pixelHeight:rank
                                             bitRate:representation.bandwidth
-                                           byteSize:bytes]];
+                                           byteSize:bytes
+                                               tier:FBPDownloadVariantTierDash]];
     }
 
     [ranked sortUsingComparator:^NSComparisonResult(FBPDownloadVariant *a,
@@ -412,7 +434,8 @@ FBPDownloadMergeDashLadder(id item,
 
 NSArray<FBPDownloadVariant *> *FBPDownloadSingleVariant(NSURL *url, NSString *title) {
     FBPDownloadVariant *variant =
-        FBPDownloadMakeVariant(url, title ?: FBPL(@"download.quality.original"), nil, 0, 0, 0);
+        FBPDownloadMakeVariant(url, title ?: FBPL(@"download.quality.original"), nil, 0, 0, 0,
+                               FBPDownloadVariantTierProgressive);
     return variant ? @[variant] : @[];
 }
 
@@ -477,23 +500,27 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
     if (isSpherical) {
         add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"sphericalPlaybackHDURL"),
                                    FBPL(@"download.quality.spherical.hd"),
-                                   FBPL(@"download.quality.spherical.detail"), 0, 0, 0));
+                                   FBPL(@"download.quality.spherical.detail"), 0, 0, 0,
+                                   FBPDownloadVariantTierSpherical));
         add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"sphericalPlaybackURL"),
                                    FBPL(@"download.quality.spherical.sd"),
-                                   FBPL(@"download.quality.spherical.detail"), 0, 0, 0));
+                                   FBPL(@"download.quality.spherical.detail"), 0, 0, 0,
+                                   FBPDownloadVariantTierSpherical));
     }
 
     NSUInteger beforeProgressive = variants.count;
 
     add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"HDPlaybackURL"),
                                FBPL(@"download.quality.hd"), nil,
-                               bestHeight, hdBitRate, hdSize));
+                               bestHeight, hdBitRate, hdSize,
+                               FBPDownloadVariantTierProgressive));
 
     // SD only gets the item's height when HD did not take it.
     NSInteger sdHeight = (variants.count > beforeProgressive) ? 0 : bestHeight;
     add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"SDPlaybackURL"),
                                FBPL(@"download.quality.sd"), nil,
-                               sdHeight, sdBitRate, sdSize));
+                               sdHeight, sdBitRate, sdSize,
+                               FBPDownloadVariantTierProgressive));
 
     // Everything above is the progressive tier, unchanged. The ladder is merged
     // in on top of it, and returns this list untouched when there is none.
@@ -501,6 +528,31 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
 }
 
 #pragma mark - Source
+
+/// The item's own title, trimmed and capped, or nil.
+///
+/// Guarded the same way as every other read here: the getter has to exist,
+/// take no arguments and return an object, and what comes back has to actually
+/// be a string. A rename, or a build where the title is a model object rather
+/// than text, leaves this nil and the download manager falls back to "Reel" or
+/// "Story" — which is what every row said before this existed.
+static NSString *FBPDownloadItemTitle(id item) {
+    id raw = FBPDownloadSafeObjectGetter(item, @"title");
+    if (![raw isKindOfClass:NSString.class]) return nil;
+
+    NSString *title = [(NSString *)raw
+        stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if (title.length == 0) return nil;
+
+    // Facebook puts the whole caption here on some surfaces. One row's worth is
+    // all a list can show, and holding the rest would be holding a paragraph per
+    // job for the session.
+    static const NSUInteger kMaxTitleLength = 80;
+    if (title.length > kMaxTitleLength) {
+        title = [[title substringToIndex:kMaxTitleLength] stringByAppendingString:@"…"];
+    }
+    return [title copy];
+}
 
 @implementation FBPDownloadSource
 
@@ -513,6 +565,10 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
         _playbackController = playbackController;
         _videoID = [videoID copy];
         _variants = [variants copy] ?: @[];
+        _mediaTitle = FBPDownloadItemTitle(item);
+        _thumbnailURL =
+            FBPDownloadURLFromObject(
+                FBPDownloadSafeObjectGetter(item, @"firstFrameThumbnailURL"));
     }
     return self;
 }
@@ -581,6 +637,51 @@ static FBPDownloadVariant *FBPDownloadFreshenVariant(
     return match;
 }
 
+/// The leading glyph for a row, chosen so the six rows no longer read as six
+/// copies of the same arrow.
+///
+/// It answers the one question the detail line cannot answer at a glance: what
+/// does picking this cost?
+///
+///   * globe — a 360° stream. For a spherical video this is the content.
+///   * arrow.triangle.merge — two streams that have to be joined. The slow pick,
+///     and the only one with a step that can fail after the bytes are down.
+///   * bolt.circle — one complete file, straight to Photos. Every progressive
+///     row, and a silent video's DASH rungs, which have nothing to pair.
+///
+/// A symbol the running iOS does not have resolves to nil and the row simply has
+/// no glyph, which is why none of this is gated on a version check.
+static NSString *FBPDownloadIconForVariant(FBPDownloadVariant *variant) {
+    if (variant.tier == FBPDownloadVariantTierSpherical) return @"globe";
+    if (variant.needsMux) return @"arrow.triangle.merge";
+    return @"bolt.circle";
+}
+
+/// Index of the cheapest row worth pointing at, or NSNotFound.
+///
+/// Only sizes we actually have count, and only when there is something to
+/// compare: badging the sole row that happens to publish a size as "Smallest"
+/// would be comparing it against nothing. Index 0 is excluded because it already
+/// carries "Best" — one row, one badge.
+static NSUInteger FBPDownloadSmallestIndex(NSArray<FBPDownloadVariant *> *variants) {
+    NSUInteger sized = 0;
+    NSUInteger best = NSNotFound;
+    long long bestBytes = 0;
+
+    for (NSUInteger i = 0; i < variants.count; i++) {
+        FBPDownloadVariant *variant = variants[i];
+        if (variant.byteSize <= 0) continue;
+        sized++;
+        if (i == 0) continue;
+        if (best == NSNotFound || variant.byteSize < bestBytes) {
+            best = i;
+            bestBytes = variant.byteSize;
+        }
+    }
+
+    return (sized >= 2) ? best : NSNotFound;
+}
+
 static void FBPDownloadShowSheet(NSArray<FBPDownloadVariant *> *variants,
                                  UIViewController *presenter,
                                  UIView *sourceView,
@@ -589,14 +690,40 @@ static void FBPDownloadShowSheet(NSArray<FBPDownloadVariant *> *variants,
     NSMutableArray<FBPSheetAction *> *actions =
         [NSMutableArray arrayWithCapacity:variants.count];
 
-    for (FBPDownloadVariant *variant in variants) {
-        FBPDownloadVariant *pick = variant;
-        [actions addObject:[FBPSheetAction actionWithTitle:pick.title
-                                                   detail:pick.detail
-                                                 iconName:@"arrow.down.circle"
-                                                  handler:^{
-            chosen(FBPDownloadFreshenVariant(pick, refresh));
-        }]];
+    // The list is best-first by construction (see FBPDownloadVariantsForItem),
+    // so the top row is the recommendation and needs no second ranking pass.
+    NSUInteger smallest = FBPDownloadSmallestIndex(variants);
+
+    for (NSUInteger i = 0; i < variants.count; i++) {
+        FBPDownloadVariant *pick = variants[i];
+
+        // At most one badge per row, in this order: a spherical row is a
+        // different *kind* of download rather than a better one, so saying so
+        // matters more than ranking it; then the recommendation; then the
+        // cheapest alternative to it.
+        NSString *badge = nil;
+        if (pick.tier == FBPDownloadVariantTierSpherical) {
+            badge = FBPL(@"download.quality.badge.spherical");
+        } else if (i == 0) {
+            badge = FBPL(@"download.quality.badge.best");
+        } else if (i == smallest) {
+            badge = FBPL(@"download.quality.badge.smallest");
+        }
+
+        FBPSheetAction *action =
+            [FBPSheetAction actionWithTitle:pick.title
+                                    detail:pick.detail
+                                  iconName:FBPDownloadIconForVariant(pick)
+                                   handler:^{
+                chosen(FBPDownloadFreshenVariant(pick, refresh));
+            }];
+        // The quality is the decision; the size and its caveat only qualify it,
+        // so the title goes on the first line. The sheet's default order puts
+        // the grey detail on top, which had a row reading
+        // "~12.4 MB · estimated size" before it said "1080p".
+        action.titleFirst = YES;
+        action.badge = badge;
+        [actions addObject:action];
     }
 
     [FBPSheetPresenter presentActions:actions

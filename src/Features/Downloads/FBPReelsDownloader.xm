@@ -4,6 +4,8 @@
 #import "FBPResources.h"
 #import "FBPDownloadVariants.h"
 #import "FBPDashDownload.h"
+#import "FBPDownloadStore.h"
+#import "FBPDownloadManagerController.h"
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -409,816 +411,386 @@ static void FBPShowMessage(
     });
 }
 
-#pragma mark - Progress UI
+#pragma mark - Download tasks
 
-@interface FBPDownloadProgressController :
-    UIViewController
-
-@property(nonatomic, strong)
-    UIActivityIndicatorView *spinner;
-
-@property(nonatomic, strong)
-    UIProgressView *progressView;
-
-@property(nonatomic, strong)
-    UILabel *percentLabel;
-
-@property(nonatomic, strong)
-    UILabel *titleLabel;
-
-@property(nonatomic, strong)
-    UIImageView *checkmarkView;
-
-- (void)setProgressValue:(float)value;
-- (void)showSuccessWithTitle:(NSString *)title;
-- (void)setStatusTitle:(NSString *)title;
-
-@end
-
-@implementation FBPDownloadProgressController
-
-- (void)viewDidLoad {
-
-    [super viewDidLoad];
-
-    // Clear background so the hosting alert's vibrant blur shows through instead
-    // of a flat fill — the "premium" material look.
-    self.view.backgroundColor = UIColor.clearColor;
-
-    self.preferredContentSize = CGSizeMake(272.0, 172.0);
-
-    // Spinner — large for presence, tinted to the label colour.
-    self.spinner = [[UIActivityIndicatorView alloc]
-        initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    self.spinner.translatesAutoresizingMaskIntoConstraints = NO;
-    self.spinner.color = UIColor.labelColor;
-    [self.spinner startAnimating];
-
-    // Success checkmark, shown only once the save completes.
-    UIImageSymbolConfiguration *checkCfg =
-        [UIImageSymbolConfiguration configurationWithPointSize:40.0
-                                                        weight:UIImageSymbolWeightSemibold];
-    self.checkmarkView = [[UIImageView alloc]
-        initWithImage:[UIImage systemImageNamed:@"checkmark.circle.fill"
-                              withConfiguration:checkCfg]];
-    self.checkmarkView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.checkmarkView.tintColor = UIColor.systemGreenColor;
-    self.checkmarkView.contentMode = UIViewContentModeScaleAspectFit;
-    self.checkmarkView.hidden = YES;
-
-    // Title — rounded, wraps to two lines so longer strings never truncate.
-    self.titleLabel = [[UILabel alloc] init];
-    self.titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.titleLabel.text = FBPL(@"download.reel.progress");
-    self.titleLabel.font = FBPFont(16.0, UIFontWeightSemibold);
-    self.titleLabel.textColor = UIColor.labelColor;
-    self.titleLabel.textAlignment = NSTextAlignmentCenter;
-    self.titleLabel.numberOfLines = 2;
-    self.titleLabel.adjustsFontSizeToFitWidth = YES;
-    self.titleLabel.minimumScaleFactor = 0.85;
-
-    // Progress bar — accent-tinted, thicker and rounded.
-    self.progressView = [[UIProgressView alloc]
-        initWithProgressViewStyle:UIProgressViewStyleDefault];
-    self.progressView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.progressView.progress = 0.0f;
-    self.progressView.progressTintColor = UIColor.systemBlueColor;
-    self.progressView.trackTintColor =
-        [UIColor.labelColor colorWithAlphaComponent:0.12];
-    self.progressView.transform = CGAffineTransformMakeScale(1.0, 1.6);
-    self.progressView.clipsToBounds = YES;
-    self.progressView.layer.cornerRadius = 3.0;
-
-    // Percent — rounded, monospaced digits so it doesn't jitter as it counts.
-    self.percentLabel = [[UILabel alloc] init];
-    self.percentLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.percentLabel.text = @"0%";
-    self.percentLabel.font =
-        [UIFont monospacedDigitSystemFontOfSize:15.0 weight:UIFontWeightSemibold];
-    self.percentLabel.textColor = UIColor.secondaryLabelColor;
-    self.percentLabel.textAlignment = NSTextAlignmentCenter;
-
-    [self.view addSubview:self.spinner];
-    [self.view addSubview:self.checkmarkView];
-    [self.view addSubview:self.titleLabel];
-    [self.view addSubview:self.progressView];
-    [self.view addSubview:self.percentLabel];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [self.spinner.topAnchor
-            constraintEqualToAnchor:self.view.topAnchor constant:24.0],
-        [self.spinner.centerXAnchor
-            constraintEqualToAnchor:self.view.centerXAnchor],
-
-        [self.checkmarkView.centerXAnchor
-            constraintEqualToAnchor:self.spinner.centerXAnchor],
-        [self.checkmarkView.centerYAnchor
-            constraintEqualToAnchor:self.spinner.centerYAnchor],
-
-        [self.titleLabel.topAnchor
-            constraintEqualToAnchor:self.spinner.bottomAnchor constant:14.0],
-        [self.titleLabel.leadingAnchor
-            constraintEqualToAnchor:self.view.leadingAnchor constant:20.0],
-        [self.titleLabel.trailingAnchor
-            constraintEqualToAnchor:self.view.trailingAnchor constant:-20.0],
-
-        [self.progressView.topAnchor
-            constraintEqualToAnchor:self.titleLabel.bottomAnchor constant:18.0],
-        [self.progressView.leadingAnchor
-            constraintEqualToAnchor:self.view.leadingAnchor constant:28.0],
-        [self.progressView.trailingAnchor
-            constraintEqualToAnchor:self.view.trailingAnchor constant:-28.0],
-
-        [self.percentLabel.topAnchor
-            constraintEqualToAnchor:self.progressView.bottomAnchor constant:12.0],
-        [self.percentLabel.centerXAnchor
-            constraintEqualToAnchor:self.view.centerXAnchor],
-    ]];
-}
-
-- (void)setProgressValue:(float)value {
-
-    value =
-        MAX(
-            0.0f,
-            MIN(1.0f, value)
-        );
-
-    dispatch_async(
-        dispatch_get_main_queue(), ^{
-
-        [self.progressView
-            setProgress:value
-               animated:YES];
-
-        NSInteger percent =
-            (NSInteger)lrintf(
-                value * 100.0f);
-
-        self.percentLabel.text =
-            [NSString
-                stringWithFormat:
-                    @"%ld%%",
-                    (long)percent];
-
-        if (percent >= 100) {
-
-            self.titleLabel.text =
-                FBPL(@"download.reel.saving");
-        }
-    });
-}
-
-// Names the step the flow is on, for a download that has more than one.
+// One object per download, so several can run at once.
 //
-// A two-stream DASH save fetches, then merges, and the merge reports no
-// intermediate progress of its own — the bar deliberately stops short of full
-// and waits there. Without this the card would read "Downloading Reel…" while
-// nothing moved, which is indistinguishable from a stall.
-- (void)setStatusTitle:(NSString *)title {
-    if (title.length == 0) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        self.titleLabel.text = title;
-    });
-}
+// What used to be here: a singleton holding one NSURLSession, one task, one
+// `downloading` flag and the UIAlertController that showed the percentage. That
+// shape had two problems the download manager exists to fix. A second tap while
+// something was downloading was answered with "A Reel is already downloading."
+// even though nothing in the flow required that — FBPDashDownload has always
+// supported more than one in flight. And the alert *was* the download's state:
+// dismissing it left the transfer running with nothing left pointing at it.
+//
+// Now each tap makes one of these, each owns its own session or two-stream
+// flow, and all any of them reports to is FBPDownloadStore. The HUD pill and the
+// manager list are both drawn from the store, so dismissing either of them is
+// not an operation on the download at all.
 
-// Morphs the card into a success state: the spinner and percent give way to a
-// green checkmark, the bar fills green. Used in place of a separate confirmation
-// alert so the whole flow reads as one premium HUD.
-- (void)showSuccessWithTitle:(NSString *)title {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self.spinner stopAnimating];
-        self.spinner.hidden = YES;
-        self.percentLabel.hidden = YES;
+@interface FBPReelDownloadTask : NSObject <NSURLSessionDownloadDelegate>
 
-        self.progressView.progressTintColor = UIColor.systemGreenColor;
-        [self.progressView setProgress:1.0f animated:YES];
+@property(nonatomic, strong) NSURLSession *session;
+@property(nonatomic, strong) NSURLSessionDownloadTask *task;
 
-        self.titleLabel.text = title;
+// The two-stream flow for a DASH rung, nil on the single-URL path.
+@property(nonatomic, strong) FBPDashDownload *dashDownload;
 
-        self.checkmarkView.hidden = NO;
-        self.checkmarkView.transform = CGAffineTransformMakeScale(0.6, 0.6);
-        self.checkmarkView.alpha = 0.0;
-        [UIView animateWithDuration:0.28
-                              delay:0.0
-             usingSpringWithDamping:0.6
-              initialSpringVelocity:0.5
-                            options:UIViewAnimationOptionCurveEaseOut
-                         animations:^{
-            self.checkmarkView.transform = CGAffineTransformIdentity;
-            self.checkmarkView.alpha = 1.0;
-        } completion:nil];
-    });
-}
+@property(nonatomic, strong) FBPDownloadJob *job;
+@property(nonatomic, strong) FBPDownloadVariant *variant;
+@property(nonatomic, copy) NSString *videoID;
+
+/// Register a download and start it.
++ (void)startWithVariant:(FBPDownloadVariant *)variant
+                 videoID:(NSString *)videoID
+                   title:(NSString *)title
+            thumbnailURL:(NSURL *)thumbnailURL;
 
 @end
 
-#pragma mark - Download manager
+// Every task with work still outstanding. A task is held here from the moment it
+// starts until its completion has run — the same reason FBPDashDownload holds
+// itself alive — so neither surface has to park it anywhere.
+//
+// Guarded, because the two ends of a task's life are on different queues now
+// that several can run at once: it is added from the main queue (the pick) and
+// dropped from whichever queue reported the end — an NSURLSession delegate
+// queue, or Photos' completion handler.
+static NSMutableSet<FBPReelDownloadTask *> *gLiveDownloadTasks = nil;
 
-@interface FBPReelDownloadManager :
-    NSObject
-    <NSURLSessionDownloadDelegate>
-
-@property(nonatomic, strong)
-    NSURLSession *session;
-
-@property(nonatomic, strong)
-    NSURLSessionDownloadTask *task;
-
-@property(nonatomic, strong)
-    FBPDownloadProgressController
-        *progressController;
-
-@property(nonatomic, strong)
-    UIViewController *progressContainer;
-
-@property(nonatomic, copy)
-    NSString *videoID;
-
-@property(nonatomic, assign)
-    BOOL downloading;
-
-// The two-stream flow for a DASH rung, nil on the single-URL path. Held only so
-// the progress card's Stop button has something to cancel.
-@property(nonatomic, strong)
-    FBPDashDownload *dashDownload;
-
-+ (instancetype)shared;
-
-- (void)startDownloadWithURL:
-    (NSURL *)url
-    videoID:
-    (NSString *)videoID;
-
-- (void)startDownloadWithVariant:
-    (FBPDownloadVariant *)variant
-    videoID:
-    (NSString *)videoID;
-
-@end
-
-@implementation FBPReelDownloadManager
-
-+ (instancetype)shared {
-
-    static FBPReelDownloadManager *manager =
-        nil;
-
-    static dispatch_once_t onceToken;
-
-    dispatch_once(&onceToken, ^{
-
-        manager =
-            [[FBPReelDownloadManager alloc]
-                init];
-    });
-
-    return manager;
-}
-
-- (void)showProgress {
-
-    [self showProgressWithStop:NO];
-}
-
-// @param stop Adds a Stop action to the card. Only the two-stream path passes
-//   YES: that flow can run for tens of seconds across three files and a merge,
-//   and it has a real cancel to offer. The single-URL path keeps the actionless
-//   card it has always had.
-- (void)showProgressWithStop:
-    (BOOL)stop {
-
-    dispatch_async(
-        dispatch_get_main_queue(), ^{
-
-        UIViewController *presenter =
-            FBPTopViewController();
-
-        if (!presenter)
-            return;
-
-        FBPDownloadProgressController
-            *progress =
-                [[FBPDownloadProgressController
-                    alloc] init];
-
-        UIAlertController *container =
-            [UIAlertController
-                alertControllerWithTitle:nil
-                message:nil
-                preferredStyle:
-                    UIAlertControllerStyleAlert];
-
-        if (stop) {
-
-            __weak __typeof__(self) weakSelf = self;
-
-            [container addAction:
-                [UIAlertAction
-                    actionWithTitle:FBPL(@"common.cancel")
-                    style:
-                        UIAlertActionStyleCancel
-                    handler:^(__unused UIAlertAction *action) {
-
-                    // UIKit has already dismissed the card by the time this
-                    // runs; the flow's own completion then finds nothing to
-                    // dismiss and simply clears state.
-                    [weakSelf.dashDownload cancel];
-                }]];
+static void FBPReelTrackTask(FBPReelDownloadTask *task, BOOL live) {
+    if (!task) return;
+    @synchronized ([FBPReelDownloadTask class]) {
+        if (!gLiveDownloadTasks) gLiveDownloadTasks = [NSMutableSet set];
+        if (live) {
+            [gLiveDownloadTasks addObject:task];
+        } else {
+            [gLiveDownloadTasks removeObject:task];
         }
-
-        @try {
-
-            [container
-                setValue:progress
-                forKey:
-                    @"contentViewController"];
-
-        } @catch (__unused NSException *e) {
-
-        }
-
-        self.progressController =
-            progress;
-
-        self.progressContainer =
-            container;
-
-        [presenter
-            presentViewController:container
-                         animated:YES
-                       completion:nil];
-    });
+    }
 }
 
-- (void)dismissProgressWithCompletion:
-    (void (^)(void))completion {
-
-    dispatch_async(
-        dispatch_get_main_queue(), ^{
-
-        UIViewController *container =
-            self.progressContainer;
-
-        self.progressController =
-            nil;
-
-        self.progressContainer =
-            nil;
-
-        if (container &&
-            container
-                .presentingViewController) {
-
-            [container
-                dismissViewControllerAnimated:YES
-                                   completion:
-                    completion];
-
-        } else if (completion) {
-
-            completion();
-        }
-    });
-}
-
-- (void)finishWithError:
-    (NSString *)message {
-
-    self.downloading =
-        NO;
-
-    [self.session
-        invalidateAndCancel];
-
-    self.session =
-        nil;
-
-    self.task =
-        nil;
-
-    [self
-        dismissProgressWithCompletion:^{
-
-        FBPShowMessage(
-            FBPL(@"download.appName"),
-            message ?:
-                FBPL(@"download.reel.failed")
-        );
+/// An error whose localizedDescription is already the sentence to show.
+///
+/// The single-URL path has its own wording for every way it can fail, tested on
+/// device, and those strings are kept rather than re-derived: packing them into
+/// an NSError is only how they travel to the store, which reads
+/// -localizedDescription for anything outside FBPDashDownload's own domain.
+static NSError *FBPReelError(NSString *message) {
+    return [NSError errorWithDomain:@"com.shajon.fbplus.downloads"
+                               code:1
+                           userInfo:@{
+        NSLocalizedDescriptionKey : message ?: FBPL(@"download.reel.failed"),
     }];
 }
 
-- (void)saveVideo:
-    (NSURL *)fileURL {
+@implementation FBPReelDownloadTask
 
+#pragma mark Lifecycle
 
-    [[PHPhotoLibrary
-        sharedPhotoLibrary]
-        performChanges:^{
++ (void)startWithVariant:(FBPDownloadVariant *)variant
+                 videoID:(NSString *)videoID
+                   title:(NSString *)title
+            thumbnailURL:(NSURL *)thumbnailURL {
 
-        [PHAssetChangeRequest
-            creationRequestForAssetFromVideoAtFileURL:
-                fileURL];
+    if (!variant.url) return;
 
-    } completionHandler:^(
-        BOOL success,
-        NSError *error
-    ) {
+    FBPDownloadStore *store = FBPDownloadStore.shared;
 
-        [[NSFileManager
-            defaultManager]
-            removeItemAtURL:fileURL
-                     error:nil];
+    FBPDownloadJob *job =
+        [store addJobWithSurface:FBPDownloadJobSurfaceReel
+                           title:title
+                         quality:variant.title
+                    thumbnailURL:thumbnailURL
+                        needsMux:variant.needsMux
+                   expectedBytes:variant.byteSize];
 
-        self.downloading =
-            NO;
+    // Retry deliberately captures nothing but the two values it needs, so the
+    // block the job holds for the rest of the session does not keep a finished
+    // task — and its session, and its temporary files — alive with it.
+    //
+    // It re-runs from the same variant, which is the honest thing to offer: by
+    // the time the user reaches for Retry the signed URL may well have expired,
+    // and the failure it then reports is the expired-link message that tells
+    // them to tap download again on the Reel itself. Re-resolving is not
+    // possible from here — the reel it came from is long gone from the screen.
+    NSString *retryID = [videoID copy];
+    FBPDownloadVariant *retryVariant = variant;
+    [store setRetryWork:^(FBPDownloadJob *retried) {
+        [FBPReelDownloadTask runJob:retried variant:retryVariant videoID:retryID];
+    } forJob:job];
 
-        [self.session
-            finishTasksAndInvalidate];
+    [self runJob:job variant:variant videoID:videoID];
+}
 
-        self.session =
-            nil;
+/// Attach a fresh task to a job and start it. Also the retry path.
++ (void)runJob:(FBPDownloadJob *)job
+       variant:(FBPDownloadVariant *)variant
+       videoID:(NSString *)videoID {
 
-        self.task =
-            nil;
+    FBPReelDownloadTask *download = [[FBPReelDownloadTask alloc] init];
+    download.job = job;
+    download.variant = variant;
+    download.videoID = videoID.length ? videoID : @"unknown";
+
+    FBPReelTrackTask(download, YES);
+
+    // Installed before anything is in flight, so the HUD pill — which is raised
+    // from the store's change notification, one turn of the run loop later —
+    // already knows whether this job has a stop to offer.
+    [FBPDownloadStore.shared setCancelWork:^(__unused FBPDownloadJob *cancelled) {
+        [download cancel];
+    } forJob:job];
+
+    [download begin];
+}
+
+- (void)begin {
+    // A variant with no separate audio is a complete MP4 — one GET, one file,
+    // audio already in it. That is the progressive tier, confirmed working on
+    // device, and it goes down exactly the path it always has.
+    if (self.variant.needsMux) {
+        [self beginTwoStream];
+    } else {
+        [self beginSingleFile];
+    }
+}
+
+/// Stop whichever flow is running. Safe at any point, including after the
+/// download has already finished.
+- (void)cancel {
+    [self.dashDownload cancel];
+    [self.task cancel];
+}
+
+/// Let go of the session and drop out of the live set. Called on every terminal
+/// path, so nothing outlives its download.
+- (void)finish {
+    [self.session finishTasksAndInvalidate];
+    self.session = nil;
+    self.task = nil;
+    self.dashDownload = nil;
+
+    // Clearing the cancel work breaks the job -> block -> task reference, so a
+    // finished task is released as soon as the live set lets go of it.
+    [FBPDownloadStore.shared setCancelWork:nil forJob:self.job];
+    FBPReelTrackTask(self, NO);
+}
+
+- (void)failWithMessage:(NSString *)message {
+    [FBPDownloadStore.shared job:self.job didFailWithError:FBPReelError(message)];
+    [self finish];
+}
+
+#pragma mark Destination
+
+/// The same name, in the same directory, as this file has always used — so the
+/// asset Photos ends up with is indistinguishable from one saved before any of
+/// this existed, right down to its originalFilename.
+///
+/// The job identifier is mixed in because several downloads can now be in
+/// flight: two taps on the same Reel would otherwise race for one path, and the
+/// second would delete the first's file out from under it.
+- (NSURL *)outputURL {
+    NSString *filename =
+        [NSString stringWithFormat:@"FBP-Reel-%@-%@.mp4",
+                                   self.videoID ?: @"unknown",
+                                   self.job.identifier ?: NSUUID.UUID.UUIDString];
+
+    return [NSURL fileURLWithPath:
+        [NSTemporaryDirectory() stringByAppendingPathComponent:filename]];
+}
+
+#pragma mark Photos
+
+- (void)saveVideo:(NSURL *)fileURL {
+    [FBPDownloadStore.shared job:self.job didEnterStage:FBPDownloadJobStageSaving];
+
+    // Kept so the manager's row can offer "View in Photos" afterwards. The
+    // placeholder's localIdentifier is the created asset's, and it is only valid
+    // to read once the change block has been handed over.
+    __block NSString *assetIdentifier = nil;
+
+    [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+        PHAssetChangeRequest *request =
+            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:fileURL];
+        assetIdentifier = request.placeholderForCreatedAsset.localIdentifier;
+
+    } completionHandler:^(BOOL success, NSError *error) {
+        [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
 
         if (success) {
-
-            // Morph the progress card into a success checkmark, hold briefly so
-            // it registers, then dismiss — no separate confirmation alert.
-            [self.progressController
-                showSuccessWithTitle:FBPL(@"download.reel.saved")];
-
-            dispatch_after(
-                dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.3 * NSEC_PER_SEC)),
-                dispatch_get_main_queue(), ^{
-                [self dismissProgressWithCompletion:nil];
-            });
-
-        } else {
-
-
-            [self
-                dismissProgressWithCompletion:^{
-
-                FBPShowMessage(
-                    FBPL(@"download.appName"),
-                    [NSString
-                        stringWithFormat:
-                            FBPL(@"download.reel.saveFailed"),
-                        error.localizedDescription
-                            ?: FBPL(@"download.error.unknown")]
-                );
-            }];
+            [FBPDownloadStore.shared job:self.job
+                didFinishWithAssetIdentifier:assetIdentifier];
+            [self finish];
+            return;
         }
+
+        [self failWithMessage:
+            [NSString stringWithFormat:FBPL(@"download.reel.saveFailed"),
+                                       error.localizedDescription
+                                           ?: FBPL(@"download.error.unknown")]];
     }];
 }
 
-- (void)startDownloadWithURL:
-    (NSURL *)url
-    videoID:
-    (NSString *)videoID {
+#pragma mark Single-file path
 
-    if (!url)
-        return;
-
-    if (self.downloading) {
-
-        FBPShowMessage(
-            FBPL(@"download.appName"),
-            FBPL(@"download.reel.inProgress")
-        );
-
-        return;
-    }
-
-    self.downloading =
-        YES;
-
-    self.videoID =
-        videoID ?: @"unknown";
-
-
-
-
-    [self showProgress];
+- (void)beginSingleFile {
+    [FBPDownloadStore.shared job:self.job didEnterStage:FBPDownloadJobStageFetching];
 
     NSURLSessionConfiguration *config =
-        [NSURLSessionConfiguration
-            defaultSessionConfiguration];
+        [NSURLSessionConfiguration defaultSessionConfiguration];
+    config.requestCachePolicy = NSURLRequestReloadIgnoringLocalCacheData;
+    config.timeoutIntervalForRequest = 60.0;
+    config.timeoutIntervalForResource = 180.0;
 
-    config.requestCachePolicy =
-        NSURLRequestReloadIgnoringLocalCacheData;
+    NSOperationQueue *queue = [[NSOperationQueue alloc] init];
+    queue.maxConcurrentOperationCount = 1;
 
-    config.timeoutIntervalForRequest =
-        60.0;
-
-    config.timeoutIntervalForResource =
-        180.0;
-
-    NSOperationQueue *queue =
-        [[NSOperationQueue alloc]
-            init];
-
-    queue.maxConcurrentOperationCount =
-        1;
-
-    self.session =
-        [NSURLSession
-            sessionWithConfiguration:config
-            delegate:self
-            delegateQueue:queue];
+    self.session = [NSURLSession sessionWithConfiguration:config
+                                                delegate:self
+                                           delegateQueue:queue];
 
     NSMutableURLRequest *request =
-        [NSMutableURLRequest
-            requestWithURL:url
-            cachePolicy:
-                NSURLRequestReloadIgnoringLocalCacheData
-            timeoutInterval:60.0];
+        [NSMutableURLRequest requestWithURL:self.variant.url
+                               cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                           timeoutInterval:60.0];
+    request.HTTPMethod = @"GET";
 
-    request.HTTPMethod =
-        @"GET";
-
-    self.task =
-        [self.session
-            downloadTaskWithRequest:
-                request];
-
+    self.task = [self.session downloadTaskWithRequest:request];
     [self.task resume];
 }
 
-// The entry point the picker's pick now goes through: one tier or the other,
-// decided by whether the variant has a separate audio representation to pair.
-- (void)startDownloadWithVariant:
-    (FBPDownloadVariant *)variant
-    videoID:
-    (NSString *)videoID {
+- (void)URLSession:(NSURLSession *)session
+      downloadTask:(NSURLSessionDownloadTask *)downloadTask
+      didWriteData:(int64_t)bytesWritten
+ totalBytesWritten:(int64_t)totalBytesWritten
+totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
 
-    if (!variant.url)
-        return;
+    FBPDownloadStore *store = FBPDownloadStore.shared;
 
-    // A variant with no separate audio is a complete MP4 — one GET, one file,
-    // audio already in it. That is the progressive tier, already confirmed
-    // working on device, and it goes down exactly the path it always has.
-    if (!variant.needsMux) {
+    // A real Content-Length beats the picker's size; a CDN that sent none leaves
+    // the picker's exact -atomSize standing as the total.
+    [store job:self.job
+        didReceiveBytes:totalBytesWritten
+               expected:(totalBytesExpectedToWrite > 0) ? totalBytesExpectedToWrite : 0];
 
-        [self
-            startDownloadWithURL:variant.url
-            videoID:videoID];
+    if (totalBytesExpectedToWrite <= 0) return;
 
+    [store job:self.job
+        didProgress:(float)totalBytesWritten / (float)totalBytesExpectedToWrite];
+}
+
+- (void)URLSession:(NSURLSession *)session
+      downloadTask:(NSURLSessionDownloadTask *)downloadTask
+didFinishDownloadingToURL:(NSURL *)location {
+
+    NSHTTPURLResponse *response =
+        [downloadTask.response isKindOfClass:[NSHTTPURLResponse class]]
+        ? (NSHTTPURLResponse *)downloadTask.response
+        : nil;
+
+    NSInteger status = response ? response.statusCode : 0;
+
+    if (status < 200 || status >= 300) {
+        // 403 is the one failure the user can fix: Facebook's playback URLs are
+        // signed and carry a short `oe=` expiry, so a link that sat around — a
+        // picker sheet left open, a reel paused for a while — is simply past it.
+        // Tapping download again re-resolves it.
+        NSString *message =
+            (status == 403)
+            ? FBPL(@"download.reel.expired")
+            : [NSString stringWithFormat:FBPL(@"download.reel.httpError"), (long)status];
+
+        [self failWithMessage:message];
         return;
     }
 
-    if (self.downloading) {
+    NSURL *destination = [self outputURL];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    [fm removeItemAtURL:destination error:nil];
 
-        FBPShowMessage(
-            FBPL(@"download.appName"),
-            FBPL(@"download.reel.inProgress")
-        );
-
+    if (![fm moveItemAtURL:location toURL:destination error:NULL]) {
+        [self failWithMessage:FBPL(@"download.reel.tmpFailed")];
         return;
     }
 
-    self.downloading =
-        YES;
+    [FBPDownloadStore.shared job:self.job didProgress:1.0f];
+    [self saveVideo:destination];
+}
 
-    self.videoID =
-        videoID ?: @"unknown";
+- (void)URLSession:(NSURLSession *)session
+              task:(NSURLSessionTask *)task
+didCompleteWithError:(NSError *)error {
 
-    // With a Stop action: two transfers plus a merge is long enough that being
-    // unable to back out of it is a real complaint.
-    [self showProgressWithStop:YES];
+    if (!error) return;
 
-    // The same name, in the same directory, as the single-URL path's
-    // destination — so the asset Photos ends up with is indistinguishable from
-    // a progressive save, right down to its originalFilename.
-    NSString *filename =
-        [NSString
-            stringWithFormat:
-                @"FBP-Reel-%@.mp4",
-                self.videoID
-                    ?: @"unknown"];
+    // A cancelled transfer is the user's own stop arriving back. The store knows
+    // it was asked for and records the job as cancelled rather than failed, so
+    // the message built here is never shown for one.
+    [self failWithMessage:
+        [NSString stringWithFormat:FBPL(@"download.reel.failedDetail"),
+                                   error.localizedDescription
+                                       ?: FBPL(@"download.error.unknown")]];
+}
 
-    NSURL *output =
-        [NSURL
-            fileURLWithPath:
-                [NSTemporaryDirectory()
-                    stringByAppendingPathComponent:
-                        filename]];
+#pragma mark Two-stream path
+
+- (void)beginTwoStream {
+    FBPDownloadStore *store = FBPDownloadStore.shared;
+    [store job:self.job didEnterStage:FBPDownloadJobStageFetching];
 
     __weak __typeof__(self) weakSelf = self;
 
     self.dashDownload =
-        [FBPDashDownload
-            startWithVideoURL:variant.url
-            audioURL:variant.audioURL
-            outputURL:output
-            progress:^(
-                FBPDashDownloadStage stage,
-                float fraction
-            ) {
+        [FBPDashDownload startWithVideoURL:self.variant.url
+                                 audioURL:self.variant.audioURL
+                                outputURL:[self outputURL]
+                                 progress:^(FBPDashDownloadStage stage, float fraction) {
 
             __typeof__(self) strongSelf = weakSelf;
+            if (!strongSelf) return;
 
-            if (!strongSelf)
-                return;
+            FBPDownloadStore *inner = FBPDownloadStore.shared;
+            [inner job:strongSelf.job didProgress:fraction];
+            [inner job:strongSelf.job
+                didEnterStage:(stage == FBPDashDownloadStageMerging)
+                                  ? FBPDownloadJobStageMerging
+                                  : FBPDownloadJobStageFetching];
 
-            [strongSelf.progressController
-                setProgressValue:fraction];
-
-            if (stage ==
-                FBPDashDownloadStageMerging) {
-
-                [strongSelf.progressController
-                    setStatusTitle:
-                        FBPL(@"download.merge.progress")];
-            }
-
-        } completion:^(
-            NSURL *merged,
-            NSError *error
-        ) {
+        } completion:^(NSURL *merged, NSError *error) {
 
             __typeof__(self) strongSelf = weakSelf;
+            if (!strongSelf) return;
 
-            if (!strongSelf)
-                return;
-
-            strongSelf.dashDownload =
-                nil;
+            strongSelf.dashDownload = nil;
 
             if (merged) {
-
-                [strongSelf.progressController
-                    setProgressValue:1.0f];
-
+                [FBPDownloadStore.shared job:strongSelf.job didProgress:1.0f];
                 // Straight into the single-URL path's own save step: same
-                // PHAssetChangeRequest, same album behaviour, same success
-                // morph, same Photos-refused message, and it deletes the file
-                // afterwards either way.
+                // PHAssetChangeRequest, same album behaviour, and it deletes the
+                // file afterwards either way.
                 [strongSelf saveVideo:merged];
-
                 return;
             }
 
-            NSString *message =
-                FBPDashDownloadMessageForError(error);
-
-            if (!message) {
-
-                // Cancelled. Nothing was saved, nothing is left in the
-                // temporary directory, and the user does not need to be told
-                // what they just asked for.
-                strongSelf.downloading =
-                    NO;
-
-                [strongSelf
-                    dismissProgressWithCompletion:nil];
-
-                return;
-            }
-
-            [strongSelf
-                finishWithError:message];
+            // The flow's own errors go through untouched, in its own domain, so
+            // the store's message builder can keep folding a 403 on either
+            // stream into the expired-link wording. A cancellation reports no
+            // message at all, and the store has already recorded why.
+            [FBPDownloadStore.shared job:strongSelf.job didFailWithError:error];
+            [strongSelf finish];
         }];
-}
 
-- (void)URLSession:
-    (NSURLSession *)session
-    downloadTask:
-    (NSURLSessionDownloadTask *)downloadTask
-    didWriteData:
-    (int64_t)bytesWritten
-    totalBytesWritten:
-    (int64_t)totalBytesWritten
-    totalBytesExpectedToWrite:
-    (int64_t)totalBytesExpectedToWrite {
-
-    if (totalBytesExpectedToWrite <= 0)
-        return;
-
-    float progress =
-        (float)totalBytesWritten /
-        (float)totalBytesExpectedToWrite;
-
-    [self.progressController
-        setProgressValue:progress];
-}
-
-- (void)URLSession:
-    (NSURLSession *)session
-    downloadTask:
-    (NSURLSessionDownloadTask *)downloadTask
-    didFinishDownloadingToURL:
-    (NSURL *)location {
-
-    NSHTTPURLResponse *response =
-        [downloadTask.response
-            isKindOfClass:
-                [NSHTTPURLResponse class]]
-        ? (NSHTTPURLResponse *)
-            downloadTask.response
-        : nil;
-
-    NSInteger status =
-        response
-        ? response.statusCode
-        : 0;
-
-
-    if (status < 200 ||
-        status >= 300) {
-
-        // 403 is the one failure the user can fix, and the generic "HTTP 403"
-        // text hid it: Facebook's playback URLs are signed and carry a short
-        // `oe=` expiry, so a link that sat around — a picker sheet left open, a
-        // reel paused for a while — is simply past its expiry. Tapping download
-        // again re-resolves it.
-        NSString *message =
-            (status == 403)
-            ? FBPL(@"download.reel.expired")
-            : [NSString
-                  stringWithFormat:
-                      FBPL(@"download.reel.httpError"),
-                      (long)status];
-
-        [self finishWithError:message];
-
-        return;
+    if (!self.dashDownload) {
+        // Only a nil completion block makes +start… refuse, which cannot happen
+        // here — but a job that silently never moved would be worse than one
+        // that says it failed.
+        [self failWithMessage:FBPL(@"download.reel.failed")];
     }
-
-    NSString *filename =
-        [NSString
-            stringWithFormat:
-                @"FBP-Reel-%@.mp4",
-                self.videoID
-                    ?: @"unknown"];
-
-    NSString *path =
-        [NSTemporaryDirectory()
-            stringByAppendingPathComponent:
-                filename];
-
-    NSURL *destination =
-        [NSURL
-            fileURLWithPath:path];
-
-    NSFileManager *fm =
-        [NSFileManager
-            defaultManager];
-
-    [fm
-        removeItemAtURL:destination
-                 error:nil];
-
-    NSError *moveError =
-        nil;
-
-    BOOL moved =
-        [fm moveItemAtURL:location
-                    toURL:destination
-                    error:&moveError];
-
-    if (!moved) {
-
-
-        [self
-            finishWithError:
-                FBPL(@"download.reel.tmpFailed")];
-
-        return;
-    }
-
-
-
-    [self.progressController
-        setProgressValue:1.0f];
-
-    [self saveVideo:destination];
-}
-
-- (void)URLSession:
-    (NSURLSession *)session
-    task:
-    (NSURLSessionTask *)task
-    didCompleteWithError:
-    (NSError *)error {
-
-    if (!error)
-        return;
-
-
-    [self
-        finishWithError:
-            [NSString
-                stringWithFormat:
-                    FBPL(@"download.reel.failedDetail"),
-                error.localizedDescription
-                    ?: FBPL(@"download.error.unknown")]];
 }
 
 @end
-
 
 #pragma mark - Active playback fallback
 
@@ -1421,6 +993,12 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
 
     NSString *downloadID = [videoID copy];
 
+    // Carried into the job so the download manager's row can show the video's
+    // own title and poster frame instead of a bare "Reel". Both are nil on
+    // plenty of real content, and nil is fine — the row falls back.
+    NSString *mediaTitle = [live.mediaTitle copy];
+    NSURL *thumbnailURL = [live.thumbnailURL copy];
+
     // Re-resolve on the pick, not just on the tap: the sheet can sit open while
     // the user decides, and these URLs carry an oe= expiry. Same identity guard
     // as above — a walk that lands on a different video must not swap the URL
@@ -1443,9 +1021,10 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
             return again.variants;
         },
         ^(FBPDownloadVariant *variant) {
-            [[FBPReelDownloadManager shared]
-                startDownloadWithVariant:variant
-                videoID:downloadID];
+            [FBPReelDownloadTask startWithVariant:variant
+                                         videoID:downloadID
+                                           title:mediaTitle
+                                    thumbnailURL:thumbnailURL];
         }
     );
 }
@@ -2667,6 +2246,12 @@ void FBPInitReelsDownloader(void) {
     // one FBPEntry always runs, so it is registered here; it is re-run on every
     // dyld image load, hence the latch.
     FBP_ONCE(gDownloadDiagnostic) { FBPDownloadInstallDiagnostic(); }
+
+    // Start watching FBPDownloadStore so any download — from either surface —
+    // raises a HUD pill that leads back to the manager. Registered here for the
+    // same reason as the diagnostic: downloads in general, not Reels, and this
+    // is the installer FBPEntry always runs.
+    FBP_ONCE(gDownloadActivity) { FBPDownloadActivityInstall(); }
 
     FBPInstallPlayerHook();
     FBPInstallSidebarHook();

@@ -11,11 +11,22 @@ static const CGFloat kRowHeight    = 62.0;
 static const CGFloat kCancelHeight = 56.0;
 static const CGFloat kHeaderHeight = 44.0;
 
-/// Row with the detail line above the title.
+/// Row with the two text lines in either order, and an optional badge capsule
+/// beside the title.
+///
+/// The lines live in a vertical stack so the order is a one-line change at
+/// configure time rather than two sets of constraints. The stack is pinned at
+/// the same inset, with the same spacing, as the hand-built layout it replaced,
+/// so a caller that does not ask for the new order renders identically.
 @interface FBPSheetCell : UITableViewCell
 @property (nonatomic, strong) UIImageView *glyphView;
 @property (nonatomic, strong) UILabel *detailLine;
 @property (nonatomic, strong) UILabel *titleLine;
+/// Capsule holding @c badgeLabel. Hidden unless the action set a badge.
+@property (nonatomic, strong) UIView *badgeView;
+@property (nonatomic, strong) UILabel *badgeLabel;
+@property (nonatomic, strong) UIStackView *lineStack;
+- (void)setTitleFirst:(BOOL)titleFirst;
 @end
 
 @implementation FBPSheetCell
@@ -34,14 +45,40 @@ static const CGFloat kHeaderHeight = 44.0;
         _detailLine = [[UILabel alloc] init];
         _detailLine.font = [UIFont systemFontOfSize:13];
         _detailLine.textColor = UIColor.secondaryLabelColor;
-        _detailLine.translatesAutoresizingMaskIntoConstraints = NO;
-        [self.contentView addSubview:_detailLine];
 
         _titleLine = [[UILabel alloc] init];
         _titleLine.font = [UIFont systemFontOfSize:20 weight:UIFontWeightRegular];
         _titleLine.textColor = UIColor.labelColor;
-        _titleLine.translatesAutoresizingMaskIntoConstraints = NO;
-        [self.contentView addSubview:_titleLine];
+
+        _badgeLabel = [[UILabel alloc] init];
+        _badgeLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightSemibold];
+        _badgeLabel.textColor = FBPTintColor();
+        _badgeLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+        _badgeView = [[UIView alloc] init];
+        _badgeView.backgroundColor = [FBPTintColor() colorWithAlphaComponent:0.18];
+        _badgeView.layer.cornerRadius = 8.0;
+        _badgeView.layer.cornerCurve = kCACornerCurveContinuous;
+        _badgeView.translatesAutoresizingMaskIntoConstraints = NO;
+        [_badgeView addSubview:_badgeLabel];
+
+        // Title and badge share a row; the trailing spacer keeps the capsule
+        // tight against the title instead of stretched across the cell.
+        UIView *spacer = [[UIView alloc] init];
+        [spacer setContentHuggingPriority:UILayoutPriorityDefaultLow
+                                  forAxis:UILayoutConstraintAxisHorizontal];
+        UIStackView *titleRow =
+            [[UIStackView alloc] initWithArrangedSubviews:@[_titleLine, _badgeView, spacer]];
+        titleRow.axis = UILayoutConstraintAxisHorizontal;
+        titleRow.alignment = UIStackViewAlignmentCenter;
+        titleRow.spacing = 8;
+
+        _lineStack = [[UIStackView alloc] initWithArrangedSubviews:@[_detailLine, titleRow]];
+        _lineStack.axis = UILayoutConstraintAxisVertical;
+        _lineStack.alignment = UIStackViewAlignmentFill;
+        _lineStack.spacing = 2;
+        _lineStack.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.contentView addSubview:_lineStack];
 
         UIView *selected = [[UIView alloc] init];
         selected.backgroundColor = [UIColor.labelColor colorWithAlphaComponent:0.08];
@@ -54,20 +91,36 @@ static const CGFloat kHeaderHeight = 44.0;
             [_glyphView.widthAnchor constraintEqualToConstant:26],
             [_glyphView.heightAnchor constraintEqualToConstant:26],
 
-            [_detailLine.leadingAnchor constraintEqualToAnchor:_glyphView.trailingAnchor
-                                                      constant:14],
-            [_detailLine.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
-                                                       constant:-16],
-            [_detailLine.topAnchor constraintEqualToAnchor:self.contentView.topAnchor
-                                                  constant:10],
+            [_badgeLabel.leadingAnchor constraintEqualToAnchor:_badgeView.leadingAnchor
+                                                      constant:7],
+            [_badgeLabel.trailingAnchor constraintEqualToAnchor:_badgeView.trailingAnchor
+                                                       constant:-7],
+            [_badgeLabel.topAnchor constraintEqualToAnchor:_badgeView.topAnchor constant:2],
+            [_badgeLabel.bottomAnchor constraintEqualToAnchor:_badgeView.bottomAnchor
+                                                     constant:-2],
 
-            [_titleLine.leadingAnchor constraintEqualToAnchor:_detailLine.leadingAnchor],
-            [_titleLine.trailingAnchor constraintEqualToAnchor:_detailLine.trailingAnchor],
-            [_titleLine.topAnchor constraintEqualToAnchor:_detailLine.bottomAnchor
-                                                 constant:2],
+            [_lineStack.leadingAnchor constraintEqualToAnchor:_glyphView.trailingAnchor
+                                                     constant:14],
+            [_lineStack.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
+                                                      constant:-16],
+            [_lineStack.topAnchor constraintEqualToAnchor:self.contentView.topAnchor
+                                                 constant:10],
         ]];
     }
     return self;
+}
+
+/// Reorder the two lines. Cheap enough to call on every configure, and a no-op
+/// when the order already matches.
+- (void)setTitleFirst:(BOOL)titleFirst {
+    BOOL alreadyTitleFirst = (self.lineStack.arrangedSubviews.firstObject != self.detailLine);
+    if (alreadyTitleFirst == titleFirst) return;
+
+    // Exactly two rows, so promoting the last one to the front is the swap.
+    UIView *moving = self.lineStack.arrangedSubviews.lastObject;
+    if (!moving) return;
+    [self.lineStack removeArrangedSubview:moving];
+    [self.lineStack insertArrangedSubview:moving atIndex:0];
 }
 
 @end
@@ -167,6 +220,9 @@ static const CGFloat kHeaderHeight = 44.0;
     cell.titleLine.text = action.title;
     cell.detailLine.text = action.detail;
     cell.detailLine.hidden = (action.detail.length == 0);
+    cell.badgeLabel.text = action.badge;
+    cell.badgeView.hidden = (action.badge.length == 0);
+    [cell setTitleFirst:action.titleFirst];
     cell.glyphView.image = action.iconName
         ? [UIImage fbp_symbolNamed:action.iconName size:22]
         : nil;
