@@ -239,36 +239,27 @@ static NSURL *FBPDownloadURLFromObject(id object) {
 
 @end
 
-static NSString *FBPDownloadByteString(long long bytes) {
-    if (bytes <= 0) return nil;
-    return [NSByteCountFormatter stringFromByteCount:bytes
-                                          countStyle:NSByteCountFormatterCountStyleFile];
-}
 
-/// The whole of a row's second line: how big it is, and nothing else.
+/// A row carries its resolution and nothing else.
 ///
-/// The row's title is the resolution — that is the decision — so all the detail
-/// has to carry is the cost, which is why it is one short measurement rather
-/// than the sentence it used to be ("~24.8 MB · estimated size · needs
-/// merging", reading alongside a title that had already said "1080p").
+/// Sizes used to sit on the second line, and they are gone at the maintainer's
+/// request: he does not care how big the file is, and the number was becoming a
+/// liability rather than information. A DASH rung's size is only bandwidth x
+/// duration, which lands either side of the truth; and once a rung needs
+/// converting from AV1 to H.264 to be saveable at all, the figure is wrong by a
+/// large multiple — a measured 4.55 MB AV1 rung comes out of the encoder several
+/// times larger. A row that states a number the result will contradict is the
+/// exact failure this picker has already been through once, with a row labelled
+/// 1080p that downloaded 720p.
 ///
-/// The one distinction kept is the one that is real: a progressive row's size is
-/// the MP4's own byte length (-atomSize / -hdAtomSize), while a DASH rung's is
-/// bandwidth x duration and routinely lands either side of the truth. So an
-/// estimate wears a "~" and an exact size does not. That is the entire
-/// difference, said in one character, which is as subtle as it can be while
-/// still being said.
+/// @c byteSize is still carried on the variant and still drives the progress
+/// weighting in the download flow — it is only no longer shown.
 ///
-/// Nil when there is no size at all — the row then shows its resolution alone,
-/// which is honest, rather than a word standing in for a number we do not have.
-///
-/// The byte count is formatted by NSByteCountFormatter, so it follows the
-/// *system* locale rather than the tweak's own language setting — a number and a
-/// unit, which reads correctly either way.
-static NSString *FBPDownloadSizeDetail(long long byteSize, BOOL estimated) {
-    NSString *size = FBPDownloadByteString(byteSize);
-    if (size.length == 0) return nil;
-    return estimated ? [@"~" stringByAppendingString:size] : size;
+/// Returns nil always; kept as a single named place to reverse this, rather
+/// than scattering nils through the builders.
+static NSString *FBPDownloadSizeDetail(__unused long long byteSize,
+                                       __unused BOOL estimated) {
+    return nil;
 }
 
 static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
