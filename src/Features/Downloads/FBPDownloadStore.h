@@ -103,7 +103,8 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 /// normal — most Reels have none — and a row falls back to @c surfaceName.
 @property (atomic, copy, readonly, nullable) NSString *title;
 
-/// The picked variant's row title, e.g. "1080p" or "High quality".
+/// The picked variant's row title, e.g. "1080p", or "HD" when Facebook served
+/// no manifest and only the progressive pair was on offer.
 @property (atomic, copy, readonly, nullable) NSString *quality;
 
 /// A poster frame, when one was cheaply available (-firstFrameThumbnailURL on
