@@ -322,6 +322,26 @@ static long long FBPDownloadEstimatedBytes(FBPDashRepresentation *video,
     return (long long)llround(bytes);
 }
 
+/// The last-resort name for a rung the manifest never labelled and gave no
+/// dimensions for: its bitrate.
+///
+/// It exists so that such a rung can be *offered* rather than skipped, which is
+/// what used to happen. Not localized, and does not need to be — it is a number
+/// and an SI-prefixed unit, which reads the same in every language the tweak
+/// ships, and NSByteCountFormatter beside it already follows the system locale
+/// rather than the tweak's. Nil when there is no bitrate either, in which case
+/// the caller falls back to a real localized string.
+static NSString *FBPDownloadBitRateTitle(long long bitsPerSecond) {
+    if (bitsPerSecond <= 0) return nil;
+    if (bitsPerSecond >= 1000000) {
+        return [NSString stringWithFormat:@"%.1f Mbps", bitsPerSecond / 1000000.0];
+    }
+    if (bitsPerSecond >= 1000) {
+        return [NSString stringWithFormat:@"%lld kbps", bitsPerSecond / 1000];
+    }
+    return [NSString stringWithFormat:@"%lld bps", bitsPerSecond];
+}
+
 /// Merge the DASH ladder into the progressive rows.
 ///
 /// @param progressive The variants built from -HDPlaybackURL / -SDPlaybackURL
@@ -345,17 +365,19 @@ FBPDownloadMergeDashLadder(id item,
         [FBPDashManifest manifestFromXMLString:(NSString *)playlist];
     if (manifest.videoRepresentations.count == 0) return progressive;
 
-    // Audio, and the one case where the whole ladder has to be abandoned.
+    // Audio, which can no longer abandon the ladder.
     //
-    // No audio representation at all is normal and fine: a silent video has no
-    // audio AdaptationSet, and its video rungs are the complete content — they
-    // need no pairing and no muxing. But audio that was *listed and refused*
-    // (an unsupported codec, an ambisonic channel layout) is different: pairing
-    // nothing there would hand the user a silent copy of a video that has
-    // sound. There is no honest row to show for that, so the ladder is dropped
-    // and the progressive rows — which are muxed already — carry the download.
+    // This used to be: `if (!audio && manifest.hasUnusableAudio) return
+    // progressive;` — the reasoning being that pairing nothing with a video
+    // that has sound hands the user a silent copy. The reasoning was sound and
+    // the trade was wrong. It fired whenever the reader had refused every audio
+    // track it saw, and the reader refused a lot: any non-AAC codec, any
+    // AudioChannelConfiguration scheme it did not recognise. The cost was the
+    // entire 360p…1080p ladder, replaced by two progressive rows, because of
+    // the soundtrack. The reader now refuses no audio at all, so there is
+    // nothing left here to react to: nil means the video is genuinely silent
+    // and its rungs are the complete content.
     FBPDashRepresentation *audio = manifest.audioRepresentation;
-    if (!audio && manifest.hasUnusableAudio) return progressive;
 
     // Everything before `flatStart` is the spherical pair on a 360° video, and
     // it stays: those are not a quality choice, they are a different rendering
@@ -365,7 +387,7 @@ FBPDownloadMergeDashLadder(id item,
         : @[];
 
     NSMutableArray<FBPDownloadVariant *> *ranked = [NSMutableArray array];
-    NSMutableSet<NSNumber *> *covered = [NSMutableSet set];
+    NSMutableSet<NSString *> *covered = [NSMutableSet set];
 
     // The progressive pair — `progressive` from `flatStart` on — is deliberately
     // not carried into the result below, and this is the one place that decision
@@ -392,21 +414,33 @@ FBPDownloadMergeDashLadder(id item,
     // FBPDownloadVariantsForItem), which is what keeps every Facebook build
     // without a usable DASH ladder working exactly as it did.
     for (FBPDashRepresentation *representation in manifest.videoRepresentations) {
-        NSString *label = representation.displayLabel;
-        if (label.length == 0) continue;
-
-        // The rung's own number, from FBQualityLabel — *not* its pixel height.
-        // Facebook encodes several rungs at one resolution (480p, 540p, 640p
-        // and 720p are all 1280x720 in a real feed manifest), so the label is
-        // the only thing that separates them.
+        // The rung's own number: its shorter frame edge, falling back to
+        // FBQualityLabel. Used for ordering and for the refresher's fallback
+        // match, never for deciding whether two rungs are the same one.
         NSInteger rank = representation.qualityRank;
 
-        // Second guard against showing one rung twice. The parser already
-        // dedupes by label, so this only fires if a manifest repeats a rung
-        // across adaptation sets. Only DASH rows are ever entered into
-        // `covered` — a progressive row deliberately claims no rung, so it can
-        // never hide a representation here.
-        if (rank > 0 && [covered containsObject:@(rank)]) continue;
+        // A rung the manifest never named, with no dimensions either. This
+        // used to `continue` — a row the user cannot read is no row at all —
+        // and that was one more way a rung went missing. It is named by its
+        // bitrate instead, which is the only number left that tells it apart
+        // from its neighbours, and only falls back to "Original" when even
+        // that is absent.
+        NSString *label = representation.displayLabel;
+        if (label.length == 0) label = FBPDownloadBitRateTitle(representation.bandwidth);
+        if (label.length == 0) label = FBPL(@"download.quality.original");
+
+        // Second guard against showing one rung twice, keyed on the row's text
+        // and NOT on `rank`. Facebook encodes several rungs at one resolution
+        // — 480p, 540p, 640p and 720p are all 1280x720 in a real feed manifest,
+        // so all four now rank 720 — and keying this on the number would throw
+        // three of them away right here, which is the collapse the ladder
+        // exists to avoid. The parser already dedupes on the same label, so
+        // this only fires if a manifest repeats a row across adaptation sets.
+        // Only DASH rows are ever entered into `covered` — a progressive row
+        // deliberately claims no rung, so it can never hide a representation.
+        NSString *key = label.lowercaseString;
+        if ([covered containsObject:key]) continue;
+        [covered addObject:key];
 
         long long bytes =
             FBPDownloadEstimatedBytes(representation, audio, manifest.duration);
@@ -414,7 +448,6 @@ FBPDownloadMergeDashLadder(id item,
         // so every one of these rows wears the "~".
         NSString *detail = FBPDownloadSizeDetail(bytes, YES);
 
-        if (rank > 0) [covered addObject:@(rank)];
         [ranked addObject:
             [[FBPDownloadVariant alloc] initWithURL:representation.url
                                            audioURL:audio.url
@@ -426,25 +459,16 @@ FBPDownloadMergeDashLadder(id item,
                                                tier:FBPDownloadVariantTierDash]];
     }
 
-    [ranked sortUsingComparator:^NSComparisonResult(FBPDownloadVariant *a,
-                                                    FBPDownloadVariant *b) {
-        if (a.pixelHeight != b.pixelHeight) {
-            return a.pixelHeight > b.pixelHeight ? NSOrderedAscending
-                                                 : NSOrderedDescending;
-        }
-        // Rungs are unique by construction (deduped above), so this only ever
-        // settles two unnameable ones: higher bitrate first.
-        if (a.bitRate != b.bitRate) {
-            return a.bitRate > b.bitRate ? NSOrderedAscending : NSOrderedDescending;
-        }
-        return NSOrderedSame;
-    }];
+    // Deliberately not re-sorted. -videoRepresentations arrives best-first by
+    // (rank, label number, bitrate), which is more than this loop knows — a
+    // sort on `pixelHeight` alone would tie Meta's four 1280x720 CRF rungs and
+    // then reorder them by bitrate, losing the label ordering the manifest had
+    // already worked out.
 
-    // Not one rung survived its gates — an all-VP9 manifest, every
-    // representation on a SegmentTemplate, labels we could not read. Dropping
-    // the progressive pair for a ladder that turned out empty would leave
-    // nothing to download at all, so this is the last place the old behaviour is
-    // handed back intact.
+    // Not one rung survived — an all-VP9 manifest, or nothing with a fetchable
+    // BaseURL. Dropping the progressive pair for a ladder that turned out empty
+    // would leave nothing to download at all, so this is the last place the old
+    // behaviour is handed back intact.
     if (ranked.count == 0) return progressive;
 
     NSMutableArray<FBPDownloadVariant *> *merged =
@@ -642,13 +666,20 @@ static FBPDownloadVariant *FBPDownloadFreshenVariant(
             break;
         }
     }
+    // Fallback for a title that moved: the rung number, but only when exactly
+    // one fresh row carries it. Several rows legitimately share a `pixelHeight`
+    // now — Meta's 480p/540p/640p/720p rungs are all 1280x720, so all four rank
+    // 720 — and taking the first of those would refresh the tapped row's URL
+    // with a *different* rung's, which is worse than letting it expire.
     if (!match && picked.pixelHeight > 0) {
+        FBPDownloadVariant *only = nil;
+        NSUInteger hits = 0;
         for (FBPDownloadVariant *candidate in fresh) {
-            if (candidate.pixelHeight == picked.pixelHeight) {
-                match = candidate;
-                break;
-            }
+            if (candidate.pixelHeight != picked.pixelHeight) continue;
+            only = candidate;
+            hits++;
         }
+        if (hits == 1) match = only;
     }
     if (!match || !match.url) return picked;
 
@@ -1062,24 +1093,59 @@ static void FBPDownloadLogDashPlaylist(os_log_t log, id item) {
            (long)muxed, (unsigned long)tags.count);
 
     // What the reader actually made of the same document.
+    //
+    // A nil manifest now means something much narrower than it used to, and the
+    // message says so, because "no usable ladder" was exactly the answer that
+    // left the last device run guessing. There are only four ways to get here
+    // with a non-empty MPD, and each one is separately checkable from the
+    // raw-scan lines printed above:
+    //
+    //   * the document has no <BaseURL> at all — compare against the
+    //     "<Representation" count above;
+    //   * every <BaseURL> is relative, or not http(s), so nothing resolved;
+    //   * every representation is AV1/VP9 — the codecs lines above say so;
+    //   * the document is under 33 characters, or over 2 MB (the length is
+    //     printed above).
+    //
+    // Nothing else can produce nil any more: no gate on SegmentBase,
+    // SegmentTemplate, ContentProtection, MPD@type, a missing <MPD>, a missing
+    // codecs attribute, an unnameable rung or any property of the audio. If the
+    // ladder is empty on the next run, it is one of those four, and the lines
+    // below name which.
     FBPDashManifest *manifest = [FBPDashManifest manifestFromXMLString:mpd];
     if (!manifest) {
-        os_log(log, "parsed    no usable ladder (live manifest, encrypted, or nothing "
-                    "survived the gates)");
+        os_log(log, "parsed    NO LADDER. Both readers (NSXMLParser, then the regex "
+                    "scraper) found no representation with a fetchable BaseURL and a "
+                    "remuxable codec. Remaining causes, in order of likelihood: no "
+                    "<BaseURL> element at all; every BaseURL relative or non-http(s); "
+                    "every representation AV1/VP9; document under 33 or over 2097152 "
+                    "chars. Compare the mpd lines above.");
+        os_log(log, "parsed    mpd has <BaseURL> = %{public}@, length = %lu",
+               FBPDownloadCountOccurrences(mpd, @"<BaseURL") > 0 ? @"yes" : @"NO",
+               (unsigned long)mpd.length);
         return;
     }
 
-    os_log(log, "parsed    %lu rungs, duration=%.3fs, audio=%{public}@",
+    os_log(log, "parsed    %lu rungs, duration=%.3fs, audio=%{public}@%{public}@",
            (unsigned long)manifest.videoRepresentations.count, manifest.duration,
            manifest.audioRepresentation
                ? (manifest.audioRepresentation.codecs ?: @"present")
-               : (manifest.hasUnusableAudio ? @"listed but refused" : @"none (silent)"));
+               : @"none (silent)",
+           manifest.audioIsNotAAC ? @" [not AAC — mux may drop it]" : @"");
 
     for (FBPDashRepresentation *representation in manifest.videoRepresentations) {
         os_log(log, "parsed      %{public}@", [representation description]);
     }
+    // Every note the reader left: what it refused, and — now that most of the
+    // old gates only observe — what shape the document turned out to be. A
+    // ladder that is non-empty but shorter than the FBQualityLabel list above
+    // is explained here.
     for (NSString *note in manifest.droppedNotes) {
-        os_log(log, "parsed    dropped: %{public}@", note);
+        os_log(log, "parsed    note: %{public}@", note);
+    }
+    if (manifest.droppedNotes.count == 0) {
+        os_log(log, "parsed    note: nothing refused or remarked on — the ladder above "
+                    "is everything the document offered");
     }
 }
 

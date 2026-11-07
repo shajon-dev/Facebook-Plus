@@ -12,30 +12,48 @@
 // @indexRange, Initialization/@range, FBFirstSegmentRange — is information we
 // deliberately ignore.
 //
-// What this is NOT: a DASH client. There is no adaptation and no timeline. It
-// reads only the shape it can act on and drops everything else:
+// What this is NOT: a DASH client. There is no adaptation and no timeline. But
+// it is also no longer fussy, and that is a deliberate reversal.
 //
-//   * MPD@type="dynamic" (live) is refused outright. A live manifest is a
-//     SegmentTemplate of ~2 s pieces covering the last few seconds, so its
-//     <BaseURL> is a path prefix rather than a file — saving it would produce
-//     a broken download, not a shorter one.
-//   * A representation without a <SegmentBase> child, or with a
-//     <SegmentTemplate> / <SegmentList>, is refused for the same reason.
-//   * A representation (or whole AdaptationSet) carrying <ContentProtection> is
-//     refused: an encrypted stream is not something we can save.
+// It used to refuse MPD@type="dynamic", any representation without a
+// <SegmentBase> child, anything under a <SegmentTemplate> / <SegmentList>,
+// anything carrying <ContentProtection>, any document not rooted in <MPD>, any
+// representation that declared no codec or could not be named, and any
+// soundtrack that was not AAC with a channel layout it recognised — the last of
+// which could take the whole video ladder with it. A rival tweak reading the
+// same -DashPlaylist off the same -currentVideoPlaybackItem checks *none* of
+// those and shows the full 360p…1080p ladder on the same videos, where ours
+// showed two progressive rows. So every one of those gates was costing rungs
+// rather than buying safety, and every one is now a -droppedNotes entry instead
+// of a refusal.
 //
-// Quality is named by Facebook's own non-standard FBQualityLabel, NOT by
-// @height. Meta encodes several CRFs per resolution — one real feed manifest
-// carries 480p, 540p, 640p and 720p rungs that are all 1280x720 — so @height is
-// that encode's pixel count while FBQualityLabel is the perceptual rung. Keying
-// a ladder on height would collapse four rungs into one row, which is the exact
-// bug this tier exists to fix. On portrait video the label tracks the short
-// side, so a Reels rung is width="720" height="1280" labelled "720p".
+// Two things are still refused, because both are still true: a <BaseURL> that
+// does not resolve to an absolute http(s) URL is not fetchable at all, and
+// AV1/VP9 cannot be passed through AVAssetWriter, so offering such a rung would
+// mean a full download followed by a failed mux. Both say so in -droppedNotes.
+//
+// There are two readers. NSXMLParser first; when it yields no video rung from a
+// document long enough to hold one, a regular-expression scraper re-reads the
+// same string using the rival's own patterns. The reason is NSXMLParser's
+// contract: it abandons the document at the first well-formedness error, so one
+// unescaped `&` in a signed <BaseURL> loses the entire ladder, while a scraper
+// is immune by construction. A document under 33 characters is not read at all.
+//
+// Quality is NAMED by Facebook's own non-standard FBQualityLabel and RANKED by
+// the frame's shorter edge, and the split is on purpose. Meta encodes several
+// CRFs per resolution — one real feed manifest carries 480p, 540p, 640p and 720p
+// rungs that are all 1280x720 — so dimensions cannot name those four rows
+// without printing "720p" four times, while the label cannot rank a rung the
+// document never labelled. Each is used for the job it can do: see
+// -qualityRank and -displayLabel. Dedupe is on the label text, so the CRF rungs
+// survive as separate rows. On portrait video the rank tracks the short side,
+// so a Reels rung is width="720" height="1280" and ranks 720.
 //
 // Mixed-codec manifests are normal: Meta ships AVC, VP9 and AV1 lanes in one
 // MPD, in several video AdaptationSets, so the same label can appear two or
-// three times. Only H.264/HEVC survives, and that filter runs before dedupe so
-// a VP9 entry can never win a label.
+// three times. Only H.264/HEVC — or a representation that declares no codec at
+// all — survives, and that filter runs before dedupe so a VP9 entry can never
+// win a label.
 //
 // Video and audio are separate representations — a published capture census
 // found 176 of 176 track-separated, and no representation has ever been
@@ -43,8 +61,8 @@
 // with an audio representation and the two muxed into one file. This reader
 // therefore returns the video ladder *and* the single best audio
 // representation. A silent video has no audio AdaptationSet at all, which is a
-// success, not an error: see -hasUnusableAudio for how to tell that apart from
-// audio we refused.
+// success, not an error; audio that is there but awkward is also a success, and
+// -audioIsNotAAC says so without withholding anything.
 //
 // Lifetime: never cache a parsed manifest across a user interaction. The
 // <BaseURL>s carry the same short-lived `oe=` signature as every other Facebook
@@ -79,14 +97,21 @@ NS_ASSUME_NONNULL_BEGIN
 /// duration — for the only size estimate a DASH rung can offer.
 @property (nonatomic, assign, readonly) long long bandwidth;
 
-/// The number this rung is ranked and deduped by: FBQualityLabel with its
-/// trailing "p" stripped, falling back to the *shorter* frame edge when there is
-/// no label. Never the raw @height — see the file comment. 0 when neither is
-/// readable, in which case the rung is dropped rather than offered.
+/// The number this rung is SORTED by: the *shorter* frame edge when both
+/// dimensions are known (never the raw @height — a portrait 720x1280 Reels rung
+/// ranks 720), else the raw height, else FBQualityLabel with its trailing "p"
+/// stripped. 0 when the document gave none of the three, which no longer drops
+/// the rung — it only means the picker has to name the row from its bitrate.
+///
+/// Not the dedupe key: several rungs legitimately share one rank. See
+/// -displayLabel.
 @property (nonatomic, assign, readonly) NSInteger qualityRank;
 
-/// What to put in front of the user: FBQualityLabel, else "720p" built from
-/// @c qualityRank, else nil.
+/// What to put in front of the user, and the key the ladder is deduped on:
+/// FBQualityLabel first, else "720p" built from @c qualityRank, else nil.
+///
+/// The opposite order to @c qualityRank, deliberately — Meta's four CRF rungs
+/// at one resolution can only be told apart by their labels.
 @property (nonatomic, copy, readonly, nullable) NSString *displayLabel;
 
 @end
@@ -94,26 +119,31 @@ NS_ASSUME_NONNULL_BEGIN
 /// A parsed manifest, reduced to what the picker needs.
 @interface FBPDashManifest : NSObject
 
-/// Video rungs, best first (highest FBQualityLabel first), one row per label.
-/// Never empty on a non-nil manifest.
+/// Video rungs, best first — by @c qualityRank, then by the label's own number,
+/// then by bitrate — one row per @c displayLabel. Never empty on a non-nil
+/// manifest, and already in picker order: do not re-sort it.
 @property (nonatomic, copy, readonly) NSArray<FBPDashRepresentation *> *videoRepresentations;
 
-/// The single audio representation to pair with any chosen video rung. Nil when
-/// the document lists no audio at all (a silent video — pair nothing and save
-/// the video rung as it is) *and* when every audio track it listed was refused;
-/// -hasUnusableAudio distinguishes the two.
+/// The single audio representation to pair with any chosen video rung. Nil only
+/// when the document lists no audio at all — a silent video, where pairing
+/// nothing and saving the video rung as it is, is correct.
+///
+/// Audio is never refused any more, so this is no longer the place a soundtrack
+/// can go missing. Ranked AAC first, then a channel layout we recognise, then
+/// the document's FBDefaultQuality, then bitrate; when nothing AAC is on offer
+/// the best of whatever is there comes back and @c audioIsNotAAC is set.
 @property (nonatomic, strong, readonly, nullable) FBPDashRepresentation *audioRepresentation;
 
-/// YES when the document listed audio that we refused — an unsupported codec,
-/// or an AudioChannelConfiguration scheme we do not recognise (Facebook has a
-/// spatial `fb360:audio:channel_layout` scheme, and muxing an ambisonic track
-/// onto flat video sounds wrong).
+/// YES when @c audioRepresentation is present but is not AAC — Opus, Vorbis,
+/// FLAC, anything that would have to be transcoded rather than remuxed to ride
+/// in an MP4.
 ///
-/// With @c audioRepresentation nil, this is the difference between "this video
-/// is silent, saving video-only is correct" (NO) and "this video has sound we
-/// cannot carry, so saving video-only would hand the user a silent copy of a
-/// video that was not silent" (YES).
-@property (nonatomic, assign, readonly) BOOL hasUnusableAudio;
+/// Purely advisory, and that is the point: it exists for mux time, so the muxer
+/// can decide to drop the audio track rather than fail, and for the diagnostic.
+/// It must never be read as a reason to withhold the video ladder — doing
+/// exactly that is how a complete 360p…1080p ladder used to disappear because
+/// of the soundtrack.
+@property (nonatomic, assign, readonly) BOOL audioIsNotAAC;
 
 /// MPD/@mediaPresentationDuration in seconds, 0 when absent or unparseable.
 @property (nonatomic, assign, readonly) NSTimeInterval duration;
@@ -125,10 +155,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Parse an MPD.
 ///
-/// Returns nil — never an empty shell — when @c xml is nil, empty, longer than
-/// the bound this reader will accept, not XML at all, a live/dynamic manifest,
-/// truncated past the point of usefulness, or carries no representation that
-/// survives the gates above. Malformed input is a nil return, never a crash.
+/// Returns nil — never an empty shell — when @c xml is nil, shorter than 33
+/// characters, longer than the bound this reader will accept, has no `<` in it
+/// at all, or produced no video representation from either reader. Malformed
+/// input is a nil return, never a crash.
+///
+/// A nil return now means something much narrower than it used to: not "we
+/// disapproved of this manifest" but "neither the XML parser nor the scraper
+/// found a single representation with a fetchable BaseURL and a codec this
+/// device can remux". Whatever was decided along the way is in
+/// @c droppedNotes on a non-nil result.
 + (nullable FBPDashManifest *)manifestFromXMLString:(nullable NSString *)xml;
 
 @end
