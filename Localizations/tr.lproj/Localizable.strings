@@ -100,14 +100,13 @@
 "download.merge.failed" = "Bu videonun sesi ve görüntüsü birleştirilemedi.\n%@";
 "download.stream.videoFailed" = "Görüntü akışı indirilemedi.\n%@";
 "download.stream.audioFailed" = "Ses akışı indirilemedi.\n%@";
-"download.quality.title" = "İndirme kalitesi";
-"download.quality.hd" = "Yüksek kalite";
-"download.quality.sd" = "Standart kalite";
-"download.quality.spherical.hd" = "360° yüksek kalite";
-"download.quality.spherical.sd" = "360° standart kalite";
+"download.quality.select.title" = "Kalite Seç";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "Tam 360° kaynak";
 "download.quality.original" = "Özgün";
-"download.quality.dash.detail" = "~%@ · tahmini boyut";
 "reels.hideOverlay.a11y" = "Reel yer paylaşımını gizle";
 "update.title" = "Güncelleme mevcut";
 "update.subtitle" = "%@ sürümü şimdi mevcut.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "Sil";
 "fonts.deleted" = "Yazı tipi silindi";
 
-"download.quality.dash.mergeDetail" = "~%@ · tahmini boyut · birleştirme gerekir";
-"download.quality.merge.detail" = "Birleştirme gerekir";
-"download.quality.exact.detail" = "%@ · tam boyut";
 "download.quality.badge.best" = "En iyi";
 "download.quality.badge.smallest" = "En küçük";
 "download.quality.badge.spherical" = "360°";

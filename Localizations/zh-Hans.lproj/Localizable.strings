@@ -100,14 +100,13 @@
 "download.merge.failed" = "无法合并这个视频的音频和画面。\n%@";
 "download.stream.videoFailed" = "画面流未能下载。\n%@";
 "download.stream.audioFailed" = "音频流未能下载。\n%@";
-"download.quality.title" = "下载画质";
-"download.quality.hd" = "高画质";
-"download.quality.sd" = "标准画质";
-"download.quality.spherical.hd" = "360° 高画质";
-"download.quality.spherical.sd" = "360° 标准画质";
+"download.quality.select.title" = "选择画质";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "完整 360° 源文件";
 "download.quality.original" = "原始画质";
-"download.quality.dash.detail" = "~%@ · 预估大小";
 "reels.hideOverlay.a11y" = "隐藏 Reel 浮层";
 "update.title" = "有可用更新";
 "update.subtitle" = "版本 %@ 现已可用。";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "删除";
 "fonts.deleted" = "已删除字体";
 
-"download.quality.dash.mergeDetail" = "~%@ · 估算大小 · 需要合并";
-"download.quality.merge.detail" = "需要合并";
-"download.quality.exact.detail" = "%@ · 实际大小";
 "download.quality.badge.best" = "最佳";
 "download.quality.badge.smallest" = "最小";
 "download.quality.badge.spherical" = "360°";

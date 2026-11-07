@@ -100,14 +100,13 @@
 "download.merge.failed" = "इस वीडियो का ऑडियो और चित्र जोड़ा नहीं जा सका।\n%@";
 "download.stream.videoFailed" = "वीडियो स्ट्रीम डाउनलोड नहीं हुई।\n%@";
 "download.stream.audioFailed" = "ऑडियो स्ट्रीम डाउनलोड नहीं हुई।\n%@";
-"download.quality.title" = "डाउनलोड क्वालिटी";
-"download.quality.hd" = "हाई क्वालिटी";
-"download.quality.sd" = "सामान्य क्वालिटी";
-"download.quality.spherical.hd" = "360° हाई क्वालिटी";
-"download.quality.spherical.sd" = "360° सामान्य क्वालिटी";
+"download.quality.select.title" = "क्वालिटी चुनें";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "पूरा 360° सोर्स";
 "download.quality.original" = "ओरिजिनल";
-"download.quality.dash.detail" = "~%@ · अनुमानित आकार";
 "reels.hideOverlay.a11y" = "Reel ओवरले छिपाएँ";
 "update.title" = "अपडेट उपलब्ध";
 "update.subtitle" = "संस्करण %@ अब उपलब्ध है।";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "हटाएं";
 "fonts.deleted" = "फ़ॉन्ट हटाया गया";
 
-"download.quality.dash.mergeDetail" = "~%@ · अनुमानित आकार · जोड़ना ज़रूरी";
-"download.quality.merge.detail" = "जोड़ना ज़रूरी";
-"download.quality.exact.detail" = "%@ · असली आकार";
 "download.quality.badge.best" = "सबसे अच्छा";
 "download.quality.badge.smallest" = "सबसे छोटा";
 "download.quality.badge.spherical" = "360°";

@@ -100,14 +100,13 @@
 "download.merge.failed" = "Audio dan gambar video ini tidak bisa digabungkan.\n%@";
 "download.stream.videoFailed" = "Aliran video gagal diunduh.\n%@";
 "download.stream.audioFailed" = "Aliran audio gagal diunduh.\n%@";
-"download.quality.title" = "Kualitas unduhan";
-"download.quality.hd" = "Kualitas tinggi";
-"download.quality.sd" = "Kualitas standar";
-"download.quality.spherical.hd" = "Kualitas tinggi 360°";
-"download.quality.spherical.sd" = "Kualitas standar 360°";
+"download.quality.select.title" = "Pilih Kualitas";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "Sumber 360° penuh";
 "download.quality.original" = "Asli";
-"download.quality.dash.detail" = "~%@ · perkiraan ukuran";
 "reels.hideOverlay.a11y" = "Sembunyikan overlay Reel";
 "update.title" = "Pembaruan Tersedia";
 "update.subtitle" = "Versi %@ kini tersedia.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "Hapus";
 "fonts.deleted" = "Font dihapus";
 
-"download.quality.dash.mergeDetail" = "~%@ · perkiraan ukuran · perlu digabung";
-"download.quality.merge.detail" = "Perlu digabung";
-"download.quality.exact.detail" = "%@ · ukuran pasti";
 "download.quality.badge.best" = "Terbaik";
 "download.quality.badge.smallest" = "Terkecil";
 "download.quality.badge.spherical" = "360°";

@@ -100,14 +100,13 @@
 "download.merge.failed" = "এই ভিডিওর অডিও আর ছবি জোড়া লাগানো গেল না।\n%@";
 "download.stream.videoFailed" = "ছবির স্ট্রিম ডাউনলোড হয়নি।\n%@";
 "download.stream.audioFailed" = "অডিও স্ট্রিম ডাউনলোড হয়নি।\n%@";
-"download.quality.title" = "ডাউনলোড কোয়ালিটি";
-"download.quality.hd" = "উচ্চ কোয়ালিটি";
-"download.quality.sd" = "সাধারণ কোয়ালিটি";
-"download.quality.spherical.hd" = "৩৬০° উচ্চ কোয়ালিটি";
-"download.quality.spherical.sd" = "৩৬০° সাধারণ কোয়ালিটি";
+"download.quality.select.title" = "কোয়ালিটি বেছে নিন";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "৩৬০° HD";
+"download.quality.spherical.sd" = "৩৬০° SD";
 "download.quality.spherical.detail" = "সম্পূর্ণ ৩৬০° সোর্স";
 "download.quality.original" = "আসল";
-"download.quality.dash.detail" = "~%@ · আনুমানিক আকার";
 "reels.hideOverlay.a11y" = "Reel ওভারলে লুকান";
 "update.title" = "আপডেট উপলব্ধ";
 "update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "মুছুন";
 "fonts.deleted" = "ফন্ট সরানো হয়েছে";
 
-"download.quality.dash.mergeDetail" = "~%@ · আনুমানিক আকার · জোড়া লাগাতে হবে";
-"download.quality.merge.detail" = "জোড়া লাগাতে হবে";
-"download.quality.exact.detail" = "%@ · সঠিক আকার";
 "download.quality.badge.best" = "সবচেয়ে ভালো";
 "download.quality.badge.smallest" = "সবচেয়ে ছোট";
 "download.quality.badge.spherical" = "৩৬০°";

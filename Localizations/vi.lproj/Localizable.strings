@@ -100,14 +100,13 @@
 "download.merge.failed" = "Không thể ghép âm thanh và hình ảnh của video này.\n%@";
 "download.stream.videoFailed" = "Không tải được luồng hình ảnh.\n%@";
 "download.stream.audioFailed" = "Không tải được luồng âm thanh.\n%@";
-"download.quality.title" = "Chất lượng tải xuống";
-"download.quality.hd" = "Chất lượng cao";
-"download.quality.sd" = "Chất lượng thường";
-"download.quality.spherical.hd" = "Chất lượng cao 360°";
-"download.quality.spherical.sd" = "Chất lượng thường 360°";
+"download.quality.select.title" = "Chọn chất lượng";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "Nguồn 360° đầy đủ";
 "download.quality.original" = "Bản gốc";
-"download.quality.dash.detail" = "~%@ · dung lượng dự kiến";
 "reels.hideOverlay.a11y" = "Ẩn lớp phủ Reel";
 "update.title" = "Đã có bản cập nhật";
 "update.subtitle" = "Phiên bản %@ hiện đã có.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "Xóa";
 "fonts.deleted" = "Đã xóa phông chữ";
 
-"download.quality.dash.mergeDetail" = "~%@ · dung lượng dự kiến · cần ghép";
-"download.quality.merge.detail" = "Cần ghép";
-"download.quality.exact.detail" = "%@ · dung lượng thật";
 "download.quality.badge.best" = "Tốt nhất";
 "download.quality.badge.smallest" = "Nhỏ nhất";
 "download.quality.badge.spherical" = "360°";
