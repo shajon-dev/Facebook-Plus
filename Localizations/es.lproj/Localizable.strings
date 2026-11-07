@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Muestra el botón de descarga al ver Reels.";
 "row.downloadstories.title" = "Descargar historias";
 "row.downloadstories.desc" = "Muestra el botón de descarga al ver historias.";
+"row.downloadquality.title" = "Preguntar la calidad";
+"row.downloadquality.desc" = "Elige la calidad y el tamaño antes de guardar, cuando hay más de uno disponible.";
 "row.anonstories.title" = "Ver historias de forma anónima";
 "row.anonstories.desc" = "Ver historias sin enviar confirmación de lectura.";
 "row.noautonext.title" = "Desactivar avance automático";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "Registrar tokens de unidades del feed";
 "row.logfeedunits.desc" = "Escribe el token de categoría de cada unidad del feed en el registro del sistema.";
 "footer.logfeedunits" = "Solo para diagnosticar un filtro que dejó de funcionar. Actívalo, desliza el feed una vez y después lee el registro en Console.app en «com.shajon.fbplus». Déjalo desactivado el resto del tiempo.";
+"row.logdownloadqualities.title" = "Registrar calidades de descarga";
+"row.logdownloadqualities.desc" = "Escribe las calidades que Facebook ofrece para un vídeo en el registro del sistema.";
+"footer.logdownloadqualities" = "Solo para averiguar qué calidades se podrían añadir al selector de descarga. Actívalo, toca descargar en un reel y en una historia, y después lee el registro en Console.app en «com.shajon.fbplus». Déjalo desactivado el resto del tiempo.";
 "row.welcome.title" = "Mostrar pantalla de bienvenida";
 "row.reset.title" = "Restablecer todos los ajustes";
 "row.linksinsafari.title" = "Abrir enlaces en Safari";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN devolvió HTTP %ld.";
 "download.reel.tmpFailed" = "No se pudo crear el archivo de vídeo temporal.";
 "download.reel.noLink" = "No se pudo obtener el enlace de este vídeo.";
+"download.reel.expired" = "Este enlace de descarga ha caducado. Vuelve a tocar descargar.";
+"download.quality.title" = "Calidad de descarga";
+"download.quality.hd" = "Calidad alta";
+"download.quality.sd" = "Calidad estándar";
+"download.quality.spherical.hd" = "Calidad alta 360°";
+"download.quality.spherical.sd" = "Calidad estándar 360°";
+"download.quality.spherical.detail" = "Fuente 360° completa";
+"download.quality.original" = "Original";
 "reels.hideOverlay.a11y" = "Ocultar superposición del Reel";
 "update.title" = "Actualización disponible";
 "update.subtitle" = "La versión %@ ya está disponible.";

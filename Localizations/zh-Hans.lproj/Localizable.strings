@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "观看 Reels 时显示下载按钮。";
 "row.downloadstories.title" = "下载快拍";
 "row.downloadstories.desc" = "观看快拍时显示下载按钮。";
+"row.downloadquality.title" = "询问画质";
+"row.downloadquality.desc" = "有多种画质时，保存前先选择画质和大小。";
 "row.anonstories.title" = "匿名查看快拍";
 "row.anonstories.desc" = "查看快拍时不发送已读回执。";
 "row.noautonext.title" = "关闭自动播放下一个";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "记录信息流单元标识";
 "row.logfeedunits.desc" = "把每个信息流单元的分类标识写入系统日志。";
 "footer.logfeedunits" = "只在某个过滤项失效、需要排查时使用。打开后把信息流滑一遍，再到 Console.app 里查看“com.shajon.fbplus”的日志。其余时候请保持关闭。";
+"row.logdownloadqualities.title" = "记录下载画质";
+"row.logdownloadqualities.desc" = "把 Facebook 为某个视频提供的画质写入系统日志。";
+"footer.logdownloadqualities" = "只在想知道下载选项里还能加哪些画质时使用。打开后在一个 Reels 和一个快拍上点下载，再到 Console.app 里查看“com.shajon.fbplus”的日志。其余时候请保持关闭。";
 "row.welcome.title" = "显示欢迎界面";
 "row.reset.title" = "重置所有设置";
 "row.linksinsafari.title" = "在 Safari 中打开链接";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN 返回了 HTTP %ld。";
 "download.reel.tmpFailed" = "无法创建临时视频文件。";
 "download.reel.noLink" = "无法获取此视频的链接。";
+"download.reel.expired" = "该下载链接已过期，请再点一次下载。";
+"download.quality.title" = "下载画质";
+"download.quality.hd" = "高画质";
+"download.quality.sd" = "标准画质";
+"download.quality.spherical.hd" = "360° 高画质";
+"download.quality.spherical.sd" = "360° 标准画质";
+"download.quality.spherical.detail" = "完整 360° 源文件";
+"download.quality.original" = "原始画质";
 "reels.hideOverlay.a11y" = "隐藏 Reel 浮层";
 "update.title" = "有可用更新";
 "update.subtitle" = "版本 %@ 现已可用。";

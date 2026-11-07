@@ -2,6 +2,7 @@
 #import "FBPHeaders.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
+#import "FBPDownloadVariants.h"
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -32,8 +33,20 @@ static void (*gOriginalPlayerViewDidDisappear)(
     id, SEL, BOOL
 ) = NULL;
 
-static NSURL *gCurrentDownloadURL = nil;
+// Every rendition the current video can be saved in, best first — not a single
+// chosen URL. The choice is the user's, and it is made at tap time, because
+// these are short-lived signed CDN URLs (an `oe=` hex expiry) and a picker sheet
+// can sit open while the user deliberates. See -downloadButtonPressed:.
+static NSArray<FBPDownloadVariant *> *gCurrentVariants = nil;
 static NSString *gCurrentVideoID = nil;
+
+// The same video's id as read off the playback *item* (-videoID), kept beside
+// gCurrentVideoID — which prefers the id the didStartPlayback hook was handed,
+// and is what names the saved file. Tap-time re-resolution compares its live
+// read against this one so both sides of the comparison come from the same
+// accessor; comparing against the hook argument would risk a format mismatch
+// that silently rejected every refresh.
+static NSString *gCurrentItemVideoID = nil;
 
 static void (*gOriginalHitTestLayoutSubviews)(
     id, SEL
@@ -239,100 +252,21 @@ static void FBPShowTabBars(void) {
 
 #pragma mark - Runtime helpers
 
-static id FBPSafeObjectGetter(
+// The guarded zero-argument object getter this file has always used, now shared
+// with the Stories downloader and the variant resolver — one implementation, so
+// the two surfaces cannot drift apart in how defensively they read Facebook's
+// objects. See FBPDownloadVariants.m for the body.
+static inline id FBPSafeObjectGetter(
     id object,
     NSString *getterName
 ) {
-    if (!object || !getterName)
-        return nil;
-
-    SEL selector =
-        NSSelectorFromString(getterName);
-
-    Method method =
-        class_getInstanceMethod(
-            [object class],
-            selector
-        );
-
-    if (!method)
-        return nil;
-
-    if (method_getNumberOfArguments(method) != 2)
-        return nil;
-
-    char *returnType =
-        method_copyReturnType(method);
-
-    BOOL valid =
-        returnType &&
-        returnType[0] == '@';
-
-    if (returnType)
-        free(returnType);
-
-    if (!valid)
-        return nil;
-
-    @try {
-
-        id (*sendObject)(id, SEL) =
-            (id (*)(id, SEL))objc_msgSend;
-
-        return sendObject(
-            object,
-            selector
-        );
-
-    } @catch (__unused NSException *e) {
-
-        return nil;
-    }
+    return FBPDownloadSafeObjectGetter(object, getterName);
 }
 
-static NSURL *FBPURLFromObject(id object) {
-
-    if (!object)
-        return nil;
-
-    if ([object
-        isKindOfClass:
-            [NSURL class]]) {
-
-        return object;
-    }
-
-    if ([object
-        isKindOfClass:
-            [NSString class]]) {
-
-        return [NSURL
-            URLWithString:object];
-    }
-
-    return nil;
-}
-
-static NSURL *FBPPlaybackURLFromItem(id item, NSString **videoIDOut) {
-    if (!item) return nil;
-
-    NSURL *hdURL = FBPURLFromObject(FBPSafeObjectGetter(item, @"HDPlaybackURL"));
-    NSURL *sdURL = FBPURLFromObject(FBPSafeObjectGetter(item, @"SDPlaybackURL"));
-    NSURL *chosen = hdURL ?: sdURL;
-
-    if (videoIDOut) {
-        id rawID = FBPSafeObjectGetter(item, @"videoID");
-        if ([rawID isKindOfClass:[NSString class]]) {
-            *videoIDOut = [(NSString *)rawID copy];
-        } else if (rawID) {
-            *videoIDOut = [[rawID description] copy];
-        } else {
-            *videoIDOut = nil;
-        }
-    }
-
-    return chosen;
-}
+// Capture no longer collapses the renditions to `hdURL ?: sdURL`: the whole
+// ordered variant list is kept, and the pick happens at tap time.
+// FBPDownloadVariantsForItem (FBPDownloadVariants.m) is now the one place that
+// knows how to read an FBVideoPlaybackItem.
 
 static UIViewController *FBPFindControllerOfClass(UIViewController *vc, Class targetClass) {
     if (!vc || !targetClass) return nil;
@@ -1006,12 +940,20 @@ static void FBPShowMessage(
     if (status < 200 ||
         status >= 300) {
 
-        [self
-            finishWithError:
-                [NSString
-                    stringWithFormat:
-                        FBPL(@"download.reel.httpError"),
-                        (long)status]];
+        // 403 is the one failure the user can fix, and the generic "HTTP 403"
+        // text hid it: Facebook's playback URLs are signed and carry a short
+        // `oe=` expiry, so a link that sat around — a picker sheet left open, a
+        // reel paused for a while — is simply past its expiry. Tapping download
+        // again re-resolves it.
+        NSString *message =
+            (status == 403)
+            ? FBPL(@"download.reel.expired")
+            : [NSString
+                  stringWithFormat:
+                      FBPL(@"download.reel.httpError"),
+                      (long)status];
+
+        [self finishWithError:message];
 
         return;
     }
@@ -1114,20 +1056,30 @@ static id FBPObjectIvar(id object, const char *name) {
     return nil;
 }
 
-static BOOL FBPCaptureActivePlaybackController(UIButton *sender) {
+/// Walk from the tapped button to Facebook's live playback controller and
+/// resolve it, writing nothing global.
+///
+/// Called on every download tap, not just as a fallback: the playback URLs are
+/// signed and short-lived, so the list captured when the reel started playing
+/// may already be stale by the time the user taps. @c ownerOut is the player
+/// view controller the media belongs to, used to keep the owner latch in step.
+static FBPDownloadSource *
+FBPResolveActivePlayback(UIButton *sender, UIViewController **ownerOut) {
+    if (ownerOut) *ownerOut = nil;
+
     UIWindow *window = sender.window;
-    if (!window) return NO;
+    if (!window) return nil;
 
     Class playerClass =
         NSClassFromString(@"FBVideoHomeUnifiedPlayerViewController");
-    if (!playerClass) return NO;
+    if (!playerClass) return nil;
 
     UIViewController *playerVC =
         FBPFindControllerOfClass(
             window.rootViewController,
             playerClass
         );
-    if (!playerVC) return NO;
+    if (!playerVC) return nil;
 
     id feedVC =
         FBPObjectIvar(playerVC, "_feedViewController");
@@ -1143,30 +1095,15 @@ static BOOL FBPCaptureActivePlaybackController(UIButton *sender) {
             monitor,
             @"activePlaybackController"
         );
-    if (!playbackController) return NO;
+    if (!playbackController) return nil;
 
-    id item =
-        FBPSafeObjectGetter(
-            playbackController,
-            @"currentVideoPlaybackItem"
-        );
-    if (!item) return NO;
+    FBPDownloadSource *source =
+        FBPDownloadSourceFromPlaybackController(playbackController);
+    if (source.variants.count == 0) return nil;
 
-    NSString *videoID = nil;
-    NSURL *url =
-        FBPPlaybackURLFromItem(
-            item,
-            &videoID
-        );
-    if (!url) return NO;
+    if (ownerOut) *ownerOut = playerVC;
 
-    @synchronized([NSFileManager class]) {
-        gCurrentDownloadURL = url;
-        gCurrentVideoID = [videoID copy];
-        gMediaOwnerPlayerVC = playerVC;
-    }
-
-    return YES;
+    return source;
 }
 
 #pragma mark - Button handler
@@ -1231,30 +1168,56 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
 
     sender.alpha = 1.0;
 
-    NSURL *url = nil;
+    NSArray<FBPDownloadVariant *> *variants = nil;
     NSString *videoID = nil;
+    NSString *itemVideoID = nil;
 
     @synchronized([NSFileManager class]) {
-        url = gCurrentDownloadURL;
+        variants = gCurrentVariants;
         videoID = [gCurrentVideoID copy];
+        itemVideoID = [gCurrentItemVideoID copy];
     }
 
     /*
-     * Reels/swipe normally arrive through didStartPlayback.
-     * The first video opened from Home can already be playing before that
-     * callback reaches this controller, so resolve Facebook's active playback
-     * controller on demand when the user actually taps Download.
+     * Re-resolve now, at tap time, rather than trusting what was captured when
+     * the reel started playing.
+     *
+     * Two reasons, and the second is the important one:
+     *
+     *  - Reels/swipe normally arrive through didStartPlayback, but the first
+     *    video opened from Home can already be playing before that callback
+     *    reaches this controller, so there may be nothing captured at all.
+     *
+     *  - These are signed CDN URLs carrying a short `oe=` expiry. A captured
+     *    list goes stale on its own, and the picker sheet below can sit open for
+     *    as long as the user takes to decide, so the freshest list we can get is
+     *    the one read at the moment of the tap.
+     *
+     * The live read wins only when it describes the same video (or when nothing
+     * was captured): the walk finds whatever playback controller is active, and
+     * a mismatch means it found a different video, not a fresher copy of this
+     * one. Anything else falls back to the captured list, which is still better
+     * than refusing to download.
      */
-    if (!url &&
-        FBPCaptureActivePlaybackController(sender)) {
+    UIViewController *owner = nil;
+    FBPDownloadSource *live = FBPResolveActivePlayback(sender, &owner);
+
+    if (live &&
+        (!itemVideoID || !live.videoID ||
+         [live.videoID isEqualToString:itemVideoID])) {
+
+        variants = live.variants;
+        videoID = videoID ?: live.videoID;
 
         @synchronized([NSFileManager class]) {
-            url = gCurrentDownloadURL;
-            videoID = [gCurrentVideoID copy];
+            gCurrentVariants = live.variants;
+            gCurrentVideoID = [videoID copy];
+            gCurrentItemVideoID = [live.videoID copy];
+            if (owner) gMediaOwnerPlayerVC = owner;
         }
     }
 
-    if (!url) {
+    if (variants.count == 0) {
         FBPShowMessage(
             FBPL(@"download.appName"),
             FBPL(@"download.reel.noLink")
@@ -1262,9 +1225,23 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
         return;
     }
 
-    [[FBPReelDownloadManager shared]
-        startDownloadWithURL:url
-        videoID:videoID];
+    // Diagnostic (off by default): record what Facebook is really serving for
+    // this video, so the maintainer's device run can answer whether a DASH
+    // quality tier is worth building. Free when the switch is off.
+    FBPDownloadLogQualities(live.item, live.playbackController, variants);
+
+    NSString *downloadID = [videoID copy];
+
+    FBPDownloadPresentPicker(
+        variants,
+        FBPTopViewController(),
+        sender,
+        ^(FBPDownloadVariant *variant) {
+            [[FBPReelDownloadManager shared]
+                startDownloadWithURL:variant.url
+                videoID:downloadID];
+        }
+    );
 }
 
 - (void)hideOverlayButtonPressed:
@@ -2114,20 +2091,9 @@ FBPDidStartPlayback(
         );
     }
 
-    id item =
-        FBPSafeObjectGetter(
-            playbackController,
-            @"currentVideoPlaybackItem"
-        );
-    if (!item) return;
-
-    NSString *itemVideoID = nil;
-    NSURL *url =
-        FBPPlaybackURLFromItem(
-            item,
-            &itemVideoID
-        );
-    if (!url) return;
+    FBPDownloadSource *source =
+        FBPDownloadSourceFromPlaybackController(playbackController);
+    if (source.variants.count == 0) return;
 
     NSString *newID = nil;
     if ([videoID isKindOfClass:[NSString class]]) {
@@ -2135,12 +2101,13 @@ FBPDidStartPlayback(
     } else if (videoID) {
         newID = [[videoID description] copy];
     } else {
-        newID = itemVideoID;
+        newID = source.videoID;
     }
 
     @synchronized([NSFileManager class]) {
-        gCurrentDownloadURL = url;
+        gCurrentVariants = source.variants;
         gCurrentVideoID = [newID copy];
+        gCurrentItemVideoID = [source.videoID copy];
         gMediaOwnerPlayerVC = self;
     }
 }
@@ -2161,8 +2128,9 @@ FBPPlayerViewWillAppear(
         if (gMediaOwnerPlayerVC &&
             gMediaOwnerPlayerVC != self) {
 
-            gCurrentDownloadURL = nil;
+            gCurrentVariants = nil;
             gCurrentVideoID = nil;
+            gCurrentItemVideoID = nil;
             gMediaOwnerPlayerVC = nil;
         }
     }
@@ -2194,8 +2162,9 @@ FBPPlayerViewDidDisappear(
         if (!gMediaOwnerPlayerVC ||
             gMediaOwnerPlayerVC == self) {
 
-            gCurrentDownloadURL = nil;
+            gCurrentVariants = nil;
             gCurrentVideoID = nil;
+            gCurrentItemVideoID = nil;
             gMediaOwnerPlayerVC = nil;
         }
     }
@@ -2487,6 +2456,12 @@ FBPInstallHitTestHook(void) {
 }
 
 void FBPInitReelsDownloader(void) {
+    // Seed the quality diagnostic's cached flag and keep it in step with the
+    // settings panel. Both download surfaces share it, and this installer is the
+    // one FBPEntry always runs, so it is registered here; it is re-run on every
+    // dyld image load, hence the latch.
+    FBP_ONCE(gDownloadDiagnostic) { FBPDownloadInstallDiagnostic(); }
+
     FBPInstallPlayerHook();
     FBPInstallSidebarHook();
     FBPInstallLifecycleHooks();

@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "릴스를 볼 때 다운로드 버튼을 표시합니다.";
 "row.downloadstories.title" = "스토리 다운로드";
 "row.downloadstories.desc" = "스토리를 볼 때 다운로드 버튼을 표시합니다.";
+"row.downloadquality.title" = "화질 묻기";
+"row.downloadquality.desc" = "화질이 여러 개일 때 저장하기 전에 화질과 용량을 고릅니다.";
 "row.anonstories.title" = "스토리 익명으로 보기";
 "row.anonstories.desc" = "읽음 표시를 보내지 않고 스토리를 봅니다.";
 "row.noautonext.title" = "자동 넘김 끄기";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "피드 유닛 토큰 기록";
 "row.logfeedunits.desc" = "각 피드 유닛의 카테고리 토큰을 시스템 로그에 기록합니다.";
 "footer.logfeedunits" = "필터가 작동을 멈춘 원인을 찾을 때만 사용합니다. 켜고 피드를 한 번 스크롤한 다음 Console.app에서 'com.shajon.fbplus' 로그를 확인하세요. 그 이언엔 꺼 듐세요.";
+"row.logdownloadqualities.title" = "다운로드 화질 기록";
+"row.logdownloadqualities.desc" = "Facebook이 동영상에 제공하는 화질을 시스템 로그에 기록합니다.";
+"footer.logdownloadqualities" = "다운로드 선택 목록에 어떤 화질을 더할 수 있는지 알아볼 때만 사용합니다. 켜고 릴스와 스토리에서 다운로드를 누른 다음 Console.app에서 'com.shajon.fbplus' 로그를 확인하세요. 그 외에는 꺼 두세요.";
 "row.welcome.title" = "시작 화면 표시";
 "row.reset.title" = "모든 설정 초기화";
 "row.linksinsafari.title" = "링크를 Safari에서 열기";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN이 HTTP %ld을(를) 반환했습니다.";
 "download.reel.tmpFailed" = "임시 동영상 파일을 만들지 못했습니다.";
 "download.reel.noLink" = "이 동영상의 링크를 가져오지 못했습니다.";
+"download.reel.expired" = "이 다운로드 링크가 만료되었습니다. 다운로드를 다시 누르세요.";
+"download.quality.title" = "다운로드 화질";
+"download.quality.hd" = "고화질";
+"download.quality.sd" = "일반 화질";
+"download.quality.spherical.hd" = "360° 고화질";
+"download.quality.spherical.sd" = "360° 일반 화질";
+"download.quality.spherical.detail" = "360° 원본 전체";
+"download.quality.original" = "원본";
 "reels.hideOverlay.a11y" = "릴 오버레이 숨기기";
 "update.title" = "업데이트 있음";
 "update.subtitle" = "버전 %@ 을(를) 사용할 수 있습니다.";

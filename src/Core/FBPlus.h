@@ -69,6 +69,10 @@ extern NSString *const FBPKeyConfirmPost;       // Confirm before publishing a p
 // Downloads
 extern NSString *const FBPKeyReelsDownloaderEnabled;
 extern NSString *const FBPKeyStoryDownloaderEnabled;
+/// Ask which quality to save when Facebook serves more than one rendition.
+/// Off means "take the best one and start", which is what the downloaders did
+/// before the picker existed.
+extern NSString *const FBPKeyDownloadQualityPicker;
 
 // Reels
 extern NSString *const FBPKeyReelsHideOverlay;  // Strip the Reels overlay (always on; no toggle)
@@ -90,6 +94,10 @@ extern NSString *const FBPKeyLinksInSafari;     // Open external links in the de
 
 // Diagnostics
 extern NSString *const FBPKeyLogFeedUnits;      // os_log the live feed-unit token set
+/// os_log what Facebook actually serves for a video on a download tap — the
+/// DASH manifest's representations and labels, and whether any of them is muxed.
+/// Answers whether a DASH quality tier would be worth building.
+extern NSString *const FBPKeyLogDownloadQualities;
 // Sideload compatibility
 /// Pin keychain calls that need it to the probed access group (see
 /// src/PluginsInject/SecRebinds.xm). On by default; turning it off disables the

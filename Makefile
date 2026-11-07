@@ -41,6 +41,7 @@ FacebookPlus_FILES = \
 	src/Features/OLED/FBPOLEDHooks.xm \
 	src/Features/Fonts/FBPFontHooks.xm \
 	src/Features/Fonts/FBPFontController.m \
+	src/Features/Downloads/FBPDownloadVariants.m \
 	src/Features/Downloads/FBPReelsDownloader.xm \
 	src/Features/Downloads/FBPStoryDownloader.xm \
 	src/Features/Links/FBPLinkHooks.xm \

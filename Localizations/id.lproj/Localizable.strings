@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Menampilkan tombol unduh saat menonton Reels.";
 "row.downloadstories.title" = "Unduh Stories";
 "row.downloadstories.desc" = "Menampilkan tombol unduh saat menonton Stories.";
+"row.downloadquality.title" = "Tanya Kualitas";
+"row.downloadquality.desc" = "Pilih kualitas dan ukuran sebelum menyimpan, bila tersedia lebih dari satu.";
 "row.anonstories.title" = "Lihat Story secara Anonim";
 "row.anonstories.desc" = "Lihat story tanpa mengirim tanda telah dibaca.";
 "row.noautonext.title" = "Matikan Lanjut Otomatis";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "Catat Token Unit Feed";
 "row.logfeedunits.desc" = "Menulis token kategori setiap unit feed ke log sistem.";
 "footer.logfeedunits" = "Hanya untuk mendiagnosis filter yang berhenti bekerja. Aktifkan, gulir feed sekali, lalu baca log di Console.app pada «com.shajon.fbplus». Biarkan mati di waktu lain.";
+"row.logdownloadqualities.title" = "Catat Kualitas Unduhan";
+"row.logdownloadqualities.desc" = "Menulis kualitas yang disediakan Facebook untuk sebuah video ke log sistem.";
+"footer.logdownloadqualities" = "Hanya untuk mengetahui kualitas apa saja yang bisa ditambahkan ke pemilih unduhan. Aktifkan, ketuk unduh pada sebuah Reel dan sebuah Story, lalu baca log di Console.app pada «com.shajon.fbplus». Biarkan mati di waktu lain.";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";
 "row.reset.title" = "Setel Ulang Semua Pengaturan";
 "row.linksinsafari.title" = "Buka Tautan di Safari";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN mengembalikan HTTP %ld.";
 "download.reel.tmpFailed" = "Tidak dapat membuat file video sementara.";
 "download.reel.noLink" = "Tidak dapat mengambil tautan video ini.";
+"download.reel.expired" = "Tautan unduhan ini sudah kedaluwarsa. Ketuk unduh sekali lagi.";
+"download.quality.title" = "Kualitas unduhan";
+"download.quality.hd" = "Kualitas tinggi";
+"download.quality.sd" = "Kualitas standar";
+"download.quality.spherical.hd" = "Kualitas tinggi 360°";
+"download.quality.spherical.sd" = "Kualitas standar 360°";
+"download.quality.spherical.detail" = "Sumber 360° penuh";
+"download.quality.original" = "Asli";
 "reels.hideOverlay.a11y" = "Sembunyikan overlay Reel";
 "update.title" = "Pembaruan Tersedia";
 "update.subtitle" = "Versi %@ kini tersedia.";

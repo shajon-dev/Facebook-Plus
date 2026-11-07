@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Reels izlerken indirme düğmesini gösterir.";
 "row.downloadstories.title" = "Hikayeleri İndir";
 "row.downloadstories.desc" = "Hikaye izlerken indirme düğmesini gösterir.";
+"row.downloadquality.title" = "Kaliteyi Sor";
+"row.downloadquality.desc" = "Birden fazla kalite varsa kaydetmeden önce kaliteyi ve boyutu seç.";
 "row.anonstories.title" = "Hikâyeleri Anonim İzle";
 "row.anonstories.desc" = "Okundu bilgisi göndermeden hikâyeleri izle.";
 "row.noautonext.title" = "Otomatik İlerlemeyi Kapat";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "Akış Birimi Belirteçlerini Kaydet";
 "row.logfeedunits.desc" = "Her akış biriminin kategori belirtecini sistem günlüğüne yazar.";
 "footer.logfeedunits" = "Yalnızca çalışmayı bırakan bir süzgeci teşhis etmek için. Aç, akışı bir kez kaydır, sonra günlüğü Console.app’te «com.shajon.fbplus» altında oku. Diğer zamanlarda kapalı bırak.";
+"row.logdownloadqualities.title" = "İndirme Kalitelerini Kaydet";
+"row.logdownloadqualities.desc" = "Facebook’un bir video için sunduğu kaliteleri sistem günlüğüne yazar.";
+"footer.logdownloadqualities" = "Yalnızca indirme seçiciye hangi kalitelerin eklenebileceğini anlamak için. Aç, bir Reel’de ve bir hikayede indirmeye dokun, sonra günlüğü Console.app’te «com.shajon.fbplus» altında oku. Diğer zamanlarda kapalı bırak.";
 "row.welcome.title" = "Karşılama Ekranını Göster";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
 "row.linksinsafari.title" = "Bağlantıları Safari'de aç";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN HTTP %ld döndürdü.";
 "download.reel.tmpFailed" = "Geçici video dosyası oluşturulamadı.";
 "download.reel.noLink" = "Bu videonun bağlantısı alınamadı.";
+"download.reel.expired" = "Bu indirme bağlantısının süresi doldu. İndirmeye yeniden dokun.";
+"download.quality.title" = "İndirme kalitesi";
+"download.quality.hd" = "Yüksek kalite";
+"download.quality.sd" = "Standart kalite";
+"download.quality.spherical.hd" = "360° yüksek kalite";
+"download.quality.spherical.sd" = "360° standart kalite";
+"download.quality.spherical.detail" = "Tam 360° kaynak";
+"download.quality.original" = "Özgün";
 "reels.hideOverlay.a11y" = "Reel yer paylaşımını gizle";
 "update.title" = "Güncelleme mevcut";
 "update.subtitle" = "%@ sürümü şimdi mevcut.";

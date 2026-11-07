@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Показывает кнопку скачивания при просмотре Reels.";
 "row.downloadstories.title" = "Скачивать истории";
 "row.downloadstories.desc" = "Показывает кнопку скачивания при просмотре историй.";
+"row.downloadquality.title" = "Спрашивать качество";
+"row.downloadquality.desc" = "Выбирайте качество и размер перед сохранением, если доступно несколько.";
 "row.anonstories.title" = "Смотреть истории анонимно";
 "row.anonstories.desc" = "Смотреть истории без отправки отметки о просмотре.";
 "row.noautonext.title" = "Отключить автопереход";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "Записывать токены блоков ленты";
 "row.logfeedunits.desc" = "Записывает токен категории каждого блока ленты в системный журнал.";
 "footer.logfeedunits" = "Нужно только чтобы разобраться, почему фильтр перестал работать. Включите, пролистайте ленту один раз, затем откройте журнал в Console.app по «com.shajon.fbplus». В остальное время держите выключенным.";
+"row.logdownloadqualities.title" = "Записывать качества для скачивания";
+"row.logdownloadqualities.desc" = "Записывает в системный журнал качества, которые Facebook предлагает для видео.";
+"footer.logdownloadqualities" = "Нужно только чтобы понять, какие качества можно добавить в выбор при скачивании. Включите, нажмите скачивание на рилсе и на истории, затем откройте журнал в Console.app по «com.shajon.fbplus». В остальное время держите выключенным.";
 "row.welcome.title" = "Показать экран приветствия";
 "row.reset.title" = "Сбросить все настройки";
 "row.linksinsafari.title" = "Открывать ссылки в Safari";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN вернул HTTP %ld.";
 "download.reel.tmpFailed" = "Не удалось создать временный видеофайл.";
 "download.reel.noLink" = "Не удалось получить ссылку на это видео.";
+"download.reel.expired" = "Срок действия ссылки истёк. Нажмите скачивание ещё раз.";
+"download.quality.title" = "Качество скачивания";
+"download.quality.hd" = "Высокое качество";
+"download.quality.sd" = "Обычное качество";
+"download.quality.spherical.hd" = "Высокое качество 360°";
+"download.quality.spherical.sd" = "Обычное качество 360°";
+"download.quality.spherical.detail" = "Полный источник 360°";
+"download.quality.original" = "Оригинал";
 "reels.hideOverlay.a11y" = "Скрыть наложение Reel";
 "update.title" = "Доступно обновление";
 "update.subtitle" = "Версия %@ уже доступна.";

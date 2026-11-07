@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Reels देखते समय डाउनलोड बटन दिखाता है।";
 "row.downloadstories.title" = "Stories डाउनलोड करें";
 "row.downloadstories.desc" = "Story देखते समय डाउनलोड बटन दिखाता है।";
+"row.downloadquality.title" = "क्वालिटी पूछें";
+"row.downloadquality.desc" = "एक से ज़्यादा क्वालिटी होने पर सेव करने से पहले क्वालिटी और साइज़ चुनें।";
 "row.anonstories.title" = "स्टोरी गुमनाम रूप से देखें";
 "row.anonstories.desc" = "पढ़े जाने की सूचना भेजे बिना स्टोरी देखें।";
 "row.noautonext.title" = "ऑटो-आगे बढ़ना बंद करें";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "फ़ीड यूनिट टोकन लॉग करें";
 "row.logfeedunits.desc" = "हर फ़ीड यूनिट का कैटेगरी टोकन सिस्टम लॉग में लिखता है।";
 "footer.logfeedunits" = "यह सिर्य़ तब काम आता है जब कोई फ़िल्टर काम करना बंद कर दे। इसे चालू करें, फ़ीड एक बार स्क्रॉल करें, पिफ़र Console.app में «com.shajon.fbplus» के नीचे लॉग पढ़ें। बाक़ी समय बंद रखें।";
+"row.logdownloadqualities.title" = "डाउनलोड क्वालिटी लॉग करें";
+"row.logdownloadqualities.desc" = "Facebook किसी वीडियो के लिए जो क्वालिटी देता है, उन्हें सिस्टम लॉग में लिखता है।";
+"footer.logdownloadqualities" = "यह सिर्फ़ यह पता करने के लिए है कि डाउनलोड पिकर में कौन-कौन सी क्वालिटी जोड़ी जा सकती है। इसे चालू करें, एक Reel और एक Story पर डाउनलोड दबाएँ, फिर Console.app में «com.shajon.fbplus» के नीचे लॉग पढ़ें। बाक़ी समय बंद रखें।";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
 "row.linksinsafari.title" = "लिंक Safari में खोलें";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN ने HTTP %ld लौटाया।";
 "download.reel.tmpFailed" = "अस्थायी वीडियो फ़ाइल नहीं बनाई जा सकी।";
 "download.reel.noLink" = "इस वीडियो का लिंक नहीं मिल सका।";
+"download.reel.expired" = "यह डाउनलोड लिंक ख़त्म हो गया है। डाउनलोड दोबारा दबाएँ।";
+"download.quality.title" = "डाउनलोड क्वालिटी";
+"download.quality.hd" = "हाई क्वालिटी";
+"download.quality.sd" = "सामान्य क्वालिटी";
+"download.quality.spherical.hd" = "360° हाई क्वालिटी";
+"download.quality.spherical.sd" = "360° सामान्य क्वालिटी";
+"download.quality.spherical.detail" = "पूरा 360° सोर्स";
+"download.quality.original" = "ओरिजिनल";
 "reels.hideOverlay.a11y" = "Reel ओवरले छिपाएँ";
 "update.title" = "अपडेट उपलब्ध";
 "update.subtitle" = "संस्करण %@ अब उपलब्ध है।";
