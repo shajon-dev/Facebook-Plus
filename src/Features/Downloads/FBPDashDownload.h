@@ -55,7 +55,7 @@ typedef NS_ENUM(NSInteger, FBPDashDownloadError) {
     /// is the underlying error.
     FBPDashDownloadErrorMux,
     /// The streams arrived but FBPMediaConverter could not turn the picture into
-    /// H.264. Separate from @c FBPDashDownloadErrorMux because the two are
+    /// HEVC. Separate from @c FBPDashDownloadErrorMux because the two are
     /// different conversations with the user: a merge failing points at the
     /// download, while a conversion failing usually points at the device —
     /// FBPMediaConverterErrorNoConversionPath means this iPhone has no AV1
@@ -85,7 +85,7 @@ typedef NS_ENUM(NSInteger, FBPDashDownloadStage) {
     /// change is the signal; show it.
     FBPDashDownloadStageMerging,
     /// Both streams are down and FBPMediaConverter is re-encoding the picture to
-    /// H.264. @c fraction *does* advance here, because this step has real
+    /// HEVC. @c fraction *does* advance here, because this step has real
     /// progress to report — frames encoded against the source's own duration —
     /// and it is far too long to leave a bar sitting still through.
     ///
@@ -135,7 +135,7 @@ typedef void (^FBPDashDownloadCompletion)(NSURL *_Nullable outputURL,
                                   progress:(nullable FBPDashDownloadProgress)progress
                                 completion:(FBPDashDownloadCompletion)completion;
 
-/// As above, but re-encode the picture to H.264 instead of copying it.
+/// As above, but re-encode the picture instead of copying it.
 ///
 /// For an AV1 rung, which Photos refuses as-is. The conversion replaces the
 /// merge rather than following it — FBPMediaConverter writes both tracks in one

@@ -608,8 +608,8 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
 
     // A DASH rung is a video-only file plus a separate audio file, so it takes
     // the two-stream path and gets merged before it is saved. An AV1 rung takes
-    // it too, soundtrack or not, because that is where the conversion to H.264
-    // happens and saving AV1 as-is is what Photos refuses. Everything else is
+    // it too, soundtrack or not, because that is where the re-encode happens
+    // and saving AV1 as-is is what Photos refuses. Everything else is
     // one complete MP4 — or a photo — and goes down the path it always has.
     if (variant.needsMux || variant.needsConversion) {
         FBPStoryStartDashDownload(variant, job, isRetry);

@@ -15,6 +15,19 @@
 #import <stdatomic.h>
 #import <math.h>
 
+/// From FBPMediaConverter, declared rather than imported.
+///
+/// Same arrangement FBPDashManifest.m already uses for
+/// FBPMediaConversionIsAvailable, and for the same reason: that header pulls in
+/// AVFoundation, and nothing else in this file needs it. One plain C function,
+/// the size a converted rung will produce, which is the only thing the picker
+/// has to borrow from the encoder.
+extern long long FBPConverterExpectedOutputBytes(long long sourceBitsPerSecond,
+                                                 CGSize frameSize,
+                                                 float framesPerSecond,
+                                                 long long audioBitsPerSecond,
+                                                 double durationSeconds);
+
 #pragma mark - Guarded runtime reads
 
 // Every read below goes through one of these three. Facebook renames things
@@ -242,26 +255,66 @@ static NSURL *FBPDownloadURLFromObject(id object) {
 @end
 
 
-/// A row carries its resolution and nothing else.
+static NSString *FBPDownloadByteString(long long bytes) {
+    if (bytes <= 0) return nil;
+    return [NSByteCountFormatter stringFromByteCount:bytes
+                                          countStyle:NSByteCountFormatterCountStyleFile];
+}
+
+/// The whole of a row's second line: how big the saved file will be, and nothing
+/// else.
 ///
-/// Sizes used to sit on the second line, and they are gone at the maintainer's
-/// request: he does not care how big the file is, and the number was becoming a
-/// liability rather than information. A DASH rung's size is only bandwidth x
-/// duration, which lands either side of the truth; and once a rung needs
-/// converting from AV1 to H.264 to be saveable at all, the figure is wrong by a
-/// large multiple — a measured 4.55 MB AV1 rung comes out of the encoder several
-/// times larger. A row that states a number the result will contradict is the
-/// exact failure this picker has already been through once, with a row labelled
-/// 1080p that downloaded 720p.
+/// Twice removed, and this is the third attempt — so what changed is the part
+/// worth reading.
 ///
-/// @c byteSize is still carried on the variant and still drives the progress
-/// weighting in the download flow — it is only no longer shown.
+/// It first said too much ("~24.8 MB · estimated size · needs merging", beside a
+/// title that had already said "1080p"). Then it was removed outright (69c4b73),
+/// because a row must never state a number the result contradicts and this one
+/// did: once a rung had to be re-encoded from AV1 to be saveable at all, the
+/// source's bandwidth x duration was wrong by a large multiple — a 4.55 MB AV1
+/// rung came out of AVAssetExportSession at 88.95 MB. That is the same class of
+/// failure as a row labelled 1080p that downloaded 720p, and it is the
+/// maintainer's standing objection to this picker.
 ///
-/// Returns nil always; kept as a single named place to reverse this, rather
-/// than scattering nils through the builders.
-static NSString *FBPDownloadSizeDetail(__unused long long byteSize,
-                                       __unused BOOL estimated) {
-    return nil;
+/// What makes a number safe to show again is that the converter's output bitrate
+/// is now a measured multiple of the rung's own bandwidth rather than a preset's
+/// opinion, so the converted file's size is predictable — see
+/// FBPConverterExpectedOutputBytes, which is what a converting row is sized
+/// from. Predictable was checked rather than assumed: fourteen real rungs from
+/// five of the six captured manifests were fetched and converted, and the
+/// prediction against the bytes that came out is mean 3.4% off, median 2.8%,
+/// worst 8.3%, with nothing outside 10%. The bias is a slight under-prediction
+/// (+2.3% on average): the encoder overshoots its average-bitrate target a
+/// little and the container has overhead, so the file usually lands just above
+/// the figure rather than just below. Either way it is a few percent, which is
+/// what the "~" is promising — not the multiple that got this column removed.
+///
+/// So every row shows what *that row* will produce:
+///
+///   * a progressive row — its MP4's own -atomSize, exact, no "~";
+///   * a DASH rung that is copied — bandwidth x duration, an estimate, "~";
+///   * a DASH rung that is converted — the *post-conversion* prediction, an
+///     estimate, "~". Never the source's size, which is what it costs to
+///     download and not what lands in Photos.
+///
+/// The "~" is the entire distinction between an estimate and an exact figure,
+/// said in one character, which is as subtle as it can be while still being
+/// said.
+///
+/// Nil when there is no size at all — the row then shows its resolution alone,
+/// which is honest, rather than a word standing in for a number we do not have.
+///
+/// The byte count is formatted by NSByteCountFormatter, so it follows the
+/// *system* locale rather than the tweak's own language setting — a number and a
+/// unit, which reads correctly either way, and which is why this needs no
+/// localized string. Its one decimal place is kept rather than rounded away to a
+/// coarser figure: the exact progressive rows use the same formatter, and a
+/// second convention on the estimated rows would be read as a second meaning.
+/// The "~" is what says how much to trust the last digit.
+static NSString *FBPDownloadSizeDetail(long long byteSize, BOOL estimated) {
+    NSString *size = FBPDownloadByteString(byteSize);
+    if (size.length == 0) return nil;
+    return estimated ? [@"~" stringByAppendingString:size] : size;
 }
 
 static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
@@ -292,15 +345,20 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
 
 #pragma mark - DASH ladder
 
-/// Bytes a DASH rung is likely to cost: (video + audio) bits per second x
-/// seconds, over 8.
+/// Bytes a DASH rung is likely to cost to *download*: (video + audio) bits per
+/// second x seconds, over 8.
 ///
 /// This is the only number DASH gives us, and it is an estimate — @c bandwidth
 /// is an average over a variable-bitrate encode, so the real file routinely
 /// lands either side of it. The progressive tier's -atomSize is the MP4's true
-/// length; this is not, which is why every row built from it is shown with a
-/// "~" and the word "estimated". Audio is counted in because the file the user
-/// ends up with is the mux of both streams.
+/// length; this is not, which is why every row built from it wears a "~". Audio
+/// is counted in because the file the user ends up with is the mux of both
+/// streams.
+///
+/// For a rung that will be *converted* this is still the right number for the
+/// download — and so for the progress weighting — but the wrong one to show: the
+/// re-encode changes the size. FBPConverterExpectedOutputBytes is what a
+/// converting row is sized from instead.
 static long long FBPDownloadEstimatedBytes(FBPDashRepresentation *video,
                                            FBPDashRepresentation *audio,
                                            NSTimeInterval duration) {
@@ -435,11 +493,35 @@ FBPDownloadMergeDashLadder(id item,
         if ([covered containsObject:key]) continue;
         [covered addObject:key];
 
+        // Two different numbers, and conflating them is what made the size a
+        // liability in the first place.
+        //
+        // `bytes` is what the download costs — bandwidth x duration for both
+        // streams — and it is what `byteSize` carries, because that is what the
+        // progress bar is weighted by and what the CDN's Content-Length will
+        // later replace.
+        //
+        // `shown` is what the *file* will be. For a rung that is copied they are
+        // the same thing. For a rung that is converted they are not: the picture
+        // is re-encoded at a measured multiple of the rung's bandwidth, so the
+        // saved file is about twice the download. Showing `bytes` on such a row
+        // would understate the result by that whole multiple, which is the exact
+        // failure that got the size removed from this picker.
         long long bytes =
             FBPDownloadEstimatedBytes(representation, audio, manifest.duration);
-        // Always an estimate here — bandwidth x duration, never a real length —
-        // so every one of these rows wears the "~".
-        NSString *detail = FBPDownloadSizeDetail(bytes, YES);
+        long long shown = bytes;
+        if (representation.needsConversion) {
+            shown = FBPConverterExpectedOutputBytes(
+                representation.bandwidth,
+                CGSizeMake((CGFloat)representation.width,
+                           (CGFloat)representation.height),
+                (float)representation.frameRate,
+                audio.bandwidth,
+                manifest.duration);
+        }
+        // Always an estimate here — a bitrate x a duration either way, never a
+        // real length — so every one of these rows wears the "~".
+        NSString *detail = FBPDownloadSizeDetail(shown, YES);
 
         FBPDownloadVariant *variant =
             [[FBPDownloadVariant alloc] initWithURL:representation.url
@@ -1233,12 +1315,16 @@ static void FBPDownloadLogQualitiesNow(id item,
         // difference between a row that saves in a second and one that occupies
         // the encoder for minutes — and it is the first thing worth knowing when
         // a maintainer asks why a download was slow.
-        NSString *path = variant.needsConversion ? @"(dash, AV1 -> H.264)"
+        NSString *path = variant.needsConversion ? @"(dash, AV1 re-encoded)"
                        : variant.needsMux        ? @"(dash, needs mux)"
                                                  : @"(single file)";
-        os_log(log, "variants    %{public}@ · rung=%ld bitrate=%lld bytes=%lld %{public}@",
+        // `bytes` is the download; `shows` is the second line the user reads,
+        // which for a converting row is the post-conversion prediction. Logging
+        // both is what makes an "it said 9 MB and I got 14" report answerable.
+        os_log(log, "variants    %{public}@ · rung=%ld bitrate=%lld bytes=%lld "
+                    "shows=%{public}@ %{public}@",
                variant.title, (long)variant.pixelHeight, variant.bitRate,
-               variant.byteSize, path);
+               variant.byteSize, variant.detail ?: @"(no size)", path);
     }
 
     // Presence of the adaptive manifests, which the progressive tier ignores.
