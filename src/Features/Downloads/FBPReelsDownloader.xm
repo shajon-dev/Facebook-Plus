@@ -1232,10 +1232,27 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
 
     NSString *downloadID = [videoID copy];
 
+    // Re-resolve on the pick, not just on the tap: the sheet can sit open while
+    // the user decides, and these URLs carry an oe= expiry. Same identity guard
+    // as above — a walk that lands on a different video must not swap the URL
+    // out from under this download.
+    __weak UIButton *weakSender = sender;
+    NSString *expectedItemID = [itemVideoID copy];
+
     FBPDownloadPresentPicker(
         variants,
         FBPTopViewController(),
         sender,
+        ^NSArray<FBPDownloadVariant *> *{
+            FBPDownloadSource *again =
+                FBPResolveActivePlayback(weakSender, NULL);
+            if (!again) return nil;
+            if (expectedItemID && again.videoID &&
+                ![again.videoID isEqualToString:expectedItemID]) {
+                return nil;
+            }
+            return again.variants;
+        },
         ^(FBPDownloadVariant *variant) {
             [[FBPReelDownloadManager shared]
                 startDownloadWithURL:variant.url

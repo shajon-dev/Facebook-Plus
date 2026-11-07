@@ -344,9 +344,51 @@ FBPDownloadSource *FBPDownloadSourceFromPlaybackController(id playbackController
 
 #pragma mark - Picker
 
+/// The same rendition from a freshly resolved list, or @c picked unchanged.
+///
+/// Only the URL is taken from the fresh entry; the title, detail and metrics
+/// shown in the sheet stay as the user saw them, so a refresh can never make
+/// the download disagree with the row that was tapped.
+static FBPDownloadVariant *FBPDownloadFreshenVariant(
+    FBPDownloadVariant *picked, FBPDownloadVariantRefresher refresh) {
+    if (!refresh || !picked) return picked;
+
+    NSArray<FBPDownloadVariant *> *fresh = nil;
+    @try {
+        fresh = refresh();
+    } @catch (__unused NSException *exception) {
+        return picked;
+    }
+    if (fresh.count == 0) return picked;
+
+    FBPDownloadVariant *match = nil;
+    for (FBPDownloadVariant *candidate in fresh) {
+        if (candidate.title.length && [candidate.title isEqualToString:picked.title]) {
+            match = candidate;
+            break;
+        }
+    }
+    if (!match && picked.pixelHeight > 0) {
+        for (FBPDownloadVariant *candidate in fresh) {
+            if (candidate.pixelHeight == picked.pixelHeight) {
+                match = candidate;
+                break;
+            }
+        }
+    }
+    if (!match || !match.url) return picked;
+    if ([match.url.absoluteString isEqualToString:picked.url.absoluteString]) {
+        return picked;
+    }
+
+    FBPLog(@"refreshed %@ URL at pick time", picked.title);
+    return match;
+}
+
 static void FBPDownloadShowSheet(NSArray<FBPDownloadVariant *> *variants,
                                  UIViewController *presenter,
                                  UIView *sourceView,
+                                 FBPDownloadVariantRefresher refresh,
                                  void (^chosen)(FBPDownloadVariant *)) {
     NSMutableArray<FBPSheetAction *> *actions =
         [NSMutableArray arrayWithCapacity:variants.count];
@@ -356,7 +398,9 @@ static void FBPDownloadShowSheet(NSArray<FBPDownloadVariant *> *variants,
         [actions addObject:[FBPSheetAction actionWithTitle:pick.title
                                                    detail:pick.detail
                                                  iconName:@"arrow.down.circle"
-                                                  handler:^{ chosen(pick); }]];
+                                                  handler:^{
+            chosen(FBPDownloadFreshenVariant(pick, refresh));
+        }]];
     }
 
     [FBPSheetPresenter presentActions:actions
@@ -368,6 +412,7 @@ static void FBPDownloadShowSheet(NSArray<FBPDownloadVariant *> *variants,
 void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
                               UIViewController *presenter,
                               UIView *sourceView,
+                              FBPDownloadVariantRefresher refresh,
                               void (^chosen)(FBPDownloadVariant *variant)) {
     if (!chosen) return;
 
@@ -383,13 +428,13 @@ void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
     }
 
     if (NSThread.isMainThread) {
-        FBPDownloadShowSheet(variants, presenter, sourceView, chosen);
+        FBPDownloadShowSheet(variants, presenter, sourceView, refresh, chosen);
         return;
     }
 
     NSArray<FBPDownloadVariant *> *snapshot = [variants copy];
     dispatch_async(dispatch_get_main_queue(), ^{
-        FBPDownloadShowSheet(snapshot, presenter, sourceView, chosen);
+        FBPDownloadShowSheet(snapshot, presenter, sourceView, refresh, chosen);
     });
 }
 

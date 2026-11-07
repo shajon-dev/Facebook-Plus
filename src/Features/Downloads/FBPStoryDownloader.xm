@@ -367,10 +367,27 @@ static void FBPStoryStartDownload(NSURL *sourceURL) {
     // Diagnostic (off by default, free when off).
     FBPDownloadLogQualities(item, playbackController, variants);
 
+    // And again on the pick, for the same expiry reason: the tap-time read
+    // above is already stale by the time a sheet the user studied is dismissed.
+    // Video stories only, for the same reason as above.
+    // Assigned to a typed variable rather than written inline as a ternary:
+    // this file compiles as Objective-C++, where `cond ? block : nil` cannot be
+    // reconciled with nullptr.
+    FBPDownloadVariantRefresher storyRefresh = nil;
+    if (gStoryMediaIsVideo && gStoryMediaView != nil) {
+        storyRefresh = ^NSArray<FBPDownloadVariant *> *{
+            id view = gStoryMediaView;
+            if (!gStoryMediaIsVideo || !view) return nil;
+            id controller = FBPStoryObjectGetter(view, @"playbackController");
+            return FBPDownloadSourceFromPlaybackController(controller).variants;
+        };
+    }
+
     FBPDownloadPresentPicker(
         variants,
         gStoryController,
         sender,
+        storyRefresh,
         ^(FBPDownloadVariant *variant) {
             FBPStoryStartDownload(variant.url);
         }

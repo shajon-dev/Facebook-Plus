@@ -78,14 +78,29 @@ FBPDownloadVariantsForItem(id _Nullable item,
 extern FBPDownloadSource *
 FBPDownloadSourceFromPlaybackController(id _Nullable playbackController);
 
+/// Re-reads the variants at the moment of the pick. Returns nil when a fresh
+/// list cannot be obtained, in which case the picked variant is used as-is.
+typedef NSArray<FBPDownloadVariant *> *_Nullable (^FBPDownloadVariantRefresher)(void);
+
 /// Offer the variants and call @c chosen with the pick.
 ///
 /// With a single variant — a photo story, a single-quality video, or the picker
 /// preference turned off — no sheet is shown and @c chosen runs synchronously,
 /// exactly as the downloaders behaved before the picker existed.
+///
+/// @param refresh Optional. Facebook's media URLs are short-lived signed URLs
+///   (they carry an @c oe= expiry and the app has FNFURLRefreshManager to renew
+///   them), so a sheet left open while the user deliberates can outlive the URL
+///   that was resolved to build it. When given, this is called on the pick and
+///   the matching entry of the fresh list is preferred, so the download starts
+///   from a URL resolved seconds ago rather than minutes ago. Matching is by
+///   title, then by pixel height; an entry that no longer appears falls back to
+///   the original. Not called at all on the no-sheet fast path, where the
+///   variants were resolved in the same turn of the run loop.
 extern void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
                                      UIViewController *_Nullable presenter,
                                      UIView *_Nullable sourceView,
+                                     FBPDownloadVariantRefresher _Nullable refresh,
                                      void (^chosen)(FBPDownloadVariant *variant));
 
 /// Build a one-entry variant list for media that has exactly one rendition
