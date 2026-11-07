@@ -96,6 +96,10 @@
 "download.reel.tmpFailed" = "अस्थायी वीडियो फ़ाइल नहीं बनाई जा सकी।";
 "download.reel.noLink" = "इस वीडियो का लिंक नहीं मिल सका।";
 "download.reel.expired" = "यह डाउनलोड लिंक ख़त्म हो गया है। डाउनलोड दोबारा दबाएँ।";
+"download.merge.progress" = "ऑडियो और वीडियो जोड़े जा रहे हैं…";
+"download.merge.failed" = "इस वीडियो का ऑडियो और चित्र जोड़ा नहीं जा सका।\n%@";
+"download.stream.videoFailed" = "वीडियो स्ट्रीम डाउनलोड नहीं हुई।\n%@";
+"download.stream.audioFailed" = "ऑडियो स्ट्रीम डाउनलोड नहीं हुई।\n%@";
 "download.quality.title" = "डाउनलोड क्वालिटी";
 "download.quality.hd" = "हाई क्वालिटी";
 "download.quality.sd" = "सामान्य क्वालिटी";
@@ -104,7 +108,6 @@
 "download.quality.spherical.detail" = "पूरा 360° सोर्स";
 "download.quality.original" = "ओरिजिनल";
 "download.quality.dash.detail" = "~%@ · अनुमानित आकार";
-"download.quality.muxPending" = "इस क्वालिटी के लिए ऑडियो जोड़ना पड़ता है, जो अभी उपलब्ध नहीं है। फ़िलहाल दूसरी चुनें।";
 "reels.hideOverlay.a11y" = "Reel ओवरले छिपाएँ";
 "update.title" = "अपडेट उपलब्ध";
 "update.subtitle" = "संस्करण %@ अब उपलब्ध है।";

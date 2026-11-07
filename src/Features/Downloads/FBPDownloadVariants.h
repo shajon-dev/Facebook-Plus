@@ -173,6 +173,14 @@ extern void FBPDownloadLogQualities(id _Nullable item,
 /// panel. Called once from FBPInitReelsDownloader.
 extern void FBPDownloadInstallDiagnostic(void);
 
+/// Whether "Log Download Qualities" is on, as one relaxed atomic load.
+///
+/// Exposed so the rest of the download flow — FBPDashDownload, which records the
+/// two streams' content types and byte counts and whether the merge worked — can
+/// gate its own os_log calls on the same switch, kept in step by the same
+/// notification, and stay just as free when it is off.
+extern BOOL FBPDownloadQualityLoggingEnabled(void);
+
 #ifdef __cplusplus
 }
 #endif

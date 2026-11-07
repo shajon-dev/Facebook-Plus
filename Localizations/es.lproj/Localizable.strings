@@ -96,6 +96,10 @@
 "download.reel.tmpFailed" = "No se pudo crear el archivo de vídeo temporal.";
 "download.reel.noLink" = "No se pudo obtener el enlace de este vídeo.";
 "download.reel.expired" = "Este enlace de descarga ha caducado. Vuelve a tocar descargar.";
+"download.merge.progress" = "Combinando audio y vídeo…";
+"download.merge.failed" = "No se pudo combinar el audio y la imagen de este vídeo.\n%@";
+"download.stream.videoFailed" = "No se descargó la pista de vídeo.\n%@";
+"download.stream.audioFailed" = "No se descargó la pista de audio.\n%@";
 "download.quality.title" = "Calidad de descarga";
 "download.quality.hd" = "Calidad alta";
 "download.quality.sd" = "Calidad estándar";
@@ -104,7 +108,6 @@
 "download.quality.spherical.detail" = "Fuente 360° completa";
 "download.quality.original" = "Original";
 "download.quality.dash.detail" = "~%@ · tamaño estimado";
-"download.quality.muxPending" = "Esta calidad necesita combinar el audio, algo que aún no está disponible. Elige otra por ahora.";
 "reels.hideOverlay.a11y" = "Ocultar superposición del Reel";
 "update.title" = "Actualización disponible";
 "update.subtitle" = "La versión %@ ya está disponible.";

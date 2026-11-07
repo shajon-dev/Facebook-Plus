@@ -96,6 +96,10 @@
 "download.reel.tmpFailed" = "Не удалось создать временный видеофайл.";
 "download.reel.noLink" = "Не удалось получить ссылку на это видео.";
 "download.reel.expired" = "Срок действия ссылки истёк. Нажмите скачивание ещё раз.";
+"download.merge.progress" = "Объединение звука и видео…";
+"download.merge.failed" = "Не удалось объединить звук и изображение этого видео.\n%@";
+"download.stream.videoFailed" = "Видеопоток не загрузился.\n%@";
+"download.stream.audioFailed" = "Аудиопоток не загрузился.\n%@";
 "download.quality.title" = "Качество скачивания";
 "download.quality.hd" = "Высокое качество";
 "download.quality.sd" = "Обычное качество";
@@ -104,7 +108,6 @@
 "download.quality.spherical.detail" = "Полный источник 360°";
 "download.quality.original" = "Оригинал";
 "download.quality.dash.detail" = "~%@ · примерный размер";
-"download.quality.muxPending" = "Для этого качества нужно объединять звук, а это пока недоступно. Пока выберите другое.";
 "reels.hideOverlay.a11y" = "Скрыть наложение Reel";
 "update.title" = "Доступно обновление";
 "update.subtitle" = "Версия %@ уже доступна.";

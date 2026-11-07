@@ -96,6 +96,10 @@
 "download.reel.tmpFailed" = "অস্থায়ী ভিডিও ফাইল তৈরি করা যায়নি।";
 "download.reel.noLink" = "এই ভিডিওর লিংক পাওয়া যায়নি।";
 "download.reel.expired" = "এই ডাউনলোড লিংকের সময় শেষ। আবার ডাউনলোড চাপুন।";
+"download.merge.progress" = "অডিও আর ভিডিও জোড়া লাগানো হচ্ছে…";
+"download.merge.failed" = "এই ভিডিওর অডিও আর ছবি জোড়া লাগানো গেল না।\n%@";
+"download.stream.videoFailed" = "ছবির স্ট্রিম ডাউনলোড হয়নি।\n%@";
+"download.stream.audioFailed" = "অডিও স্ট্রিম ডাউনলোড হয়নি।\n%@";
 "download.quality.title" = "ডাউনলোড কোয়ালিটি";
 "download.quality.hd" = "উচ্চ কোয়ালিটি";
 "download.quality.sd" = "সাধারণ কোয়ালিটি";
@@ -104,7 +108,6 @@
 "download.quality.spherical.detail" = "সম্পূর্ণ ৩৬০° সোর্স";
 "download.quality.original" = "আসল";
 "download.quality.dash.detail" = "~%@ · আনুমানিক আকার";
-"download.quality.muxPending" = "এই কোয়ালিটির জন্য অডিও জোড়া লাগাতে হয়, যেটা এখনো নেই। আপাতত অন্যটা বেছে নিন।";
 "reels.hideOverlay.a11y" = "Reel ওভারলে লুকান";
 "update.title" = "আপডেট উপলব্ধ";
 "update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";

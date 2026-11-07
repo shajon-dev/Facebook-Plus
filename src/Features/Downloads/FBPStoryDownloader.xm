@@ -3,6 +3,7 @@
 #import "FBPPrefs.h"
 #import "FBPResources.h"
 #import "FBPDownloadVariants.h"
+#import "FBPDashDownload.h"
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
@@ -33,6 +34,11 @@ static BOOL gStoryMediaIsVideo = NO;
 static UIButton *gStoryDownloadButton = nil;
 static UIProgressView *gStoryProgress = nil;
 static BOOL gStoryDownloading = NO;
+// The two-stream flow for a DASH rung, nil whenever the single-file path is what
+// is running. Non-nil is also what turns the download button into a stop button:
+// a story that is two transfers plus a merge is no longer instant, and a user who
+// started one needs a way out of it.
+static FBPDashDownload *gStoryDashDownload = nil;
 
 static const NSInteger kFBPStoryDownloadTag = 0x53444C31; // SDL1
 static const NSInteger kFBPStoryProgressTag = 0x53445031; // SDP1
@@ -161,6 +167,50 @@ static void FBPStoryFlashSymbol(NSString *symbol) {
     });
 }
 
+// Hand a finished local file to Photos, then clean up after it.
+//
+// Lifted out of the single-file delegate below, unchanged, so the two-stream
+// path lands in exactly the same place: same PHAssetChangeRequest, same album
+// behaviour, same temporary-file deletion, same feedback. @c then runs once the
+// save has been attempted, which is where the single-file path invalidates its
+// session.
+static void FBPStorySaveToPhotos(NSURL *fileURL, BOOL isVideo, void (^then)(void)) {
+    [[PHPhotoLibrary sharedPhotoLibrary]
+     performChanges:^{
+        if (isVideo) {
+            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:fileURL];
+        } else {
+            [PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:fileURL];
+        }
+    } completionHandler:^(BOOL success, NSError *error) {
+        FBPStoryLog(@"Photos save success=%d type=%@ error=%@",
+                    success, isVideo ? @"video" : @"photo", error);
+
+        [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            gStoryDownloading = NO;
+            FBPStorySetButtonState(YES);
+            FBPStorySetProgress(0, NO);
+            FBPStoryFlashSymbol(success ? @"checkmark" : @"xmark");
+            if (success) {
+                FBPStoryShowSavedPopup();
+            } else {
+                // Previously a silent xmark on this path. A save that Photos
+                // refused is not something to flash past: it is the one failure
+                // where the reason (permissions, storage, an unplayable file)
+                // is actionable.
+                FBPShowStoryMessage(
+                    [NSString stringWithFormat:FBPL(@"download.reel.saveFailed"),
+                              error.localizedDescription
+                                  ?: FBPL(@"download.error.unknown")]);
+            }
+        });
+
+        if (then) then();
+    }];
+}
+
 @interface FBPStoryDownloadDelegate : NSObject <NSURLSessionDownloadDelegate>
 @property(nonatomic, copy) NSURL *sourceURL;
 @end
@@ -231,30 +281,9 @@ didFinishDownloadingToURL:(NSURL *)location {
 
     FBPStoryLog(@"download complete: %@", dst);
 
-    BOOL isVideo = gStoryMediaIsVideo;
-    [[PHPhotoLibrary sharedPhotoLibrary]
-     performChanges:^{
-        if (isVideo) {
-            [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:dstURL];
-        } else {
-            [PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:dstURL];
-        }
-    } completionHandler:^(BOOL success, NSError *error) {
-        FBPStoryLog(@"Photos save success=%d type=%@ error=%@",
-                    success, isVideo ? @"video" : @"photo", error);
-
-        [[NSFileManager defaultManager] removeItemAtURL:dstURL error:nil];
-
-        dispatch_async(dispatch_get_main_queue(), ^{
-            gStoryDownloading = NO;
-            FBPStorySetButtonState(YES);
-            FBPStorySetProgress(0, NO);
-            FBPStoryFlashSymbol(success ? @"checkmark" : @"xmark");
-            if (success) FBPStoryShowSavedPopup();
-        });
-
+    FBPStorySaveToPhotos(dstURL, gStoryMediaIsVideo, ^{
         [session finishTasksAndInvalidate];
-    }];
+    });
 }
 
 - (void)URLSession:(NSURLSession *)session
@@ -319,6 +348,92 @@ static void FBPStoryStartDownload(NSURL *sourceURL) {
     });
 }
 
+// Turn the download button into a stop button, and back.
+//
+// Stories shows no progress bar — story files are small and the maintainer asked
+// for no visible downloading UI — but a two-stream DASH save is two transfers
+// and a merge, so it is neither small nor instant. Rather than break that
+// promise with a bar, the one control already on screen carries the state: while
+// a two-stream save runs the button is a stop glyph, and tapping it cancels.
+// That keeps Stories silent and still gives cancel a route.
+static void FBPStorySetStopGlyph(BOOL stop) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIButton *button = gStoryDownloadButton;
+        if (!button) return;
+
+        UIImage *image = stop ? [UIImage systemImageNamed:@"stop.circle"]
+                              : [UIImage fbp_imageNamed:@"download"];
+        if (image) [button setImage:image forState:UIControlStateNormal];
+
+        // Stays enabled on purpose while a two-stream save runs: it is the only
+        // way out of one. The single-file path still greys the button out.
+        button.enabled = YES;
+        button.alpha = 1.0;
+    });
+}
+
+static void FBPStoryStartDashDownload(FBPDownloadVariant *variant) {
+    if (!FBPStoryDownloaderEnabled()) { FBPStoryHideButton(); return; }
+    if (gStoryDownloading || !variant.url || !variant.audioURL) return;
+
+    gStoryDownloading = YES;
+
+    // Same shape of name, in the same directory, as the single-file story path,
+    // so the asset Photos ends up with is indistinguishable from one saved
+    // before the DASH tier existed.
+    NSString *tmpName = [NSString stringWithFormat:@"FBP-Story-%@-%@.mp4",
+                         gStoryVideoID ?: @"video", NSUUID.UUID.UUIDString];
+    NSURL *output = [NSURL fileURLWithPath:
+        [NSTemporaryDirectory() stringByAppendingPathComponent:tmpName]];
+
+    FBPStoryLog(@"dash download start mediaID=%@ video=%@ audio=%@",
+                gStoryVideoID, variant.url.absoluteString,
+                variant.audioURL.absoluteString);
+
+    gStoryDashDownload = [FBPDashDownload
+        startWithVideoURL:variant.url
+                 audioURL:variant.audioURL
+                outputURL:output
+                 progress:^(FBPDashDownloadStage stage, float fraction) {
+        // Driven even though FBPStorySetProgress swallows it, so that one
+        // function stays the only thing between Stories and a visible bar if the
+        // maintainer ever wants one.
+        (void)stage;
+        FBPStorySetProgress(fraction, YES);
+    } completion:^(NSURL *merged, NSError *error) {
+        gStoryDashDownload = nil;
+        // Before the save, so the checkmark/xmark flash restores the download
+        // glyph rather than the stop one.
+        FBPStorySetStopGlyph(NO);
+
+        if (merged) {
+            FBPStoryLog(@"dash download merged -> %@", merged.path);
+            FBPStorySaveToPhotos(merged, YES, nil);
+            return;
+        }
+
+        gStoryDownloading = NO;
+        FBPStorySetButtonState(YES);
+        FBPStorySetProgress(0, NO);
+
+        NSString *message = FBPDashDownloadMessageForError(error);
+        if (!message) {
+            // Cancelled by the user. Nothing saved, nothing left behind, and no
+            // need to report back what they just asked for.
+            FBPStoryLog(@"dash download cancelled");
+            return;
+        }
+
+        // Unmistakable on purpose: with no progress bar, a silent xmark was the
+        // only sign a story download had failed, and it was easy to miss.
+        FBPStoryLog(@"dash download failed: %@", error);
+        FBPStoryFlashSymbol(@"xmark");
+        FBPShowStoryMessage(message);
+    }];
+
+    FBPStorySetStopGlyph(YES);
+}
+
 @interface FBPStoryDownloadTarget : NSObject
 + (instancetype)shared;
 - (void)downloadTapped:(UIButton *)sender;
@@ -333,6 +448,14 @@ static void FBPStoryStartDownload(NSURL *sourceURL) {
 }
 - (void)downloadTapped:(UIButton *)sender {
     FBPStoryLog(@"button tapped currentVideoID=%@", gStoryVideoID);
+
+    // While a two-stream save is running this button is a stop button — see
+    // FBPStorySetStopGlyph. Checked first, before any re-resolution: the tap
+    // means "stop", not "start another".
+    if (gStoryDashDownload) {
+        [gStoryDashDownload cancel];
+        return;
+    }
 
     NSArray<FBPDownloadVariant *> *variants = gStoryVariants;
 
@@ -389,11 +512,12 @@ static void FBPStoryStartDownload(NSURL *sourceURL) {
         sender,
         storyRefresh,
         ^(FBPDownloadVariant *variant) {
-            // TEMPORARY, same reason as the Reels handler: a DASH variant has
-            // video without audio, so saving variant.url alone would produce a
-            // silent file. Refuse until the muxing flow is wired.
+            // A DASH rung is a video-only file plus a separate audio file, so it
+            // takes the two-stream path and gets merged before it is saved.
+            // Everything else is one complete MP4 and goes down the path it
+            // always has.
             if (variant.needsMux) {
-                FBPShowStoryMessage(FBPL(@"download.quality.muxPending"));
+                FBPStoryStartDashDownload(variant);
                 return;
             }
             FBPStoryStartDownload(variant.url);
@@ -453,11 +577,16 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
     [host bringSubviewToFront:progress];
 
     button.hidden = NO;
-    button.enabled = !gStoryDownloading;
+    // A running two-stream save keeps the button live, because it is that
+    // download's stop control for as long as it lasts — including across a
+    // layout pass triggered by the next story starting to play.
+    button.enabled = !gStoryDownloading || gStoryDashDownload != nil;
     button.alpha = button.enabled ? 1.0 : 0.45;
 
     gStoryDownloadButton = button;
     gStoryProgress = progress;
+
+    if (gStoryDashDownload) FBPStorySetStopGlyph(YES);
 }
 
 static void FBPStoryCaptureCurrentVideo(id controller, id mediaView) {

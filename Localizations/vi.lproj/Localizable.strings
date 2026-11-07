@@ -96,6 +96,10 @@
 "download.reel.tmpFailed" = "Không tạo được file video tạm.";
 "download.reel.noLink" = "Chưa lấy được link của video này.";
 "download.reel.expired" = "Link tải này đã hết hạn. Hãy nhấn tải lại.";
+"download.merge.progress" = "Đang ghép âm thanh và hình ảnh…";
+"download.merge.failed" = "Không thể ghép âm thanh và hình ảnh của video này.\n%@";
+"download.stream.videoFailed" = "Không tải được luồng hình ảnh.\n%@";
+"download.stream.audioFailed" = "Không tải được luồng âm thanh.\n%@";
 "download.quality.title" = "Chất lượng tải xuống";
 "download.quality.hd" = "Chất lượng cao";
 "download.quality.sd" = "Chất lượng thường";
@@ -104,7 +108,6 @@
 "download.quality.spherical.detail" = "Nguồn 360° đầy đủ";
 "download.quality.original" = "Bản gốc";
 "download.quality.dash.detail" = "~%@ · dung lượng dự kiến";
-"download.quality.muxPending" = "Chất lượng này cần ghép âm thanh, hiện chưa có. Tạm thời hãy chọn chất lượng khác.";
 "reels.hideOverlay.a11y" = "Ẩn lớp phủ Reel";
 "update.title" = "Đã có bản cập nhật";
 "update.subtitle" = "Phiên bản %@ hiện đã có.";

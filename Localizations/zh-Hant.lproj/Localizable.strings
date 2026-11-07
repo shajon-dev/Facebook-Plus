@@ -96,6 +96,10 @@
 "download.reel.tmpFailed" = "無法建立影片暫存檔。";
 "download.reel.noLink" = "無法取得此影片的連結。";
 "download.reel.expired" = "此下載連結已過期，請再點一次下載。";
+"download.merge.progress" = "正在合併音訊與畫面…";
+"download.merge.failed" = "無法合併這部影片的音訊與畫面。\n%@";
+"download.stream.videoFailed" = "畫面串流未能下載。\n%@";
+"download.stream.audioFailed" = "音訊串流未能下載。\n%@";
 "download.quality.title" = "下載畫質";
 "download.quality.hd" = "高畫質";
 "download.quality.sd" = "標準畫質";
@@ -104,7 +108,6 @@
 "download.quality.spherical.detail" = "完整 360° 原始來源";
 "download.quality.original" = "原始畫質";
 "download.quality.dash.detail" = "~%@ · 預估大小";
-"download.quality.muxPending" = "此畫質需要合併音軌，目前尚未支援。請先選擇其他畫質。";
 "reels.hideOverlay.a11y" = "隱藏 Reels 畫面資訊";
 "update.title" = "有可用的更新";
 "update.subtitle" = "版本 %@ 現已推出。";

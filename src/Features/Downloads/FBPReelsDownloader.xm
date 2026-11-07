@@ -3,6 +3,7 @@
 #import "FBPPrefs.h"
 #import "FBPResources.h"
 #import "FBPDownloadVariants.h"
+#import "FBPDashDownload.h"
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -430,6 +431,7 @@ static void FBPShowMessage(
 
 - (void)setProgressValue:(float)value;
 - (void)showSuccessWithTitle:(NSString *)title;
+- (void)setStatusTitle:(NSString *)title;
 
 @end
 
@@ -567,6 +569,19 @@ static void FBPShowMessage(
     });
 }
 
+// Names the step the flow is on, for a download that has more than one.
+//
+// A two-stream DASH save fetches, then merges, and the merge reports no
+// intermediate progress of its own — the bar deliberately stops short of full
+// and waits there. Without this the card would read "Downloading Reel…" while
+// nothing moved, which is indistinguishable from a stall.
+- (void)setStatusTitle:(NSString *)title {
+    if (title.length == 0) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.titleLabel.text = title;
+    });
+}
+
 // Morphs the card into a success state: the spinner and percent give way to a
 // green checkmark, the bar fills green. Used in place of a separate confirmation
 // alert so the whole flow reads as one premium HUD.
@@ -623,10 +638,20 @@ static void FBPShowMessage(
 @property(nonatomic, assign)
     BOOL downloading;
 
+// The two-stream flow for a DASH rung, nil on the single-URL path. Held only so
+// the progress card's Stop button has something to cancel.
+@property(nonatomic, strong)
+    FBPDashDownload *dashDownload;
+
 + (instancetype)shared;
 
 - (void)startDownloadWithURL:
     (NSURL *)url
+    videoID:
+    (NSString *)videoID;
+
+- (void)startDownloadWithVariant:
+    (FBPDownloadVariant *)variant
     videoID:
     (NSString *)videoID;
 
@@ -653,6 +678,16 @@ static void FBPShowMessage(
 
 - (void)showProgress {
 
+    [self showProgressWithStop:NO];
+}
+
+// @param stop Adds a Stop action to the card. Only the two-stream path passes
+//   YES: that flow can run for tens of seconds across three files and a merge,
+//   and it has a real cancel to offer. The single-URL path keeps the actionless
+//   card it has always had.
+- (void)showProgressWithStop:
+    (BOOL)stop {
+
     dispatch_async(
         dispatch_get_main_queue(), ^{
 
@@ -673,6 +708,24 @@ static void FBPShowMessage(
                 message:nil
                 preferredStyle:
                     UIAlertControllerStyleAlert];
+
+        if (stop) {
+
+            __weak __typeof__(self) weakSelf = self;
+
+            [container addAction:
+                [UIAlertAction
+                    actionWithTitle:FBPL(@"common.cancel")
+                    style:
+                        UIAlertActionStyleCancel
+                    handler:^(__unused UIAlertAction *action) {
+
+                    // UIKit has already dismissed the card by the time this
+                    // runs; the flow's own completion then finds nothing to
+                    // dismiss and simply clears state.
+                    [weakSelf.dashDownload cancel];
+                }]];
+        }
 
         @try {
 
@@ -892,6 +945,142 @@ static void FBPShowMessage(
                 request];
 
     [self.task resume];
+}
+
+// The entry point the picker's pick now goes through: one tier or the other,
+// decided by whether the variant has a separate audio representation to pair.
+- (void)startDownloadWithVariant:
+    (FBPDownloadVariant *)variant
+    videoID:
+    (NSString *)videoID {
+
+    if (!variant.url)
+        return;
+
+    // A variant with no separate audio is a complete MP4 — one GET, one file,
+    // audio already in it. That is the progressive tier, already confirmed
+    // working on device, and it goes down exactly the path it always has.
+    if (!variant.needsMux) {
+
+        [self
+            startDownloadWithURL:variant.url
+            videoID:videoID];
+
+        return;
+    }
+
+    if (self.downloading) {
+
+        FBPShowMessage(
+            FBPL(@"download.appName"),
+            FBPL(@"download.reel.inProgress")
+        );
+
+        return;
+    }
+
+    self.downloading =
+        YES;
+
+    self.videoID =
+        videoID ?: @"unknown";
+
+    // With a Stop action: two transfers plus a merge is long enough that being
+    // unable to back out of it is a real complaint.
+    [self showProgressWithStop:YES];
+
+    // The same name, in the same directory, as the single-URL path's
+    // destination — so the asset Photos ends up with is indistinguishable from
+    // a progressive save, right down to its originalFilename.
+    NSString *filename =
+        [NSString
+            stringWithFormat:
+                @"FBP-Reel-%@.mp4",
+                self.videoID
+                    ?: @"unknown"];
+
+    NSURL *output =
+        [NSURL
+            fileURLWithPath:
+                [NSTemporaryDirectory()
+                    stringByAppendingPathComponent:
+                        filename]];
+
+    __weak __typeof__(self) weakSelf = self;
+
+    self.dashDownload =
+        [FBPDashDownload
+            startWithVideoURL:variant.url
+            audioURL:variant.audioURL
+            outputURL:output
+            progress:^(
+                FBPDashDownloadStage stage,
+                float fraction
+            ) {
+
+            __typeof__(self) strongSelf = weakSelf;
+
+            if (!strongSelf)
+                return;
+
+            [strongSelf.progressController
+                setProgressValue:fraction];
+
+            if (stage ==
+                FBPDashDownloadStageMerging) {
+
+                [strongSelf.progressController
+                    setStatusTitle:
+                        FBPL(@"download.merge.progress")];
+            }
+
+        } completion:^(
+            NSURL *merged,
+            NSError *error
+        ) {
+
+            __typeof__(self) strongSelf = weakSelf;
+
+            if (!strongSelf)
+                return;
+
+            strongSelf.dashDownload =
+                nil;
+
+            if (merged) {
+
+                [strongSelf.progressController
+                    setProgressValue:1.0f];
+
+                // Straight into the single-URL path's own save step: same
+                // PHAssetChangeRequest, same album behaviour, same success
+                // morph, same Photos-refused message, and it deletes the file
+                // afterwards either way.
+                [strongSelf saveVideo:merged];
+
+                return;
+            }
+
+            NSString *message =
+                FBPDashDownloadMessageForError(error);
+
+            if (!message) {
+
+                // Cancelled. Nothing was saved, nothing is left in the
+                // temporary directory, and the user does not need to be told
+                // what they just asked for.
+                strongSelf.downloading =
+                    NO;
+
+                [strongSelf
+                    dismissProgressWithCompletion:nil];
+
+                return;
+            }
+
+            [strongSelf
+                finishWithError:message];
+        }];
 }
 
 - (void)URLSession:
@@ -1254,21 +1443,8 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
             return again.variants;
         },
         ^(FBPDownloadVariant *variant) {
-            // TEMPORARY, remove with the two-stream download flow: a DASH
-            // variant's video representation carries no audio, so downloading
-            // variant.url alone would save a silent clip and look like a
-            // working download. Until the fetch-both-then-FBPMediaMuxer path is
-            // wired up, refuse rather than mislead. The picker still lists
-            // these rungs so the maintainer can see the real ladder on device.
-            if (variant.needsMux) {
-                FBPShowMessage(
-                    FBPL(@"download.appName"),
-                    FBPL(@"download.quality.muxPending")
-                );
-                return;
-            }
             [[FBPReelDownloadManager shared]
-                startDownloadWithURL:variant.url
+                startDownloadWithVariant:variant
                 videoID:downloadID];
         }
     );
