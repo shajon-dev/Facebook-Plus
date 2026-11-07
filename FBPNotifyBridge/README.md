@@ -1,8 +1,11 @@
 # FBPNotifyBridge — the notification-service session bridge
 
-**Status: implemented, builds, and is shipped in the IPA — but UNVERIFIED on a
-device.** Nobody has yet confirmed that it turns a generic push into real text.
-Read the whole page before assuming it fixes anything.
+**Status: shipped and confirmed working on a device (2026-11-07).** Detailed
+notifications arrive on the lock screen on a re-signed build. The one hard
+requirement is that the signing certificate carries at least one registered App
+Group — see [Your signing certificate has to cooperate](#your-signing-certificate-has-to-cooperate)
+— without which the bridge has nowhere to redirect to and notifications stay
+generic.
 
 Tracks issues **#12** and **#13** ("You have a new notification").
 
@@ -158,7 +161,7 @@ with `NSE_BRIDGE=0 ./build.sh`.
 `test/sign-and-install.py` additionally passes `-l … -w -P` to `zsign`, so the
 local device test exercises the extension-injection path too.
 
-## Open risk: explicit App IDs and whether the NSE launches at all
+## Explicit App IDs and whether the NSE launches — settled
 
 Both profiles on hand use an **explicit** App ID (`<TEAM-B>.<app-id-b>`,
 `<TEAM-A>.<app-id-a>`), not a wildcard. An app extension normally needs
@@ -177,20 +180,27 @@ That sounds fatal, but it is not established that it is:
 - So an explicit App ID is **not a demonstrated blocker** — but nothing here
   proves the NSE launches either.
 
-Project notes record an on-device observation of `nse_seen:0`, i.e. the extension
-may not have been running at all on a re-signed build. If that holds, no
-app-group or keychain fix can help until the signing identity is sorted out, and
-the first diagnostic should be "does the NSE process start?", not "does it find a
-session?".
+— and the device run settled it. An explicit App ID is **not** a blocker: the NSE
+does launch on a re-signed build and does produce real notification text. An
+earlier project note recording `nse_seen:0`, read at the time as the extension
+never starting, was a tracing artefact rather than a finding.
 
-### Unverified, in order of importance
+### Settled by the 2026-11-07 device run
 
-1. Whether the NSE launches at all on a re-signed install (`nse_seen:0`).
-2. Whether a wildcard profile, or per-extension explicit App IDs, is required for
-   it to launch.
-3. Whether the redirected App-Group container actually carries what the NSE needs
-   once it does launch.
-4. Whether the blanket `SecItem*` rebind is safe inside an NSE's memory and time
-   budget.
-5. Whether notification text actually becomes specific. No device run has
-   happened.
+1. The NSE launches on a re-signed install. ✅
+2. No wildcard profile and no per-extension App IDs are needed. ✅
+3. The redirected App-Group container carries what the NSE needs. ✅
+4. Notification text becomes specific. ✅
+
+### Still unverified
+
+- Whether the `SecItem*` rebind is comfortable inside an NSE's memory and time
+  budget. It has since been narrowed so it no longer rewrites system access
+  groups, and **Settings → General → Keychain Compatibility** turns it off
+  entirely, which is the first thing to try if the extension starts misbehaving.
+- Behaviour on a certificate whose profile grants a *different* set of App
+  Groups, or more than one. The resolver sorts and picks the first that actually
+  resolves, so both processes converge, but only one certificate has been tested.
+- Messenger messages remain out of scope by design, not by omission: they are
+  end-to-end encrypted with device-bound keys in `group.com.facebook.family`, and
+  a redirected container is empty.
