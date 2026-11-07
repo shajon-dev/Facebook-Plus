@@ -41,6 +41,37 @@ id FBPDownloadSafeObjectGetter(id object, NSString *getterName) {
     }
 }
 
+/// The first of several spellings the object actually answers to.
+///
+/// Facebook ships two playback-item classes with two naming conventions for the
+/// same fields: FBVideoPlaybackItem capitalises the acronym (-HDPlaybackURL,
+/// -SDPlaybackURL, -DashPlaylist) while FNFVideoPlaybackItem lower-cases the
+/// first letter (-hdPlaybackURL, -sdPlaybackURL, -dashPlaylist). Both reach the
+/// download button, so asking for one spelling silently loses whichever surface
+/// uses the other — which is exactly how the DASH ladder went missing on Reels:
+/// -DashPlaylist does not exist there, the guarded getter returned nil, and the
+/// picker fell back to the progressive pair with no sign anything had failed.
+static id FBPDownloadFirstGetter(id object, NSArray<NSString *> *getterNames) {
+    for (NSString *name in getterNames) {
+        id value = FBPDownloadSafeObjectGetter(object, name);
+        if (value) return value;
+    }
+    return nil;
+}
+
+/// Every spelling of the fields that differ between the two item classes.
+static NSArray<NSString *> *FBPDownloadDashPlaylistNames(void) {
+    return @[@"dashPlaylist", @"DashPlaylist"];
+}
+
+static NSArray<NSString *> *FBPDownloadHDURLNames(void) {
+    return @[@"HDPlaybackURL", @"hdPlaybackURL"];
+}
+
+static NSArray<NSString *> *FBPDownloadSDURLNames(void) {
+    return @[@"SDPlaybackURL", @"sdPlaybackURL"];
+}
+
 /// Reads a zero-argument getter whose value is a number, whatever width or
 /// signedness Facebook declared it with, into a double.
 ///
@@ -310,7 +341,7 @@ static NSArray<FBPDownloadVariant *> *
 FBPDownloadMergeDashLadder(id item,
                            NSArray<FBPDownloadVariant *> *progressive,
                            NSUInteger flatStart) {
-    id playlist = FBPDownloadSafeObjectGetter(item, @"DashPlaylist");
+    id playlist = FBPDownloadFirstGetter(item, FBPDownloadDashPlaylistNames());
     if (![playlist isKindOfClass:NSString.class]) return progressive;
 
     FBPDashManifest *manifest =
@@ -510,14 +541,14 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
 
     NSUInteger beforeProgressive = variants.count;
 
-    add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"HDPlaybackURL"),
+    add(FBPDownloadMakeVariant(FBPDownloadFirstGetter(item, FBPDownloadHDURLNames()),
                                FBPL(@"download.quality.hd"), nil,
                                bestHeight, hdBitRate, hdSize,
                                FBPDownloadVariantTierProgressive));
 
     // SD only gets the item's height when HD did not take it.
     NSInteger sdHeight = (variants.count > beforeProgressive) ? 0 : bestHeight;
-    add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"SDPlaybackURL"),
+    add(FBPDownloadMakeVariant(FBPDownloadFirstGetter(item, FBPDownloadSDURLNames()),
                                FBPL(@"download.quality.sd"), nil,
                                sdHeight, sdBitRate, sdSize,
                                FBPDownloadVariantTierProgressive));
@@ -566,9 +597,14 @@ static NSString *FBPDownloadItemTitle(id item) {
         _videoID = [videoID copy];
         _variants = [variants copy] ?: @[];
         _mediaTitle = FBPDownloadItemTitle(item);
+        // -firstFrameThumbnailURL does not exist on either item class in v585;
+        // -thumbnailURL does. Both are tried so a build that has either one
+        // still shows a poster frame in the manager, and a build with neither
+        // just shows a row without one.
         _thumbnailURL =
             FBPDownloadURLFromObject(
-                FBPDownloadSafeObjectGetter(item, @"firstFrameThumbnailURL"));
+                FBPDownloadFirstGetter(item, @[@"thumbnailURL",
+                                               @"firstFrameThumbnailURL"]));
     }
     return self;
 }
@@ -983,7 +1019,7 @@ static NSString *FBPDownloadQualityEntryDescription(id entry) {
 }
 
 static void FBPDownloadLogDashPlaylist(os_log_t log, id item) {
-    id playlist = FBPDownloadSafeObjectGetter(item, @"DashPlaylist");
+    id playlist = FBPDownloadFirstGetter(item, FBPDownloadDashPlaylistNames());
 
     if (![playlist isKindOfClass:NSString.class]) {
         os_log(log, "mpd       %{public}@",
