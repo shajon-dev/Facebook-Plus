@@ -159,6 +159,35 @@ static NSString *FBPDashTrim(NSString *text) {
                NSCharacterSet.whitespaceAndNewlineCharacterSet];
 }
 
+/// @frameRate, in all three spellings DASH allows: "30", "29.97" and "15360/512".
+///
+/// Facebook uses the ratio form — every captured manifest writes 30 fps as
+/// "15360/512" and 25 fps as "12800/512" — which parses to 0 as a plain number,
+/// so the ratio case is the one that matters rather than a nicety. 0 when the
+/// attribute is absent or nonsense; the one caller then falls back to assuming
+/// 30, which is what the converter does anyway.
+static double FBPDashFrameRateAttr(NSDictionary<NSString *, NSString *> *attributes,
+                                   NSString *name) {
+    NSString *raw = FBPDashTrim(FBPDashAttr(attributes, name));
+    if (raw.length == 0 || raw.length > 24) return 0;
+
+    double value = 0;
+    NSRange slash = [raw rangeOfString:@"/"];
+    if (slash.location == NSNotFound) {
+        value = raw.doubleValue;
+    } else {
+        double numerator = [raw substringToIndex:slash.location].doubleValue;
+        double denominator =
+            [raw substringFromIndex:slash.location + 1].doubleValue;
+        if (!(denominator > 0)) return 0;
+        value = numerator / denominator;
+    }
+
+    // Anything outside this is a misparse rather than a video.
+    if (!isfinite(value) || value <= 0.5 || value > 240.0) return 0;
+    return value;
+}
+
 NSInteger FBPDashRankFromQualityLabel(NSString *label) {
     NSString *value = FBPDashTrim(label);
     if (value.length == 0 || value.length > 12) return 0;
@@ -372,6 +401,10 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
 @interface FBPDashRepresentation ()
 @property (nonatomic, assign) NSInteger codecRank;
+/// Video only, from @frameRate at either level. Set after construction rather
+/// than taken in the initializer, which already has six arguments and which
+/// every audio representation runs through too.
+@property (nonatomic, assign) double frameRate;
 /// Set for an audio representation the document marked as its default.
 @property (nonatomic, assign) BOOL isDefaultQuality;
 /// Audio only: whether the codec is AAC, and whether the channel layout came
@@ -809,7 +842,7 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
                 // phone that the ladder was there and this handset could not
                 // decode it.
                 why = @"is AV1 and this device has no AV1 decoder, so it cannot "
-                      @"be converted to H.264 for Photos";
+                      @"be converted for Photos";
             } else if (FBPDashVideoCodecHasNoPassthrough(codecs)) {
                 why = @"cannot be passed through to Photos and has no conversion "
                       @"path here";
@@ -833,6 +866,12 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
                                                  width:width
                                                 height:height
                                              bandwidth:bandwidth];
+        // Only the picker uses this, and only for a rung that will be converted:
+        // the output bitrate — and so the size the row promises — is bounded per
+        // pixel per frame, which needs the frame rate to mean anything. Facebook
+        // puts @frameRate on the AdaptationSet, and `attributes` has already
+        // inherited it.
+        representation.frameRate = FBPDashFrameRateAttr(attributes, @"frameRate");
         if (representation.qualityRank <= 0) {
             [self note:@"rep %@: no FBQualityLabel and no dimensions — kept, "
                         "named by bitrate", identifier];

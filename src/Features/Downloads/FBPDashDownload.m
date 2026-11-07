@@ -550,7 +550,8 @@ static void FBPDashRelease(FBPDashDownload *download) {
     }];
 }
 
-/// Re-encode the picture to H.264 and write both tracks, in one pass.
+/// Re-encode the picture (HEVC, or H.264 as the fallback) and write both
+/// tracks, in one pass.
 ///
 /// Structurally the same as the mux branch above, with one addition that is the
 /// reason this stage exists separately: a progress block. The conversion is the

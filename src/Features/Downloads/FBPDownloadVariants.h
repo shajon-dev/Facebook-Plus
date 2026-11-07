@@ -29,8 +29,12 @@
 // progressive pair is dropped — it covers the same ground and cannot name
 // itself as precisely. The pair is what is offered when there is no ladder.
 //
-// A DASH variant's byte size is an estimate (bandwidth x duration), never an
-// exact length, and its detail string marks it with a "~".
+// A DASH variant's byte size is an estimate, never an exact length, and its
+// detail string marks it with a "~". Two numbers hide behind it and they are not
+// the same: `byteSize` is what the *download* costs (bandwidth x duration),
+// which is what the progress bar is weighted by; the row's `detail` is what the
+// saved *file* will be, which for a rung that has to be re-encoded is the
+// converter's predicted output and not the download at all.
 
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
@@ -78,15 +82,16 @@ typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
 /// @c audioURL != nil. A variant that cannot be saved by downloading one URL.
 @property (nonatomic, assign, readonly) BOOL needsMux;
 
-/// This rung is AV1, so the picture has to be re-encoded to H.264 before Photos
-/// will accept it (FBPMediaConverter) rather than copied (FBPMediaMuxer).
+/// This rung is AV1, so the picture has to be re-encoded — to HEVC, or H.264
+/// where this device cannot encode HEVC — before Photos will accept it
+/// (FBPMediaConverter) rather than copied (FBPMediaMuxer).
 ///
 /// Only ever YES where the device can decode AV1 — the DASH reader refuses AV1
 /// rungs outright where it cannot — so a downloader can treat this as "convert
 /// it", never as "find out whether conversion is possible".
 ///
 /// A converting variant is strictly more expensive than any other: minutes of
-/// encoding, a battery cost, and an output several times larger than the source.
+/// encoding, a battery cost, and an output about twice the size of the source.
 /// The ladder already ranks an H.264 rung ahead of an AV1 one at the same label,
 /// and the no-picker path below prefers a variant that needs neither a merge nor
 /// a conversion, so this is normally reached only when the whole ladder is AV1 —
@@ -103,9 +108,13 @@ typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
 /// claim one; "360° HD" / "360° SD" for the spherical pair. Already localized.
 @property (nonatomic, copy, readonly) NSString *title;
 
-/// The row's second line: how big it is, and nothing else — "12.4 MB" for an
-/// exact progressive size, "~12.4 MB" for a DASH estimate. Nil when no size is
-/// known, and then the row shows its resolution alone.
+/// The row's second line: how big the saved file will be, and nothing else —
+/// "12.4 MB" for an exact progressive size, "~12.4 MB" for a DASH estimate. Nil
+/// when no size is known, and then the row shows its resolution alone.
+///
+/// For a rung with @c needsConversion this is the *post-conversion* size, which
+/// is roughly twice @c byteSize. The two are deliberately different numbers: one
+/// is what the user waits for, the other is what ends up in Photos.
 @property (nonatomic, copy, readonly, nullable) NSString *detail;
 
 /// The rung this rendition sits on: the number in Facebook's own FBQualityLabel

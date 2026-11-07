@@ -35,7 +35,7 @@
 //
 // AV1 is the interesting middle case and is no longer simply refused. Photos
 // will not take AV1 (measured: PHPhotosErrorDomain 3302), but FBPMediaConverter
-// can re-encode it to H.264 first — so an AV1 rung is offered when, and only
+// can re-encode it to HEVC first — so an AV1 rung is offered when, and only
 // when, this device can actually decode AV1, and comes back marked
 // -needsConversion. On a handset with no AV1 decoder it is refused exactly as
 // before, with a -droppedNotes line that says so. This matters more than it
@@ -105,8 +105,18 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readonly) NSInteger width;
 @property (nonatomic, assign, readonly) NSInteger height;
 /// Bits per second. Used both for ordering and — multiplied by the presentation
-/// duration — for the only size estimate a DASH rung can offer.
+/// duration — for the size estimate a DASH rung can offer.
 @property (nonatomic, assign, readonly) long long bandwidth;
+
+/// Frames per second, from @frameRate at either level. 0 when the document did
+/// not say — including every rung the regex fallback scraped, which does not
+/// look for it.
+///
+/// Read by exactly one caller, and only for a rung that will be converted: the
+/// converter bounds its output bitrate per pixel per frame, so predicting the
+/// size of the converted file needs this. Facebook writes it in the ratio form
+/// ("15360/512"), which is why it is a double rather than an integer.
+@property (nonatomic, assign, readonly) double frameRate;
 
 /// The number this rung is SORTED by: the *shorter* frame edge when both
 /// dimensions are known (never the raw @height — a portrait 720x1280 Reels rung
@@ -125,8 +135,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// at one resolution can only be told apart by their labels.
 @property (nonatomic, copy, readonly, nullable) NSString *displayLabel;
 
-/// This rung is AV1, so saving it means re-encoding the picture to H.264 first
-/// (FBPMediaConverter) rather than copying it (FBPMediaMuxer).
+/// This rung is AV1, so saving it means re-encoding the picture to HEVC first —
+/// H.264 where this device cannot encode HEVC — (FBPMediaConverter) rather than
+/// copying it (FBPMediaMuxer).
 ///
 /// Only ever YES on a device that can actually decode AV1 — the codec gate
 /// refuses AV1 outright where it cannot, so such a rung never becomes a
@@ -135,7 +146,7 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// What it costs, so a caller can decide whether to prefer another rung:
 /// minutes of sustained encoding instead of a moment of I/O, a battery hit, and
-/// an output file several times the source's size that is also perceptually
+/// an output file about twice the source's size that is also perceptually
 /// slightly worse than the source. An H.264 rung at the same label is strictly
 /// better, which is why @c videoRepresentations already ranks one ahead of this
 /// where a manifest offers both.

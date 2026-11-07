@@ -1,4 +1,5 @@
-// AV1 -> H.264 conversion, so an AV1 quality rung can be saved to Photos.
+// AV1 -> HEVC conversion (H.264 where HEVC cannot be encoded), so an AV1
+// quality rung can be saved to Photos.
 //
 // Why this exists, and why it is not FBPMediaMuxer
 // ------------------------------------------------------------------------
@@ -13,10 +14,35 @@
 // perfectly well — ffprobe reads `av1 + aac` off the output — so the wall is
 // Photos, not the muxer.
 //
-// So offering the real ladder means re-encoding the picture to H.264 before the
-// save. That is this file. It sits *beside* the muxer rather than inside it,
-// because the two are opposite promises: one guarantees nothing changed, the
-// other necessarily changes everything.
+// So offering the real ladder means re-encoding the picture before the save.
+// That is this file. It sits *beside* the muxer rather than inside it, because
+// the two are opposite promises: one guarantees nothing changed, the other
+// necessarily changes everything.
+//
+// HEVC, not H.264
+// ------------------------------------------------------------------------
+// The target is HEVC. It is not an exotic choice for a Photos library: every
+// iPhone since the A10 has recorded HEVC by default, so the overwhelming
+// majority of what is already in Photos is this codec. The rival tweak's own
+// Photos gate accepts HEVC (`codec_id 0xad`) beside H.264, which is independent
+// evidence the library takes it.
+//
+// What it buys is measured, not assumed — see FBPConverterTargetBitRate in the
+// implementation for the full sweep. Converting the whole 127-second 1080x1920
+// AV1 fixture with each codec at its own measured multiplier, and scoring the
+// result with VMAF against the AV1 source decoded:
+//
+//     H.264 at 3x source bandwidth   92.54 VMAF   14.36 MB
+//     HEVC  at 2x source bandwidth   92.94 VMAF    9.98 MB
+//
+// Same picture — marginally better, in fact — for 30% fewer bytes. The
+// multiplier is lower because the codec is more efficient, and it was re-swept
+// rather than inherited: 3x was fitted to H.264 and is simply the wrong number
+// here.
+//
+// H.264 stays as the fallback, chosen at runtime from an honest VideoToolbox
+// encoder probe rather than a device-model check — see
+// FBPMediaConversionCodec().
 //
 // One pass, not two
 // ------------------------------------------------------------------------
@@ -32,7 +58,7 @@
 // ------------------------------------------------------------------------
 // Decoding is AVFoundation's (which is VideoToolbox's), encoding is
 // VideoToolbox's by way of AVAssetWriter. The rival statically links ~15 MB of
-// FFmpeg to reach `h264_videotoolbox`, which is itself only a thin wrapper
+// FFmpeg to reach `hevc_videotoolbox`, which is itself only a thin wrapper
 // around the encoder we are calling directly. This project ships no ffmpeg and
 // should keep shipping none.
 //
@@ -40,7 +66,7 @@
 // ------------------------------------------------------------------------
 // Tier 1, implemented here, is AVFoundation-native: on a device whose
 // VideoToolbox can decode AV1, `AVAssetReader` hands up decoded pixel buffers
-// and `AVAssetWriter` re-encodes them to H.264.
+// and `AVAssetWriter` re-encodes them.
 //
 // Tier 2 would borrow the dav1d that `FBSharedFramework` already exports, for
 // devices with no AV1 decoder of their own. It is **not live** — see
@@ -56,10 +82,12 @@
 // a caller that shows neither is misusing it.
 //
 // It is also *lossy and bigger*. The output is a re-encode, and because AV1 is
-// roughly twice as efficient as H.264 at equal quality, an honest H.264 version
-// of a Meta AV1 rung is several times the source's byte size. A picker that
-// shows the rung's download size must not present it as the size of what lands
-// in Photos. See FBPDownloadVariants.m, where such a row shows no size at all.
+// still more efficient than HEVC at equal quality, an honest HEVC version of a
+// Meta AV1 rung is about twice the source's byte size. A picker must therefore
+// not present the rung's *download* size as the size of what lands in Photos —
+// but it can state the right number, because the multiplier below makes the
+// output predictable. FBPConverterExpectedOutputBytes is that prediction, and
+// FBPDownloadVariants.m is what puts it on the row.
 
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
@@ -127,7 +155,8 @@ typedef void (^FBPMediaConvertProgress)(float fraction);
 
 /// Called once, on the main queue.
 ///
-/// On success @c outputURL is the finished H.264 + AAC MP4 and @c error is nil.
+/// On success @c outputURL is the finished HEVC (or H.264) + AAC MP4 and
+/// @c error is nil.
 /// On failure — cancellation included — @c outputURL is nil, @c error says why,
 /// and nothing is left at the output path. The input files are never touched
 /// either way.
@@ -153,10 +182,14 @@ typedef void (^FBPMediaConvertCompletion)(NSURL *_Nullable outputURL,
 /// Cached after the first call — the answer cannot change within a process — and
 /// safe from any thread. The first call costs a VideoToolbox round trip, which
 /// is why @c +prewarm exists.
+///
+/// Says nothing about which codec the conversion will *produce* — that is
+/// FBPMediaConversionCodec(), and the answer there is never "none": H.264 is
+/// the floor.
 @property (class, readonly) BOOL isAvailable;
 
-/// Work out @c isAvailable now, off the main thread, so nothing later has to
-/// wait for it.
+/// Work out @c isAvailable — and which codec this device encodes — now, off the
+/// main thread, so nothing later has to wait for either.
 ///
 /// Measured at **46 ms** for the first call on an Apple-silicon Mac — creating a
 /// decompression session is not free, even a failing one. That is three dropped
@@ -176,7 +209,8 @@ typedef void (^FBPMediaConvertCompletion)(NSURL *_Nullable outputURL,
 /// whether to offer the rung before a byte has been fetched.
 + (BOOL)canDecodeVideoAtURL:(nullable NSURL *)videoURL;
 
-/// Re-encode a video file to H.264 and pair it with an audio file, in one pass.
+/// Re-encode a video file to HEVC — H.264 where this device cannot encode HEVC
+/// — and pair it with an audio file, in one pass.
 ///
 /// Returns immediately; everything expensive happens off the main thread, and
 /// @c completion runs on the main queue exactly once.
@@ -190,7 +224,7 @@ typedef void (^FBPMediaConvertCompletion)(NSURL *_Nullable outputURL,
 /// @param sourceBitRate The source representation's own bandwidth in bits per
 ///   second, from the manifest, or 0 when unknown. This is what the output
 ///   bitrate is derived from, and getting it from the manifest rather than from
-///   a preset is the whole difference between an 11 MB output and an 89 MB one —
+///   a preset is the whole difference between a 9 MB output and an 89 MB one —
 ///   see FBPConverterTargetBitRate in the implementation, which has the
 ///   measurements.
 /// @param outputURL Where to write. Anything already there is replaced; on
@@ -220,7 +254,31 @@ typedef void (^FBPMediaConvertCompletion)(NSURL *_Nullable outputURL,
 extern "C" {
 #endif
 
-/// The output bitrate this converter would choose, in bits per second.
+/// Which codec a conversion in this process will produce.
+///
+/// Not a preference and not a setting: it is what this device's VideoToolbox
+/// will encode. Both values are real outcomes, and every number derived from a
+/// conversion — the target bitrate, and so the size a picker row promises —
+/// depends on which one it is.
+typedef NS_ENUM(NSInteger, FBPConverterCodec) {
+    /// `hvc1` in an MP4. The normal answer on anything that can decode AV1 in
+    /// the first place.
+    FBPConverterCodecHEVC = 0,
+    /// `avc1`. The fallback, for a device whose VideoToolbox has no HEVC
+    /// encoder.
+    FBPConverterCodecH264,
+};
+
+/// What this device will actually encode to.
+///
+/// An honest probe — @c VTCopySupportedPropertyDictionaryForEncoder asked for an
+/// HEVC encoder, not a device-model table and not an OS-version check. Cached
+/// after the first call and safe from any thread; @c +prewarm settles it along
+/// with the decoder probe.
+extern FBPConverterCodec FBPMediaConversionCodec(void);
+
+/// The output bitrate this converter would choose, in bits per second, for the
+/// codec this device will actually use.
 ///
 /// Exposed so it can be swept against real fixtures on a host machine rather
 /// than argued about — which is how the constants behind it were picked.
@@ -228,7 +286,55 @@ extern long long FBPConverterTargetBitRate(long long sourceBitsPerSecond,
                                            CGSize frameSize,
                                            float framesPerSecond);
 
-/// Is an AV1 -> H.264 conversion path available in this process?
+/// As above, for a named codec rather than this device's.
+///
+/// Only the sweep harness and a test need this; shipped code wants the function
+/// above, because a row must predict what *this* phone will produce.
+extern long long FBPConverterTargetBitRateForCodec(long long sourceBitsPerSecond,
+                                                   CGSize frameSize,
+                                                   float framesPerSecond,
+                                                   FBPConverterCodec codec);
+
+/// How many bytes converting a rung is expected to produce.
+///
+/// The one place this prediction lives, deliberately next to the multiplier it
+/// is derived from: the encoder is handed an average bitrate, so the output is
+/// that bitrate plus the passed-through audio, over the clip's length. It is the
+/// number a picker row shows for a rung that will be converted — the source's
+/// own @c bandwidth x duration describes the *download*, not the file that lands
+/// in Photos, and the two differ by the multiplier.
+///
+/// Checked against reality rather than trusted. Fourteen real rungs from five of
+/// the six captured manifests were fetched and converted, each with its own
+/// bandwidth, frame size and frame rate — exactly what a row is computed from —
+/// and this against the bytes produced came out mean 3.4% off, median 2.8%,
+/// worst 8.3%, nothing outside 10%, biased +2.3% towards under-predicting.
+///
+/// It is only that accurate because the bitrate and the pixels come from the
+/// same representation. Handing it a bandwidth that does not belong to the
+/// content gives nonsense in the easy direction — the encoder cannot spend
+/// 5.9 Mbit/s on a clip Meta encodes at 286 kbit/s, so it undershoots by
+/// two-thirds and the prediction is far too high. The picker cannot do that, and
+/// a caller that would should not use this.
+///
+/// 0 when there is not enough to go on, and then the row shows no size rather
+/// than a guess.
+///
+/// @param sourceBitsPerSecond The rung's own @c bandwidth from the manifest.
+/// @param frameSize The rung's frame size, or CGSizeZero when the manifest did
+///   not state one.
+/// @param framesPerSecond The rung's frame rate, or 0 when unstated.
+/// @param audioBitsPerSecond The paired audio representation's @c bandwidth, or
+///   0 for a silent video. Audio is passed through untouched, so this reaches
+///   the output unchanged.
+/// @param durationSeconds The clip's length.
+extern long long FBPConverterExpectedOutputBytes(long long sourceBitsPerSecond,
+                                                 CGSize frameSize,
+                                                 float framesPerSecond,
+                                                 long long audioBitsPerSecond,
+                                                 double durationSeconds);
+
+/// Is an AV1 conversion path available in this process?
 ///
 /// A plain C function, deliberately, because its one caller is
 /// FBPDashManifest.m — which is UIKit-free and AVFoundation-free on purpose, so

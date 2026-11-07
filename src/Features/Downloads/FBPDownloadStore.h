@@ -47,8 +47,8 @@ typedef NS_ENUM(NSInteger, FBPDownloadJobStage) {
     FBPDownloadJobStageFetching,
     /// Both streams are down and FBPMediaMuxer is running. DASH only.
     FBPDownloadJobStageMerging,
-    /// Both streams are down and FBPMediaConverter is re-encoding the picture to
-    /// H.264, because the chosen rung is AV1 and Photos refuses AV1. DASH only,
+    /// Both streams are down and FBPMediaConverter is re-encoding the picture,
+    /// because the chosen rung is AV1 and Photos refuses AV1. DASH only,
     /// and mutually exclusive with @c FBPDownloadJobStageMerging — a conversion
     /// does the merge in the same pass, so a job goes through one or the other,
     /// never both.
@@ -127,8 +127,8 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 /// This job is a two-stream DASH save, so it has a merge step.
 @property (atomic, assign, readonly) BOOL needsMux;
 
-/// The chosen rung is AV1, so the picture has to be re-encoded to H.264 before
-/// Photos will take it. Set at the tap, from the variant, so a row can say the
+/// The chosen rung is AV1, so the picture has to be re-encoded before Photos
+/// will take it. Set at the tap, from the variant, so a row can say the
 /// save will be slow *before* the stage arrives rather than only once it does.
 ///
 /// When this is set the job's merge step is replaced by
@@ -196,9 +196,14 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 
 /// Register a download that is about to start.
 ///
-/// @param expectedBytes The picker's size for the chosen variant — exact for a
-///   progressive one, an estimate for a DASH rung — so a row can show a total
-///   before the first response header arrives. 0 when unknown.
+/// @param expectedBytes How many bytes the chosen variant will *download* —
+///   exact for a progressive one, an estimate for a DASH rung — so a row can
+///   show a total before the first response header arrives. 0 when unknown.
+///
+///   Deliberately the download and not the size the picker row showed: for a
+///   rung that has to be re-encoded those are different numbers, and this one
+///   has to match what the CDN will send, because the Content-Length replaces it
+///   and the progress bar is weighted by it.
 - (FBPDownloadJob *)addJobWithSurface:(FBPDownloadJobSurface)surface
                                 title:(nullable NSString *)title
                               quality:(nullable NSString *)quality

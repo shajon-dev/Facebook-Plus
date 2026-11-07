@@ -1,17 +1,17 @@
-// AV1 -> H.264 conversion. See FBPMediaConverter.h for what this is for and why
-// it is not part of FBPMediaMuxer.
+// AV1 -> HEVC conversion, with H.264 as the fallback. See FBPMediaConverter.h
+// for what this is for and why it is not part of FBPMediaMuxer.
 //
 // Shape of the pipeline
 // ------------------------------------------------------------------------
 // It is the muxer's pipeline with one input changed, deliberately, so the two
 // read alike and the differences are the interesting part:
 //
-//   video:  AVAssetReaderTrackOutput(pixel buffers)  ->  AVAssetWriterInput(H.264)
+//   video:  AVAssetReaderTrackOutput(pixel buffers)  ->  AVAssetWriterInput(HEVC)
 //   audio:  AVAssetReaderTrackOutput(nil settings)   ->  AVAssetWriterInput(nil)
 //
 // The video reader is given pixel-format output settings, which is what makes it
 // *decode* rather than hand back compressed samples; the writer input is given
-// H.264 compression settings, which is what makes it encode. The audio path is
+// compression settings, which is what makes it encode. The audio path is
 // byte-for-byte the muxer's passthrough, hint and all: Facebook's audio is
 // already AAC, and re-encoding it would cost quality to achieve nothing.
 //
@@ -20,8 +20,9 @@
 // after itself, the in-flight registry that keeps the job alive and gives
 // +cancelAll something to walk — is the muxer's, and is commented there.
 //
-// The two things that are genuinely new are the capability probe and the
-// bitrate, and both were measured rather than reasoned about. They are below.
+// The three things that are genuinely new are the two capability probes (can
+// this device decode AV1, and can it encode HEVC) and the bitrate, and all three
+// were measured rather than reasoned about. They are below.
 
 #import "FBPMediaConverter.h"
 
@@ -160,10 +161,64 @@ BOOL FBPMediaConversionIsAvailable(void) {
             FBPLog(@"converter: no AV1 decoder on this device · %@",
                    FBPDav1dTierDeclineReason());
         }
-        FBPLog(@"converter: AV1 -> H.264 conversion %@",
+        FBPLog(@"converter: AV1 conversion %@",
                available ? @"available" : @"unavailable");
     });
     return available;
+}
+
+#pragma mark - Encoder probe
+
+// Can this device encode HEVC?
+//
+// The decode probe above had to be invented because every obvious way of asking
+// was wrong. This one does not: VideoToolbox publishes the question directly.
+// VTCopySupportedPropertyDictionaryForEncoder picks an encoder for a (size,
+// codec) pair and hands back the properties it supports, and when there is no
+// encoder for the codec at all it fails with kVTCouldNotFindVideoEncoderErr
+// instead. That is the whole answer, from the same framework that will do the
+// work.
+//
+// It is deliberately *not* any of these:
+//
+//   * a device-model or OS-version table — HEVC encode arrived with the A10 and
+//     a table would have to be maintained against hardware that does not exist
+//     yet, which is exactly the class of check this file exists to avoid;
+//   * VTIsHardwareDecodeSupported — wrong direction entirely, and hardware-only;
+//   * trying the AVAssetWriterInput and watching it fail — honest, but it needs
+//     a track and an output file in hand, so it cannot answer the question for a
+//     picker row that has to state a size before anything is fetched.
+//
+// 1920x1080 is passed as the size because an encoder's *existence* does not
+// depend on the dimensions; nothing is encoded here. A device that answers yes
+// and then refuses the real settings is still caught — -canAddInput: is checked
+// at setup and the error says the device would not accept them.
+static BOOL FBPConverterVideoToolboxEncodesHEVC(void) {
+    CFDictionaryRef supported = NULL;
+    CFStringRef encoderIdentifier = NULL;
+
+    OSStatus status = VTCopySupportedPropertyDictionaryForEncoder(
+        1920, 1080, kCMVideoCodecType_HEVC, NULL, &encoderIdentifier, &supported);
+
+    if (encoderIdentifier) CFRelease(encoderIdentifier);
+    if (supported) CFRelease(supported);
+
+    return status == noErr;
+}
+
+FBPConverterCodec FBPMediaConversionCodec(void) {
+    // Same reasoning as the decode probe: the answer cannot change within a
+    // process, and the call is a VideoToolbox round trip that the picker would
+    // otherwise make once per row.
+    static FBPConverterCodec codec;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        codec = FBPConverterVideoToolboxEncodesHEVC() ? FBPConverterCodecHEVC
+                                                      : FBPConverterCodecH264;
+        FBPLog(@"converter: encoding to %@",
+               codec == FBPConverterCodecHEVC ? @"HEVC (hvc1)" : @"H.264 (avc1)");
+    });
+    return codec;
 }
 
 void FBPMediaConversionPrewarm(void) {
@@ -173,12 +228,16 @@ void FBPMediaConversionPrewarm(void) {
     // duplicate work of a racing caller free rather than merely harmless.
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
         (void)FBPMediaConversionIsAvailable();
+        // The picker needs this one too — it is what decides the size a row
+        // shows — so it is settled here rather than on the first tap.
+        (void)FBPMediaConversionCodec();
     });
 }
 
 #pragma mark - Bitrate policy
 
-// What the output bitrate should be, and why it is not a preset.
+// What the output bitrate should be, why it is not a preset, and why the two
+// codecs do not share a number.
 //
 // AVAssetExportSession's presets are the obvious way to re-encode and they are
 // unusable for this. Measured on the real 127-second 1080x1920 AV1 fixture
@@ -191,10 +250,12 @@ void FBPMediaConversionPrewarm(void) {
 // derived from the *source* representation's own bandwidth, which the manifest
 // states per rung and which FBPDownloadVariant already carries.
 //
-// The multiplier was measured, not assumed. The first 20 seconds of that same
-// fixture were re-encoded at eight bitrates with exactly the settings below, and
-// each result scored with VMAF against the AV1 source decoded — so 100 would
-// mean "indistinguishable from what Facebook plays":
+// H.264: 3x, measured
+// ------------------------------------------------------------------------
+// The first 20 seconds of that fixture were re-encoded at eight bitrates with
+// exactly the settings below, and each result scored with VMAF against the AV1
+// source decoded — so 100 would mean "indistinguishable from what Facebook
+// plays":
 //
 //     bits/s    x source   VMAF    SSIM     extrapolated size for 127s
 //      400 000     1.40    91.31   0.9941      6.9 MB
@@ -208,37 +269,104 @@ void FBPMediaConversionPrewarm(void) {
 //
 // The curve is smooth with no knee, so this is a cost decision rather than a
 // threshold: past about 3x, each further doubling of the file buys under a point
-// of VMAF. 3x sits where the curve flattens, and it is also where the
-// "AV1 is about twice as efficient as H.264" rule of thumb lands once a little
-// headroom is allowed for the generation loss of re-encoding someone else's
-// lossy encode — the only defence available, since the original pixels are gone.
+// of VMAF.
 //
+// HEVC: 2x, measured the same way and *not* inherited
+// ------------------------------------------------------------------------
+// 3x was fitted to H.264 and reusing it for HEVC would have been guesswork, so
+// the sweep was run again — same fixture, same 20-second excerpt, same VMAF
+// reference, only AVVideoCodecKey and the profile changed:
+//
+//     bits/s    x source   VMAF    SSIM     extrapolated size for 127s
+//      142 885     0.50    87.39   0.9901      5.0 MB   <- encoder floors out
+//      214 327     0.75    87.47   0.9901      5.0 MB      here: it will not go
+//      285 769     1.00    88.03   0.9906      5.1 MB      below ~314 kbit/s
+//      400 077     1.40    92.57   0.9940      6.8 MB
+//      500 096     1.75    94.31   0.9952      8.3 MB
+//      571 538     2.00    94.89   0.9954      9.2 MB   <- chosen
+//      800 000     2.80    95.32   0.9960     11.3 MB
+//    1 143 076     4.00    95.60   0.9963     12.5 MB
+//    1 600 306     5.60    95.65   0.9963     12.9 MB
+//    2 200 000     7.70    95.67   0.9963     13.0 MB
+//    3 000 000    10.50    95.76   0.9965     13.8 MB
+//
+// Same rule as before — the point past which a further doubling buys under a
+// point of VMAF — and here that is 2x: 2.00x -> 4.00x is +0.71, while
+// 1.40x -> 2.80x is still +2.75. The curve saturates around 95.7 because above
+// 2x the encoder stops spending what it is offered.
+//
+// The same sweep on a second real fixture (the 640x360 avc1 rung from
+// call-003, 168 561 bits/s — five times the pixel density of the AV1 one, so the
+// opposite end of what Meta serves) puts the same knee at or below 2x:
+// 1.00x 92.73, 1.40x 93.81, 1.75x 94.35, 2.00x 94.52, 2.80x 94.73, 4.00x 95.10.
+// There 1.40x -> 2.80x is already +0.92. 2x is the conservative choice of the
+// two, so it is the one taken.
+//
+// What that buys, which is the reason for the whole change. Both sweeps above
+// score a 20-second excerpt, so the two multipliers were then run over the
+// *whole* 127-second fixture and the finished files scored end to end — real
+// bytes, not an extrapolation:
+//
+//                  bytes       MB      VMAF mean   harmonic
+//     H.264 3.00x  13 766 478  14.36     92.54      92.29
+//     HEVC  2.00x   9 382 281   9.98     92.94      92.66
+//
+// Marginally the better picture for 32% fewer bytes of video (30% of the
+// finished file, audio included, which is passed through either way). Both
+// numbers are lower than the excerpt's because the back of this clip is harder
+// than its first 20 seconds; what matters is that they moved together, so the
+// two multipliers really are the same quality tier in two codecs.
+//
+// Per-pixel bounds
+// ------------------------------------------------------------------------
 // The floor and ceiling are in bits per pixel per frame rather than absolute,
 // because a 240p rung and a 1080p rung have nothing in common in absolute terms.
 // Both are pathology guards, and both are deliberately set where they bind on
 // *nothing* Meta has actually been observed to serve: across 29 real AV1
 // representations in the six captured manifests the source density runs from
-// 0.0042 to 0.0944 bits/pixel/frame, so 3x of it runs from 0.0127 to 0.2833, and
-// the bounds below sit just outside that range at each end. They exist to stop a
-// future manifest with an absurd rung producing an absurd file, not to second-
-// guess the measurement above.
-static const double kFBPConvertMultiplier = 3.0;
-static const double kFBPConvertFloorBPP   = 0.012;
-static const double kFBPConvertCeilBPP    = 0.300;
-// Used only when the manifest stated no bandwidth at all, which no observed Meta
-// manifest does; midway between the bounds, so it errs neither way.
-static const double kFBPConvertDefaultBPP = 0.060;
+// 0.0042 to 0.0944 bits/pixel/frame. 3x of that runs 0.0127…0.2833 and 2x runs
+// 0.0084…0.1888, so each codec gets its own pair sitting just outside its own
+// range — which is why they cannot be shared: the H.264 floor of 0.012 would
+// clamp the HEVC target *upward* on the lowest rungs Meta serves, quietly
+// undoing the measurement above and making every size a row promises wrong.
+//
+// They exist to stop a future manifest with an absurd rung producing an absurd
+// file, not to second-guess the measurement.
+typedef struct {
+    double multiplier;
+    double floorBPP;
+    double ceilBPP;
+    /// Used only when the manifest stated no bandwidth at all, which no observed
+    /// Meta manifest does. The geometric mean of the two bounds, so it errs
+    /// neither way.
+    double defaultBPP;
+} FBPConvertRatePolicy;
+
+static FBPConvertRatePolicy FBPConvertPolicyFor(FBPConverterCodec codec) {
+    if (codec == FBPConverterCodecH264) {
+        return (FBPConvertRatePolicy){ 3.0, 0.012, 0.300, 0.060 };
+    }
+    return (FBPConvertRatePolicy){ 2.0, 0.008, 0.200, 0.040 };
+}
+
 // Absolute backstops, for a frame size so small or so large that the per-pixel
-// bounds stop being sensible on their own.
+// bounds stop being sensible on their own. Shared by both codecs, because they
+// bind on nothing observed either way: the smallest real rung is 105 123 bits/s,
+// so even 2x of it clears the 120 kbit/s floor, and the largest is 4 072 929, so
+// even 3x of it (12.2 Mbit/s) stays under the 16 Mbit/s ceiling.
 static const long long kFBPConvertMinBitRate =    120000;   // 120 kbit/s
 static const long long kFBPConvertMaxBitRate =  16000000;   //  16 Mbit/s
-// What to assume when the track declares no frame rate. Every Meta rung observed
-// is 30 fps; this only has to stop the arithmetic collapsing to zero.
+// What to assume when the track declares no frame rate. Meta's rungs are 30 fps,
+// or 25 in one of the six captured manifests; this only has to stop the
+// arithmetic collapsing to zero.
 static const float kFBPConvertAssumedFPS = 30.0f;
 
-long long FBPConverterTargetBitRate(long long sourceBitsPerSecond,
-                                    CGSize frameSize,
-                                    float framesPerSecond) {
+long long FBPConverterTargetBitRateForCodec(long long sourceBitsPerSecond,
+                                            CGSize frameSize,
+                                            float framesPerSecond,
+                                            FBPConverterCodec codec) {
+    FBPConvertRatePolicy policy = FBPConvertPolicyFor(codec);
+
     double fps = (framesPerSecond > 0.5f && framesPerSecond < 240.0f)
         ? (double)framesPerSecond
         : (double)kFBPConvertAssumedFPS;
@@ -248,17 +376,17 @@ long long FBPConverterTargetBitRate(long long sourceBitsPerSecond,
         // No frame size either. Fall back to the source's own number, which is
         // at least a measurement of this video, and only then to the floor.
         long long scaled = (long long)llround((double)MAX(sourceBitsPerSecond, 0LL) *
-                                              kFBPConvertMultiplier);
+                                              policy.multiplier);
         return MAX(MIN(scaled, kFBPConvertMaxBitRate), kFBPConvertMinBitRate);
     }
 
     double perFrame = pixels * fps;
-    double floorRate = perFrame * kFBPConvertFloorBPP;
-    double ceilRate  = perFrame * kFBPConvertCeilBPP;
+    double floorRate = perFrame * policy.floorBPP;
+    double ceilRate  = perFrame * policy.ceilBPP;
 
     double target = (sourceBitsPerSecond > 0)
-        ? (double)sourceBitsPerSecond * kFBPConvertMultiplier
-        : perFrame * kFBPConvertDefaultBPP;
+        ? (double)sourceBitsPerSecond * policy.multiplier
+        : perFrame * policy.defaultBPP;
 
     if (target < floorRate) target = floorRate;
     if (target > ceilRate)  target = ceilRate;
@@ -267,6 +395,41 @@ long long FBPConverterTargetBitRate(long long sourceBitsPerSecond,
     if (rate < kFBPConvertMinBitRate) rate = kFBPConvertMinBitRate;
     if (rate > kFBPConvertMaxBitRate) rate = kFBPConvertMaxBitRate;
     return rate;
+}
+
+long long FBPConverterTargetBitRate(long long sourceBitsPerSecond,
+                                    CGSize frameSize,
+                                    float framesPerSecond) {
+    return FBPConverterTargetBitRateForCodec(sourceBitsPerSecond, frameSize,
+                                             framesPerSecond,
+                                             FBPMediaConversionCodec());
+}
+
+long long FBPConverterExpectedOutputBytes(long long sourceBitsPerSecond,
+                                          CGSize frameSize,
+                                          float framesPerSecond,
+                                          long long audioBitsPerSecond,
+                                          double durationSeconds) {
+    if (!(durationSeconds > 0) || !isfinite(durationSeconds)) return 0;
+    // With no bandwidth and no frame size there is nothing to derive a rate
+    // from: the function would return the floor, which is not a prediction of
+    // this video but a constant. Say nothing instead.
+    if (sourceBitsPerSecond <= 0 &&
+        !(frameSize.width > 0 && frameSize.height > 0)) {
+        return 0;
+    }
+
+    double bitsPerSecond =
+        (double)FBPConverterTargetBitRate(sourceBitsPerSecond, frameSize,
+                                          framesPerSecond);
+    // Audio is passed through, not re-encoded, so it arrives in the output at
+    // exactly the bitrate the manifest states for it.
+    if (audioBitsPerSecond > 0) bitsPerSecond += (double)audioBitsPerSecond;
+
+    double bytes = bitsPerSecond * durationSeconds / 8.0;
+    // 1 TB is not a Reel; a number that big means we misread something.
+    if (!isfinite(bytes) || bytes <= 0 || bytes > 1e12) return 0;
+    return (long long)llround(bytes);
 }
 
 #pragma mark - In-flight registry
@@ -636,8 +799,9 @@ static void FBPConvertEnsureRegistry(void) {
 
     // Asking for a pixel format is what makes this a decode. 420v — 8-bit
     // bi-planar video-range 4:2:0 — is what VideoToolbox's AV1 decoder produces
-    // natively and what its H.264 encoder consumes natively, so the common case
-    // costs no pixel conversion at all. Every AV1 rung Meta has been observed to
+    // natively and what both of its encoders consume natively (HEVC Main and
+    // H.264 High are both 8-bit 4:2:0), so the common case costs no pixel
+    // conversion at all. Every AV1 rung Meta has been observed to
     // serve is 8-bit (the `.08` in `av01.0.05M.08`), so nothing is being
     // truncated in practice; a 10-bit source would be flattened to 8-bit here,
     // which is a real but invisible-in-practice loss and is better than refusing
@@ -703,30 +867,53 @@ static void FBPConvertEnsureRegistry(void) {
 
 /// The encoder settings. This is the one place the conversion is lossy, so every
 /// key here is a deliberate choice rather than a default.
-- (NSDictionary *)videoOutputSettingsForTrack:(AVAssetTrack *)videoTrack {
+- (NSDictionary *)videoOutputSettingsForTrack:(AVAssetTrack *)videoTrack
+                                        codec:(FBPConverterCodec)codec {
     CGSize natural = videoTrack.naturalSize;
 
-    // H.264 wants even dimensions; an odd one is rounded down rather than up, so
-    // the output is never larger than the source. naturalSize is the *encoded*
-    // size, before any rotation matrix — which is right, because rotation is
-    // carried across as a matrix below and not baked into pixels.
+    // Both codecs want even dimensions; an odd one is rounded down rather than
+    // up, so the output is never larger than the source. naturalSize is the
+    // *encoded* size, before any rotation matrix — which is right, because
+    // rotation is carried across as a matrix below and not baked into pixels.
     NSInteger width  = ((NSInteger)llround(natural.width)  / 2) * 2;
     NSInteger height = ((NSInteger)llround(natural.height) / 2) * 2;
     if (width <= 0 || height <= 0) return nil;
 
+    BOOL hevc = (codec == FBPConverterCodecHEVC);
+
     float fps = videoTrack.nominalFrameRate;
-    long long bitRate = FBPConverterTargetBitRate(_sourceBitRate,
-                                                  CGSizeMake(width, height), fps);
+    long long bitRate = FBPConverterTargetBitRateForCodec(_sourceBitRate,
+                                                          CGSizeMake(width, height),
+                                                          fps, codec);
 
     NSMutableDictionary *compression = [NSMutableDictionary dictionaryWithCapacity:6];
     compression[AVVideoAverageBitRateKey] = @(bitRate);
-    // High profile with the level chosen for us. High is what every iOS H.264
-    // encoder produces for camera video and what Photos has always accepted;
-    // pinning a level by hand would mean getting 1080p60 wrong one day.
-    compression[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel;
-    // CABAC over CAVLC: ~10% better at the same quality, and the reason to use
-    // High profile at all.
-    compression[AVVideoH264EntropyModeKey] = AVVideoH264EntropyModeCABAC;
+
+    if (hevc) {
+        // Main profile, level chosen for us. Main is 8-bit 4:2:0, which is
+        // exactly what the reader hands up (420v) and what every AV1 rung Meta
+        // serves is; Main10 would promise a depth there is none of. Pinning a
+        // level by hand would mean getting 1080p60 wrong one day.
+        //
+        // No AVFoundation spelling of this exists, so it is VideoToolbox's own
+        // constant — AVVideoProfileLevelKey forwards the value through to
+        // kVTCompressionPropertyKey_ProfileLevel, which is where it was always
+        // going.
+        compression[AVVideoProfileLevelKey] =
+            (__bridge NSString *)kVTProfileLevel_HEVC_Main_AutoLevel;
+        // AVVideoH264EntropyModeKey is deliberately absent: it is an H.264 key,
+        // HEVC has only CABAC, and passing it makes -canAddInput: refuse the
+        // whole input.
+    } else {
+        // High profile with the level chosen for us. High is what every iOS
+        // H.264 encoder produces for camera video and what Photos has always
+        // accepted.
+        compression[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel;
+        // CABAC over CAVLC: ~10% better at the same quality, and the reason to
+        // use High profile at all.
+        compression[AVVideoH264EntropyModeKey] = AVVideoH264EntropyModeCABAC;
+    }
+
     // B-frames. Costs encode time, buys bitrate — which is the trade this whole
     // function is making.
     compression[AVVideoAllowFrameReorderingKey] = @YES;
@@ -736,11 +923,25 @@ static void FBPConvertEnsureRegistry(void) {
     compression[AVVideoMaxKeyFrameIntervalDurationKey] = @(2.0);
     if (fps > 0.5f) compression[AVVideoExpectedSourceFrameRateKey] = @(llround(fps));
 
-    FBPLog(@"converter: encoding %ldx%ld @%.2ffps source=%lld -> target=%lld bit/s",
-           (long)width, (long)height, fps, _sourceBitRate, bitRate);
+    FBPLog(@"converter: encoding %ldx%ld @%.2ffps source=%lld -> %@ %lld bit/s",
+           (long)width, (long)height, fps, _sourceBitRate,
+           hevc ? @"hevc" : @"h264", bitRate);
 
+    // hvc1, not hev1.
+    //
+    // Both are HEVC in an MP4 and they differ only in where the parameter sets
+    // live: hvc1 keeps VPS/SPS/PPS in the sample entry, hev1 allows them inline
+    // in the bitstream. Apple requires hvc1 for MP4 playback, and an hev1 file
+    // is the standard way an HEVC export ends up refused.
+    //
+    // There is no public key to ask for one or the other — and none is needed:
+    // AVAssetWriter with AVFileTypeMPEG4 writes hvc1. Verified on the real
+    // fixture, reading the finished file back: `codec_tag_string=hvc1`,
+    // `profile=Main`. -logOutputTracks asserts it on every debug conversion so
+    // that a future OS quietly changing its mind shows up as a failing check
+    // rather than as a file Photos will not take.
     return @{
-        AVVideoCodecKey: AVVideoCodecTypeH264,
+        AVVideoCodecKey: hevc ? AVVideoCodecTypeHEVC : AVVideoCodecTypeH264,
         AVVideoWidthKey: @(width),
         AVVideoHeightKey: @(height),
         AVVideoCompressionPropertiesKey: compression,
@@ -768,37 +969,71 @@ static void FBPConvertEnsureRegistry(void) {
     // movflags=+faststart, as in the muxer and as in the rival's own muxing step.
     _writer.shouldOptimizeForNetworkUse = YES;
 
-    NSDictionary *videoSettings = [self videoOutputSettingsForTrack:videoTrack];
-    if (!videoSettings) {
-        if (errorOut) {
-            *errorOut = FBPConvertError(FBPMediaConverterErrorSetupFailed,
-                                        @"The video track has no usable frame "
-                                        @"size.", nil);
+    // HEVC first where the probe said this device encodes it, then H.264.
+    //
+    // The second entry is not redundant with the probe. The probe asks whether
+    // an HEVC encoder exists; -canAddInput: asks whether *these settings* are
+    // accepted, which is a different question and the only one that can still
+    // say no at this point — an unusual frame size, a level no encoder on this
+    // chip reaches. Falling back there costs one dictionary and saves the whole
+    // download, where refusing would hand the user an error for a file H.264
+    // would have produced perfectly well.
+    //
+    // It is the one path where the size the picker promised can be wrong — the
+    // row was sized for HEVC at 2x and this would deliver H.264 at 3x — and the
+    // trade is taken anyway: a file half again as big as the row said beats no
+    // file at all, and it needs a device that reports an HEVC encoder and then
+    // refuses to use it, which nothing measured does. The log line below is what
+    // would identify such a device from a report.
+    FBPConverterCodec codecs[2];
+    NSInteger codecCount = 0;
+    if (FBPMediaConversionCodec() == FBPConverterCodecHEVC) {
+        codecs[codecCount++] = FBPConverterCodecHEVC;
+    }
+    codecs[codecCount++] = FBPConverterCodecH264;
+
+    BOOL accepted = NO;
+    BOOL hadSettings = NO;
+    for (NSInteger index = 0; index < codecCount && !accepted; index++) {
+        NSDictionary *videoSettings = [self videoOutputSettingsForTrack:videoTrack
+                                                                  codec:codecs[index]];
+        if (!videoSettings) break;   // No usable frame size; the codec is not why.
+        hadSettings = YES;
+
+        // No sourceFormatHint: a hint is what passthrough needs, and this input
+        // is the opposite of passthrough.
+        _videoInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
+                                                        outputSettings:videoSettings];
+        // NO is the AVFoundation spelling of the rival's
+        // av_opt_set(ctx, "realtime", "0"): quality over latency. Nothing is
+        // waiting on a frame here, so the encoder may take as long as it likes
+        // per frame.
+        _videoInput.expectsMediaDataInRealTime = NO;
+
+        // The same trap as in the muxer, and it bites identically here even
+        // though every pixel is being re-encoded: rotation in an MP4 is a matrix
+        // on the track, not something in the picture. A fresh input's matrix is
+        // the identity, so without this every portrait Reel converts to a file
+        // that lands in Photos on its side.
+        _videoInput.transform = videoTrack.preferredTransform;
+
+        accepted = [_writer canAddInput:_videoInput];
+        if (!accepted) {
+            FBPLog(@"converter: %@ settings refused, %@",
+                   codecs[index] == FBPConverterCodecHEVC ? @"hevc" : @"h264",
+                   index + 1 < codecCount ? @"falling back" : @"nothing left to try");
+            _videoInput = nil;
         }
-        return NO;
     }
 
-    // No sourceFormatHint: a hint is what passthrough needs, and this input is
-    // the opposite of passthrough.
-    _videoInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
-                                                    outputSettings:videoSettings];
-    // NO is the AVFoundation spelling of the rival's
-    // av_opt_set(ctx, "realtime", "0"): quality over latency. Nothing is waiting
-    // on a frame here, so the encoder may take as long as it likes per frame.
-    _videoInput.expectsMediaDataInRealTime = NO;
-
-    // The same trap as in the muxer, and it bites identically here even though
-    // every pixel is being re-encoded: rotation in an MP4 is a matrix on the
-    // track, not something in the picture. A fresh input's matrix is the
-    // identity, so without this every portrait Reel converts to a file that
-    // lands in Photos on its side.
-    _videoInput.transform = videoTrack.preferredTransform;
-
-    if (![_writer canAddInput:_videoInput]) {
+    if (!accepted) {
         if (errorOut) {
             *errorOut = FBPConvertError(FBPMediaConverterErrorSetupFailed,
-                                        @"This device would not accept these "
-                                        @"encoder settings.", nil);
+                                        hadSettings
+                                            ? @"This device would not accept these "
+                                              @"encoder settings."
+                                            : @"The video track has no usable frame "
+                                              @"size.", nil);
         }
         return NO;
     }
@@ -1143,9 +1378,11 @@ static CMTime FBPConvertStartTime(CMSampleBufferRef sample, AVAssetTrack *track)
 
 /// Read the finished file back and log what its tracks actually are.
 ///
-/// The standing proof that this produced what Photos needs: these four-character
-/// codes have to read `avc1` and `mp4a`, and if a future change ever lets AV1
-/// through untouched they will say so. Debug builds only.
+/// The standing proof that this produced what Photos needs: the video track's
+/// four-character code has to read `hvc1` — not `hev1`, which is the same codec
+/// in a container layout Apple will not play — or `avc1` on the fallback, and if
+/// a future change ever lets AV1 through untouched it will say so. Debug builds
+/// only.
 - (void)logOutputTracks {
 #ifdef DEBUG
     AVURLAsset *result = [AVURLAsset URLAssetWithURL:_outputURL options:nil];
@@ -1153,8 +1390,15 @@ static CMTime FBPConvertStartTime(CMSampleBufferRef sample, AVAssetTrack *track)
     for (AVAssetTrack *track in result.tracks) {
         CMFormatDescriptionRef format =
             (__bridge CMFormatDescriptionRef)track.formatDescriptions.firstObject;
-        FBPLog(@"converter: out %@ %@ %.3fs", track.mediaType,
-               FBPConvertFourCC(format), CMTimeGetSeconds(track.timeRange.duration));
+        NSString *fourCC = FBPConvertFourCC(format);
+        FBPLog(@"converter: out %@ %@ %.3fs", track.mediaType, fourCC,
+               CMTimeGetSeconds(track.timeRange.duration));
+
+        if (![track.mediaType isEqualToString:AVMediaTypeVideo]) continue;
+        if (![fourCC isEqualToString:@"hvc1"] && ![fourCC isEqualToString:@"avc1"]) {
+            FBPLog(@"converter: !! output video is %@, which Photos will refuse "
+                   @"(expected hvc1 or avc1)", fourCC);
+        }
     }
 #endif
 }
