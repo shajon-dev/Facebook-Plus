@@ -174,6 +174,13 @@
 "download.manager.reveal" = "Photos में देखें";
 "download.manager.revealMissing" = "यह आइटम अब Photos में नहीं है।";
 "download.manager.revealFailed" = "Photos नहीं खुल सका।";
+"download.toast.started" = "डाउनलोड हो रहा है";
+"download.toast.finished" = "डाउनलोड पूरा हुआ";
+"download.manager.delete" = "हटाएँ";
+"download.manager.delete.title" = "डाउनलोड हटाएँ?";
+"download.manager.delete.message" = "“%@” सूची से हटा दिया जाएगा और Photos से मिटा दिया जाएगा।";
+"download.manager.deleted" = "डाउनलोड हटा दिया गया";
+"download.manager.deleteKept" = "सूची से हटा दिया गया। Photos में वीडियो बना हुआ है।";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
 "download.job.stage.queued" = "इंतज़ार में…";

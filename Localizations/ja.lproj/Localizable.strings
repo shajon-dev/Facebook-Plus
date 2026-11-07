@@ -174,6 +174,13 @@
 "download.manager.reveal" = "写真で見る";
 "download.manager.revealMissing" = "この項目は写真にもうありません。";
 "download.manager.revealFailed" = "写真を開けませんでした。";
+"download.toast.started" = "ダウンロード中";
+"download.toast.finished" = "ダウンロード完了";
+"download.manager.delete" = "削除";
+"download.manager.delete.title" = "ダウンロードを削除しますか？";
+"download.manager.delete.message" = "「%@」をリストから削除し、写真からも削除します。";
+"download.manager.deleted" = "ダウンロードを削除しました";
+"download.manager.deleteKept" = "リストから削除しました。写真には動画が残っています。";
 "download.manager.source.reel" = "Reels";
 "download.manager.source.story" = "ストーリーズ";
 "download.job.stage.queued" = "待機中…";

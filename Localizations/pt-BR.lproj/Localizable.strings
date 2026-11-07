@@ -174,6 +174,13 @@
 "download.manager.reveal" = "Ver em Fotos";
 "download.manager.revealMissing" = "Esse item não está mais em Fotos.";
 "download.manager.revealFailed" = "Não foi possível abrir o Fotos.";
+"download.toast.started" = "Baixando";
+"download.toast.finished" = "Download concluído";
+"download.manager.delete" = "Excluir";
+"download.manager.delete.title" = "Excluir download?";
+"download.manager.delete.message" = "“%@” será removido da lista e excluído das Fotos.";
+"download.manager.deleted" = "Download excluído";
+"download.manager.deleteKept" = "Removido da lista. As Fotos mantiveram o vídeo.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
 "download.job.stage.queued" = "Aguardando…";

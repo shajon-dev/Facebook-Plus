@@ -75,6 +75,57 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
     [task resume];
 }
 
+/// Draw a poster frame from the saved Photos asset.
+///
+/// Best-effort in every direction: no asset identifier, an asset the user has
+/// since deleted, or a library the app may only add to and not read, all end
+/// with the row keeping its glyph rather than with an error. Cached under a
+/// key that cannot collide with a URL's.
+static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
+                                          CGSize size,
+                                          void (^then)(UIImage *image)) {
+    if (assetIdentifier.length == 0 || !then) return;
+
+    NSString *key = [@"asset:" stringByAppendingString:assetIdentifier];
+    UIImage *cached = [FBPDownloadThumbnailCache() objectForKey:key];
+    if (cached) { then(cached); return; }
+
+    NSMutableSet *inFlight = FBPDownloadThumbnailsInFlight();
+    if ([inFlight containsObject:key]) return;
+    [inFlight addObject:key];
+
+    PHAsset *asset =
+        [PHAsset fetchAssetsWithLocalIdentifiers:@[assetIdentifier] options:nil].firstObject;
+    if (!asset) {
+        [inFlight removeObject:key];
+        return;
+    }
+
+    PHImageRequestOptions *options = [[PHImageRequestOptions alloc] init];
+    options.networkAccessAllowed = NO;   // an iCloud round trip for a 44pt row is not worth it
+    options.deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic;
+    options.resizeMode = PHImageRequestOptionsResizeModeFast;
+
+    CGFloat scale = UIScreen.mainScreen.scale;
+    CGSize pixels = CGSizeMake(size.width * scale, size.height * scale);
+
+    [PHImageManager.defaultManager
+        requestImageForAsset:asset
+                  targetSize:pixels
+                 contentMode:PHImageContentModeAspectFill
+                     options:options
+               resultHandler:^(UIImage *image, __unused NSDictionary *info) {
+        // Opportunistic delivery calls back more than once — a thumbnail first,
+        // then the real thing. Both are welcome; only the last one is cached.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [FBPDownloadThumbnailsInFlight() removeObject:key];
+            if (!image) return;
+            [FBPDownloadThumbnailCache() setObject:image forKey:key cost:(NSUInteger)(pixels.width * pixels.height * 4)];
+            then(image);
+        });
+    }];
+}
+
 #pragma mark - Row
 
 /// FBP-prefixed so the OLED sweep leaves its card colour alone, like every other
@@ -384,17 +435,28 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
         [UIImage fbp_symbolNamed:(job.surface == FBPDownloadJobSurfaceStory ? @"camera" : @"play")
                             size:18];
 
-    NSURL *url = job.thumbnailURL;
-    if (!url) return;
-
     NSString *wanted = job.identifier;
-    FBPDownloadLoadThumbnail(url, ^(UIImage *image) {
+    void (^show)(UIImage *) = ^(UIImage *image) {
         // The row may have been reused for another download while the poster
         // frame was in flight.
-        if (![cell.jobIdentifier isEqualToString:wanted]) return;
+        if (!image || ![cell.jobIdentifier isEqualToString:wanted]) return;
         cell.thumbView.image = image;
         cell.placeholderView.hidden = YES;
-    });
+    };
+
+    NSURL *url = job.thumbnailURL;
+    if (url) {
+        FBPDownloadLoadThumbnail(url, show);
+        return;
+    }
+
+    // No poster URL. Most Reels have none — -firstFrameThumbnailURL is simply
+    // absent on the playback item — which is why these rows used to sit on a
+    // grey glyph for the whole session. Once the video is in Photos the asset
+    // itself can draw one, and that is a local read with no network at all.
+    FBPDownloadLoadAssetThumbnail(job.assetIdentifier,
+                                  CGSizeMake(kThumbWidth, kThumbHeight),
+                                  show);
 }
 
 /// The one button on a row, which is whatever that job's state makes useful:
@@ -430,6 +492,112 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
                        forState:UIControlStateNormal];
 }
 
+#pragma mark Deleting
+
+/// The job a row stands for, or nil if the table is asking about a row the
+/// snapshot no longer has — a swipe can outlive the reload that removed it.
+- (nullable FBPDownloadJob *)jobAtIndexPath:(NSIndexPath *)indexPath {
+    if (indexPath.section != 0) return nil;
+    if (indexPath.row < 0 || (NSUInteger)indexPath.row >= _jobs.count) return nil;
+    return _jobs[(NSUInteger)indexPath.row];
+}
+
+/// Every row can go. A running download is stopped first, so there is no case
+/// the user has to think about before swiping.
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+    return [self jobAtIndexPath:indexPath] != nil;
+}
+
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView
+    trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return [self deleteConfigForIndexPath:indexPath];
+}
+
+// Either direction, the same as the imported fonts in FBPFontController — that
+// is the gesture the user already has in their hands for this.
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView
+    leadingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return [self deleteConfigForIndexPath:indexPath];
+}
+
+- (nullable UISwipeActionsConfiguration *)deleteConfigForIndexPath:(NSIndexPath *)indexPath {
+    FBPDownloadJob *job = [self jobAtIndexPath:indexPath];
+    if (!job) return nil;
+
+    __weak typeof(self) weakSelf = self;
+    UIContextualAction *remove =
+        [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive
+                                                title:FBPL(@"download.manager.delete")
+                                              handler:^(UIContextualAction *action,
+                                                        UIView *sourceView,
+                                                        void (^completion)(BOOL)) {
+        // Hand the swipe back first, then confirm — nothing is deleted on OK alone.
+        completion(NO);
+        [weakSelf confirmDeleteJob:job];
+    }];
+    remove.image = [UIImage systemImageNamed:@"trash"];
+
+    UISwipeActionsConfiguration *config =
+        [UISwipeActionsConfiguration configurationWithActions:@[remove]];
+    // A video the user downloaded is not something a flick should be able to
+    // destroy, so the action has to be tapped.
+    config.performsFirstActionWithFullSwipe = NO;
+    return config;
+}
+
+- (void)confirmDeleteJob:(FBPDownloadJob *)job {
+    NSString *name = job.title.length ? job.title : job.surfaceName;
+    UIAlertController *alert = [UIAlertController
+        alertControllerWithTitle:FBPL(@"download.manager.delete.title")
+                         message:[NSString stringWithFormat:FBPL(@"download.manager.delete.message"), name]
+                  preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
+                                              style:UIAlertActionStyleCancel
+                                            handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"download.manager.delete")
+                                              style:UIAlertActionStyleDestructive
+                                            handler:^(__unused UIAlertAction *action) {
+        [self deleteJob:job];
+    }]];
+    alert.view.tintColor = FBPTintColor();
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+/// Remove the row and, when the video reached Photos, the video itself.
+///
+/// Photos puts up its own confirmation for a delete — that sheet is the system's
+/// and cannot be suppressed, which is exactly right for something permanent.
+/// The row is dropped either way: the user asked for it gone from this list, and
+/// a video they chose to keep in Photos is not a reason to keep a finished job.
+- (void)deleteJob:(FBPDownloadJob *)job {
+    if (job.canCancel) [FBPDownloadStore.shared cancelJob:job];
+
+    NSString *identifier = job.assetIdentifier;
+    PHFetchResult<PHAsset *> *assets = identifier.length
+        ? [PHAsset fetchAssetsWithLocalIdentifiers:@[identifier] options:nil]
+        : nil;
+
+    if (assets.count == 0) {
+        // Never saved, or already gone from Photos. Dropping the row is the
+        // whole of the delete.
+        [FBPDownloadStore.shared removeJob:job];
+        [FBPToastManager.shared showMessage:FBPL(@"download.manager.deleted") success:YES];
+        return;
+    }
+
+    [PHPhotoLibrary.sharedPhotoLibrary performChanges:^{
+        [PHAssetChangeRequest deleteAssets:assets];
+    } completionHandler:^(BOOL success, __unused NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [FBPDownloadStore.shared removeJob:job];
+            [FBPToastManager.shared
+                showMessage:(success ? FBPL(@"download.manager.deleted")
+                                     : FBPL(@"download.manager.deleteKept"))
+                    success:success];
+        });
+    }];
+}
+
 /// Open Photos at the saved asset.
 ///
 /// There is no public API that opens the Photos app on one asset, so this is
@@ -462,50 +630,28 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
 
 @end
 
-#pragma mark - HUD pill
+#pragma mark - Download announcements
 
-/// Target for the pill's tap, kept separate so nothing is added to FBPToastView.
+/// Says a download started, and says how it ended. Nothing in between.
 ///
-/// The pill is an ordinary FBPToastView; this object owns the gesture that opens
-/// the manager from it, and refuses taps that landed on the pill's own stop
-/// button — otherwise stopping a download would also push the manager into view.
-@interface FBPDownloadPillTap : NSObject <UIGestureRecognizerDelegate>
-@end
-
-@implementation FBPDownloadPillTap
-
-- (void)openManager {
-    [FBPDownloadManagerController presentFromViewController:nil];
-}
-
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)recognizer
-       shouldReceiveTouch:(UITouch *)touch {
-    for (UIView *view = touch.view; view; view = view.superview) {
-        if ([view isKindOfClass:UIControl.class]) return NO;
-        if (view == recognizer.view) break;
-    }
-    return YES;
-}
-
-@end
-
-/// One pill per running download, reconciled against the store.
+/// This replaced a live progress pill. The pill was an FBPToastView parked in
+/// FBPToastWindow that followed the transfer percent by percent and opened the
+/// manager when tapped — and watching a number climb is not what the user wants
+/// from a feed: "quality select korar sathe sathe eta toast message er moddhe
+/// download hoy and toast ei download progress dekhay — jetar dorkar nai".
 ///
-/// This is what replaced the progress popup. The old one was a UIAlertController
-/// with a progress view pushed into its private `contentViewController` key: it
-/// blocked the app while a download ran, and dismissing it left the transfer
-/// going with no way back to it. A pill lives in FBPToastWindow instead, which
-/// already sits above the app through modals and full-screen video, so it keeps
-/// showing while the user scrolls on — and tapping it opens the manager, which
-/// is where the state actually is.
+/// So a tap now says "Downloading", and when the file is in Photos it says
+/// "Download Completed". The percentages, the stop button and the per-job
+/// history all still exist, in the one place that is for them: the download
+/// manager, under Settings → Downloads.
 @interface FBPDownloadActivity : NSObject
 @property (class, readonly) FBPDownloadActivity *shared;
-@property (nonatomic, strong) NSMutableDictionary<NSString *, FBPToastView *> *pills;
-/// Jobs whose outcome has already been shown, so a finished job is never
-/// announced twice. Pruned against the store on every pass, so it cannot
-/// outgrow the job list.
+/// Jobs already told the user about. Two sets rather than one flag per job,
+/// because a download can be announced as started and as finished, and a fast
+/// cached one is only ever announced as finished. Both are pruned against the
+/// store on every pass, so neither can outgrow the job list.
+@property (nonatomic, strong) NSMutableSet<NSString *> *started;
 @property (nonatomic, strong) NSMutableSet<NSString *> *announced;
-@property (nonatomic, strong) FBPDownloadPillTap *tapTarget;
 @end
 
 @implementation FBPDownloadActivity
@@ -519,9 +665,8 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
 
 - (instancetype)init {
     if ((self = [super init])) {
-        _pills = [NSMutableDictionary dictionary];
+        _started = [NSMutableSet set];
         _announced = [NSMutableSet set];
-        _tapTarget = [[FBPDownloadPillTap alloc] init];
         [NSNotificationCenter.defaultCenter addObserver:self
                                                selector:@selector(storeDidChange)
                                                    name:FBPDownloadStoreDidChangeNotification
@@ -536,96 +681,38 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
 
     for (FBPDownloadJob *job in jobs) {
         [seen addObject:job.identifier];
-        FBPToastView *pill = self.pills[job.identifier];
 
         if (job.isActive) {
-            if (!pill) pill = [self raisePillForJob:job];
-            // FBPToastView appends the percentage itself, so the text is just
-            // the quality and the stage.
-            [pill updateText:[self pillTextForJob:job] progress:job.fraction];
+            // Said once, on the first notification this job produces, and never
+            // updated — the store posts one of these per percentage point and
+            // reacting to them is the behaviour being removed.
+            if ([self.started containsObject:job.identifier]) continue;
+            [self.started addObject:job.identifier];
+            [FBPToastManager.shared showMessage:FBPL(@"download.toast.started") success:YES];
             continue;
         }
 
-        // Already reported. Nothing to do for the rest of the session.
         if ([self.announced containsObject:job.identifier]) continue;
         [self.announced addObject:job.identifier];
+        // A cached progressive file can be fetched and saved inside one turn of
+        // the run loop, so this may be the first time we have seen the job at
+        // all. Marking it started keeps the sets consistent.
+        [self.started addObject:job.identifier];
 
         // A cancellation is the user's own doing; telling them it stopped is
         // noise, the same judgement the surfaces already made.
-        if (job.stage == FBPDownloadJobStageCancelled) {
-            [pill hideWithCompletion:nil];
-            [self.pills removeObjectForKey:job.identifier];
-            continue;
-        }
+        if (job.stage == FBPDownloadJobStageCancelled) continue;
 
-        NSString *outcome = [NSString stringWithFormat:@"%@ · %@",
-                                                       job.surfaceName, job.stageText];
         BOOL ok = (job.stage == FBPDownloadJobStageDone);
-
-        if (pill) {
-            // Finished while its pill was up: the same pill carries the
-            // outcome, so the HUD does not flash one capsule away and another
-            // in. It hides itself after that (showMessage: schedules it), which
-            // is why the dictionary entry goes now.
-            [self.pills removeObjectForKey:job.identifier];
-            [pill showMessage:outcome success:ok];
-            continue;
-        }
-
-        // Finished before its pill ever went up — a cached progressive file can
-        // be down and saved inside one turn of the run loop. Without this such a
-        // download would be completely silent, which is what the progress card
-        // used to prevent.
-        [FBPToastManager.shared showMessage:outcome success:ok];
+        NSString *message = ok
+            ? FBPL(@"download.toast.finished")
+            : (job.failureMessage.length ? job.failureMessage
+                                         : FBPL(@"download.job.stage.failed"));
+        [FBPToastManager.shared showMessage:message success:ok];
     }
 
-    // A job cleared out of the store while its pill was up.
-    for (NSString *identifier in self.pills.allKeys) {
-        if ([seen containsObject:identifier]) continue;
-        [self.pills[identifier] hideWithCompletion:nil];
-        [self.pills removeObjectForKey:identifier];
-    }
-
-    // Keep the announced set to the jobs that still exist.
+    [self.started intersectSet:seen];
     [self.announced intersectSet:seen];
-}
-
-/// What a pill says while a download runs: which surface, and which quality.
-///
-/// FBPToastView appends the percentage to this itself on every update, so the
-/// text deliberately carries no number.
-- (NSString *)pillTextForJob:(FBPDownloadJob *)job {
-    return job.quality.length
-        ? [NSString stringWithFormat:@"%@ · %@", job.surfaceName, job.quality]
-        : job.surfaceName;
-}
-
-- (FBPToastView *)raisePillForJob:(FBPDownloadJob *)job {
-    // A stop button only when the flow behind this job actually has a cancel to
-    // offer; the single-file story path does not, and a button that did nothing
-    // would be worse than none.
-    dispatch_block_t stop = job.canCancel
-        ? ^{ [FBPDownloadStore.shared cancelJob:job]; }
-        : nil;
-
-    FBPToastView *pill = [FBPToastManager.shared showProgress:[self pillTextForJob:job]
-                                              stopCompletion:stop];
-    if (!pill) return nil;
-
-    UITapGestureRecognizer *tap =
-        [[UITapGestureRecognizer alloc] initWithTarget:self.tapTarget
-                                                action:@selector(openManager)];
-    tap.delegate = self.tapTarget;
-    // The pill already has a tap of its own (dismiss-on-tap, which it ignores
-    // while processing). Making that one wait for this one to fail keeps which
-    // gesture wins deterministic, without touching FBPToastView.
-    for (UIGestureRecognizer *existing in pill.gestureRecognizers) {
-        [existing requireGestureRecognizerToFail:tap];
-    }
-    [pill addGestureRecognizer:tap];
-
-    self.pills[job.identifier] = pill;
-    return pill;
 }
 
 @end

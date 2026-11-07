@@ -174,6 +174,13 @@
 "download.manager.reveal" = "Photos-এ দেখুন";
 "download.manager.revealMissing" = "এটি আর Photos-এ নেই।";
 "download.manager.revealFailed" = "Photos খোলা গেল না।";
+"download.toast.started" = "ডাউনলোড হচ্ছে";
+"download.toast.finished" = "ডাউনলোড সম্পন্ন";
+"download.manager.delete" = "মুছুন";
+"download.manager.delete.title" = "ডাউনলোড মুছবেন?";
+"download.manager.delete.message" = "“%@” তালিকা থেকে সরানো হবে এবং Photos থেকে মুছে যাবে।";
+"download.manager.deleted" = "ডাউনলোড মুছে ফেলা হয়েছে";
+"download.manager.deleteKept" = "তালিকা থেকে সরানো হয়েছে। Photos-এ ভিডিওটি রয়ে গেছে।";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
 "download.job.stage.queued" = "অপেক্ষা করছে…";

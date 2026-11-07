@@ -174,6 +174,13 @@
 "download.manager.reveal" = "Lihat di Foto";
 "download.manager.revealMissing" = "Item itu tidak ada lagi di Foto.";
 "download.manager.revealFailed" = "Tidak bisa membuka Foto.";
+"download.toast.started" = "Mengunduh";
+"download.toast.finished" = "Unduhan selesai";
+"download.manager.delete" = "Hapus";
+"download.manager.delete.title" = "Hapus unduhan?";
+"download.manager.delete.message" = "“%@” akan dihapus dari daftar dan dihapus dari Foto.";
+"download.manager.deleted" = "Unduhan dihapus";
+"download.manager.deleteKept" = "Dihapus dari daftar. Foto masih menyimpan videonya.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
 "download.job.stage.queued" = "Menunggu…";
