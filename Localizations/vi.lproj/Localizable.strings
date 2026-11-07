@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "Chất lượng thường 360°";
 "download.quality.spherical.detail" = "Nguồn 360° đầy đủ";
 "download.quality.original" = "Bản gốc";
+"download.quality.dash.detail" = "~%@ · dung lượng dự kiến";
 "reels.hideOverlay.a11y" = "Ẩn lớp phủ Reel";
 "update.title" = "Đã có bản cập nhật";
 "update.subtitle" = "Phiên bản %@ hiện đã có.";

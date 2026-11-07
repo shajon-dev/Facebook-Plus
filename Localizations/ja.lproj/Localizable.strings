@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "360° 標準画質";
 "download.quality.spherical.detail" = "360° のフル映像";
 "download.quality.original" = "オリジナル";
+"download.quality.dash.detail" = "~%@ · 推定サイズ";
 "reels.hideOverlay.a11y" = "リールのオーバーレイを非表示";
 "update.title" = "アップデートがあります";
 "update.subtitle" = "バージョン %@ が利用可能です。";

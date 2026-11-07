@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "৩৬০° সাধারণ কোয়ালিটি";
 "download.quality.spherical.detail" = "সম্পূর্ণ ৩৬০° সোর্স";
 "download.quality.original" = "আসল";
+"download.quality.dash.detail" = "~%@ · আনুমানিক আকার";
 "reels.hideOverlay.a11y" = "Reel ওভারলে লুকান";
 "update.title" = "আপডেট উপলব্ধ";
 "update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";

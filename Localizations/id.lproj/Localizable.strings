@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "Kualitas standar 360°";
 "download.quality.spherical.detail" = "Sumber 360° penuh";
 "download.quality.original" = "Asli";
+"download.quality.dash.detail" = "~%@ · perkiraan ukuran";
 "reels.hideOverlay.a11y" = "Sembunyikan overlay Reel";
 "update.title" = "Pembaruan Tersedia";
 "update.subtitle" = "Versi %@ kini tersedia.";
