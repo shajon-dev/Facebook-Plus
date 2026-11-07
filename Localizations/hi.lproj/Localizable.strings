@@ -98,6 +98,8 @@
 "download.reel.expired" = "यह डाउनलोड लिंक ख़त्म हो गया है। डाउनलोड दोबारा दबाएँ।";
 "download.merge.progress" = "ऑडियो और वीडियो जोड़े जा रहे हैं…";
 "download.merge.failed" = "इस वीडियो का ऑडियो और चित्र जोड़ा नहीं जा सका।\n%@";
+"download.convert.failed" = "इस वीडियो को Photos के लिए बदला नहीं जा सका।\n%@";
+"download.convert.unsupported" = "यह iPhone इस क्वालिटी को नहीं बदल सकता। कोई दूसरी चुनें।";
 "download.stream.videoFailed" = "वीडियो स्ट्रीम डाउनलोड नहीं हुई।\n%@";
 "download.stream.audioFailed" = "ऑडियो स्ट्रीम डाउनलोड नहीं हुई।\n%@";
 "download.quality.select.title" = "क्वालिटी चुनें";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "इंतज़ार में…";
 "download.job.stage.fetching" = "डाउनलोड हो रहा है…";
 "download.job.stage.fetchingBoth" = "वीडियो और ऑडियो डाउनलोड हो रहे हैं…";
+"download.job.stage.converting" = "Photos के लिए बदला जा रहा है…";
 "download.job.stage.saving" = "Photos में सहेजा जा रहा है…";
 "download.job.stage.done" = "Photos में सहेजा गया";
 "download.job.stage.failed" = "डाउनलोड नहीं हो सका";

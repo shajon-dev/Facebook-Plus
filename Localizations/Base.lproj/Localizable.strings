@@ -98,6 +98,8 @@
 "download.reel.expired" = "This download link has expired. Tap download again.";
 "download.merge.progress" = "Merging audio and video…";
 "download.merge.failed" = "Couldn’t merge this video’s audio and picture.\n%@";
+"download.convert.failed" = "Couldn’t convert this video for Photos.\n%@";
+"download.convert.unsupported" = "This iPhone can’t convert this quality. Try a different one.";
 "download.stream.videoFailed" = "The picture stream didn’t download.\n%@";
 "download.stream.audioFailed" = "The audio stream didn’t download.\n%@";
 "download.quality.select.title" = "Select Quality";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "Waiting…";
 "download.job.stage.fetching" = "Downloading…";
 "download.job.stage.fetchingBoth" = "Downloading video and audio…";
+"download.job.stage.converting" = "Converting for Photos…";
 "download.job.stage.saving" = "Saving to Photos…";
 "download.job.stage.done" = "Saved to Photos";
 "download.job.stage.failed" = "Download failed";

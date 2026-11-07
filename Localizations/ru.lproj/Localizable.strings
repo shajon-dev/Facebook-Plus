@@ -98,6 +98,8 @@
 "download.reel.expired" = "Срок действия ссылки истёк. Нажмите скачивание ещё раз.";
 "download.merge.progress" = "Объединение звука и видео…";
 "download.merge.failed" = "Не удалось объединить звук и изображение этого видео.\n%@";
+"download.convert.failed" = "Не удалось преобразовать это видео для «Фото».\n%@";
+"download.convert.unsupported" = "Этот iPhone не может преобразовать это качество. Выберите другое.";
 "download.stream.videoFailed" = "Видеопоток не загрузился.\n%@";
 "download.stream.audioFailed" = "Аудиопоток не загрузился.\n%@";
 "download.quality.select.title" = "Выберите качество";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "Ожидание…";
 "download.job.stage.fetching" = "Загрузка…";
 "download.job.stage.fetchingBoth" = "Загрузка видео и звука…";
+"download.job.stage.converting" = "Преобразование для «Фото»…";
 "download.job.stage.saving" = "Сохранение в Фото…";
 "download.job.stage.done" = "Сохранено в Фото";
 "download.job.stage.failed" = "Не удалось загрузить";

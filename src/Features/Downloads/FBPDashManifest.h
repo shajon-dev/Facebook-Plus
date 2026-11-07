@@ -28,9 +28,18 @@
 // of a refusal.
 //
 // Two things are still refused, because both are still true: a <BaseURL> that
-// does not resolve to an absolute http(s) URL is not fetchable at all, and
-// AV1/VP9 cannot be passed through AVAssetWriter, so offering such a rung would
-// mean a full download followed by a failed mux. Both say so in -droppedNotes.
+// does not resolve to an absolute http(s) URL is not fetchable at all, and VP9
+// can be neither saved to Photos nor converted by anything this tweak has, so
+// offering such a rung would mean a full download followed by a failed save.
+// Both say so in -droppedNotes.
+//
+// AV1 is the interesting middle case and is no longer simply refused. Photos
+// will not take AV1 (measured: PHPhotosErrorDomain 3302), but FBPMediaConverter
+// can re-encode it to H.264 first — so an AV1 rung is offered when, and only
+// when, this device can actually decode AV1, and comes back marked
+// -needsConversion. On a handset with no AV1 decoder it is refused exactly as
+// before, with a -droppedNotes line that says so. This matters more than it
+// sounds: five of six captured Meta manifests are AV1-only.
 //
 // There are two readers. NSXMLParser first; when it yields no video rung from a
 // document long enough to hold one, a regular-expression scraper re-reads the
@@ -51,9 +60,11 @@
 //
 // Mixed-codec manifests are normal: Meta ships AVC, VP9 and AV1 lanes in one
 // MPD, in several video AdaptationSets, so the same label can appear two or
-// three times. Only H.264/HEVC — or a representation that declares no codec at
-// all — survives, and that filter runs before dedupe so a VP9 entry can never
-// win a label.
+// three times. H.264/HEVC, a representation that declares no codec at all, and
+// AV1 where it can be converted all survive; VP9 never does. The filter runs
+// before dedupe so a VP9 entry can never win a label, and the codec ranking
+// puts H.264 ahead of AV1 at the same label so a lane that can be copied always
+// beats one that would have to be re-encoded.
 //
 // Video and audio are separate representations — a published capture census
 // found 176 of 176 track-separated, and no representation has ever been
@@ -113,6 +124,22 @@ NS_ASSUME_NONNULL_BEGIN
 /// The opposite order to @c qualityRank, deliberately — Meta's four CRF rungs
 /// at one resolution can only be told apart by their labels.
 @property (nonatomic, copy, readonly, nullable) NSString *displayLabel;
+
+/// This rung is AV1, so saving it means re-encoding the picture to H.264 first
+/// (FBPMediaConverter) rather than copying it (FBPMediaMuxer).
+///
+/// Only ever YES on a device that can actually decode AV1 — the codec gate
+/// refuses AV1 outright where it cannot, so such a rung never becomes a
+/// representation at all. A caller can therefore treat this as "convert it",
+/// never as "check whether conversion is possible".
+///
+/// What it costs, so a caller can decide whether to prefer another rung:
+/// minutes of sustained encoding instead of a moment of I/O, a battery hit, and
+/// an output file several times the source's size that is also perceptually
+/// slightly worse than the source. An H.264 rung at the same label is strictly
+/// better, which is why @c videoRepresentations already ranks one ahead of this
+/// where a manifest offers both.
+@property (nonatomic, assign, readonly) BOOL needsConversion;
 
 @end
 

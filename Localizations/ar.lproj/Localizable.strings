@@ -98,6 +98,8 @@
 "download.reel.expired" = "انتهت صلاحية رابط التنزيل. اضغط زر التنزيل مرة أخرى.";
 "download.merge.progress" = "جارٍ دمج الصوت والصورة…";
 "download.merge.failed" = "تعذّر دمج صوت هذا الفيديو مع صورته.\n%@";
+"download.convert.failed" = "تعذّر تحويل هذا الفيديو ليُحفظ في الصور.\n%@";
+"download.convert.unsupported" = "لا يستطيع هذا الـ iPhone تحويل هذه الجودة. جرّب جودة أخرى.";
 "download.stream.videoFailed" = "لم يتم تنزيل مسار الصورة.\n%@";
 "download.stream.audioFailed" = "لم يتم تنزيل المسار الصوتي.\n%@";
 "download.quality.select.title" = "اختر الجودة";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "في الانتظار…";
 "download.job.stage.fetching" = "جارٍ التنزيل…";
 "download.job.stage.fetchingBoth" = "جارٍ تنزيل الصورة والصوت…";
+"download.job.stage.converting" = "جارٍ التحويل للصور…";
 "download.job.stage.saving" = "جارٍ الحفظ في الصور…";
 "download.job.stage.done" = "تم الحفظ في الصور";
 "download.job.stage.failed" = "فشل التنزيل";

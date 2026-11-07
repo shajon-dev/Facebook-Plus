@@ -98,6 +98,8 @@
 "download.reel.expired" = "এই ডাউনলোড লিংকের সময় শেষ। আবার ডাউনলোড চাপুন।";
 "download.merge.progress" = "অডিও আর ভিডিও জোড়া লাগানো হচ্ছে…";
 "download.merge.failed" = "এই ভিডিওর অডিও আর ছবি জোড়া লাগানো গেল না।\n%@";
+"download.convert.failed" = "এই ভিডিওটি Photos-এর জন্য রূপান্তর করা গেল না।\n%@";
+"download.convert.unsupported" = "এই iPhone এই কোয়ালিটি রূপান্তর করতে পারে না। অন্য একটি বেছে নিন।";
 "download.stream.videoFailed" = "ছবির স্ট্রিম ডাউনলোড হয়নি।\n%@";
 "download.stream.audioFailed" = "অডিও স্ট্রিম ডাউনলোড হয়নি।\n%@";
 "download.quality.select.title" = "কোয়ালিটি বেছে নিন";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "অপেক্ষা করছে…";
 "download.job.stage.fetching" = "ডাউনলোড হচ্ছে…";
 "download.job.stage.fetchingBoth" = "ভিডিও আর অডিও ডাউনলোড হচ্ছে…";
+"download.job.stage.converting" = "Photos-এর জন্য রূপান্তর করা হচ্ছে…";
 "download.job.stage.saving" = "Photos-এ সংরক্ষণ হচ্ছে…";
 "download.job.stage.done" = "Photos-এ সংরক্ষিত হয়েছে";
 "download.job.stage.failed" = "ডাউনলোড ব্যর্থ হয়েছে";

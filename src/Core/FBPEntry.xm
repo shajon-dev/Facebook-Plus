@@ -22,6 +22,21 @@ extern void FBPInitLinkHooks(void);
 extern void FBPInitLinkBridge(void);
 extern void FBPInitCallBlocker(void);
 
+/// Not a hook installer: it settles, off the main thread, whether this device
+/// can decode AV1 — which decides whether the download picker may offer AV1
+/// quality rungs at all. Declared here rather than by importing
+/// FBPMediaConverter.h, which would pull AVFoundation and VideoToolbox into this
+/// constructor for one call. Asked for now because the first caller would
+/// otherwise be the DASH reader on the main thread during a download tap, and
+/// the answer costs ~46 ms to work out once.
+///
+/// `extern "C"` unlike the installers above, and that difference is the point:
+/// logos compiles this file as Objective-C++, so a bare `extern` would look for
+/// a C++-mangled symbol. The installers get away with it because every one of
+/// them is defined in another .xm and so is mangled the same way; this one lives
+/// in a plain .m and is not.
+extern "C" void FBPMediaConversionPrewarm(void);
+
 /// Runs every installer. Each group latches itself with FBP_ONCE, so calling
 /// this repeatedly installs each hook exactly once.
 static void FBPInstallHooks(void) {
@@ -65,6 +80,11 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
         // Installs what is available now, and again as each framework arrives.
         FBPInstallHooks();
         _dyld_register_func_for_add_image(&FBPImageDidLoad);
+
+        // Returns immediately; the work happens on a utility queue. Outside
+        // FBPInstallHooks because it is not a hook and must not be repeated for
+        // every image dyld reports.
+        FBPMediaConversionPrewarm();
 
         // Inlined (not a local) so the release build, where FBPLog is a no-op,
         // does not trip -Werror=unused-variable.

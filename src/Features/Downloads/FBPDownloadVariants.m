@@ -194,6 +194,7 @@ static NSURL *FBPDownloadURLFromObject(id object) {
 #pragma mark - Variant
 
 @interface FBPDownloadVariant ()
+@property (nonatomic, assign) BOOL needsConversion;
 - (instancetype)initWithURL:(NSURL *)url
                    audioURL:(nullable NSURL *)audioURL
                       title:(NSString *)title
@@ -232,9 +233,10 @@ static NSURL *FBPDownloadURLFromObject(id object) {
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"<%@ %@ h=%ld bitrate=%lld bytes=%lld%@>",
+    return [NSString stringWithFormat:@"<%@ %@ h=%ld bitrate=%lld bytes=%lld%@%@>",
             NSStringFromClass(self.class), self.title, (long)self.pixelHeight,
-            self.bitRate, self.byteSize, self.needsMux ? @" +audio" : @""];
+            self.bitRate, self.byteSize, self.needsMux ? @" +audio" : @"",
+            self.needsConversion ? @" needs-conversion" : @""];
 }
 
 @end
@@ -439,7 +441,7 @@ FBPDownloadMergeDashLadder(id item,
         // so every one of these rows wears the "~".
         NSString *detail = FBPDownloadSizeDetail(bytes, YES);
 
-        [ranked addObject:
+        FBPDownloadVariant *variant =
             [[FBPDownloadVariant alloc] initWithURL:representation.url
                                            audioURL:audio.url
                                               title:label
@@ -447,7 +449,12 @@ FBPDownloadMergeDashLadder(id item,
                                         pixelHeight:rank
                                             bitRate:representation.bandwidth
                                            byteSize:bytes
-                                               tier:FBPDownloadVariantTierDash]];
+                                               tier:FBPDownloadVariantTierDash];
+        // Carried straight through from the representation. The reader has
+        // already decided, per device, whether an AV1 rung is offerable at all,
+        // so there is nothing left to judge here — only to pass along.
+        variant.needsConversion = representation.needsConversion;
+        [ranked addObject:variant];
     }
 
     // Deliberately not re-sorted. -videoRepresentations arrives best-first by
@@ -796,21 +803,37 @@ void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
     // did before this existed — start immediately, no sheet, no extra tap. This
     // is what keeps photo stories and single-quality videos unchanged.
     //
-    // The best variant that needs no muxing is taken here rather than the best
-    // variant outright. Both callers can now fetch two streams and merge them
-    // (FBPDashDownload), so this is no longer a limitation — it is the policy
-    // for "don't ask me, just save it": one GET, an exact size known up front,
-    // and no merge step that can fail, which is what the picker being off asks
-    // for. The list is best-first, so the first such variant is the best one.
-    // With a DASH ladder present every row needs muxing — the progressive pair
-    // is not in the list at all then, see FBPDownloadMergeDashLadder — so there
-    // is nothing cheaper to prefer and the top rung goes through as-is, and is
-    // merged properly.
+    // The best variant that needs no extra work is taken here rather than the
+    // best variant outright. Both callers can now fetch two streams and merge
+    // them (FBPDashDownload), so this is no longer a limitation — it is the
+    // policy for "don't ask me, just save it": one GET and no post-processing
+    // step that can fail, which is what the picker being off asks for. The list
+    // is best-first, so the first such variant is the best one.
+    //
+    // A conversion is weighed much more heavily than a merge, and that is the
+    // one judgement here: a merge is a second of I/O, while a conversion is
+    // minutes of encoding and a battery cost that a user who switched the picker
+    // *off* has certainly not agreed to. So the search is for a variant that
+    // needs neither, then — failing that — one that at least needs no
+    // conversion, before falling back to the top rung.
+    //
+    // With an all-AV1 DASH ladder present, which is the common case on real
+    // content, every row needs converting and the progressive pair is not in the
+    // list at all (see FBPDownloadMergeDashLadder), so there is nothing cheaper
+    // to prefer and the top rung goes through and is converted properly.
     if (variants.count < 2 || !FBPEnabled(FBPKeyDownloadQualityPicker)) {
         FBPDownloadVariant *direct = best;
-        if (direct.needsMux) {
+        if (direct.needsMux || direct.needsConversion) {
             for (FBPDownloadVariant *candidate in variants) {
-                if (!candidate.needsMux) {
+                if (!candidate.needsMux && !candidate.needsConversion) {
+                    direct = candidate;
+                    break;
+                }
+            }
+        }
+        if (direct.needsConversion) {
+            for (FBPDownloadVariant *candidate in variants) {
+                if (!candidate.needsConversion) {
                     direct = candidate;
                     break;
                 }
@@ -1206,9 +1229,16 @@ static void FBPDownloadLogQualitiesNow(id item,
 
     os_log(log, "variants  %lu offered by the picker", (unsigned long)variants.count);
     for (FBPDownloadVariant *variant in variants) {
+        // Which of the three save paths this row will take, because that is the
+        // difference between a row that saves in a second and one that occupies
+        // the encoder for minutes — and it is the first thing worth knowing when
+        // a maintainer asks why a download was slow.
+        NSString *path = variant.needsConversion ? @"(dash, AV1 -> H.264)"
+                       : variant.needsMux        ? @"(dash, needs mux)"
+                                                 : @"(single file)";
         os_log(log, "variants    %{public}@ · rung=%ld bitrate=%lld bytes=%lld %{public}@",
                variant.title, (long)variant.pixelHeight, variant.bitRate,
-               variant.byteSize, variant.needsMux ? @"(dash, needs mux)" : @"(single file)");
+               variant.byteSize, path);
     }
 
     // Presence of the adaptive manifests, which the progressive tier ignores.

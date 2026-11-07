@@ -44,6 +44,8 @@ FacebookPlus_FILES = \
 	src/Features/Downloads/FBPDashManifest.m \
 	src/Features/Downloads/FBPDownloadVariants.m \
 	src/Features/Downloads/FBPMediaMuxer.m \
+	src/Features/Downloads/FBPDav1dBridge.m \
+	src/Features/Downloads/FBPMediaConverter.m \
 	src/Features/Downloads/FBPDashDownload.m \
 	src/Features/Downloads/FBPDownloadStore.m \
 	src/Features/Downloads/FBPDownloadManagerController.m \
@@ -72,7 +74,10 @@ FacebookPlus_CFLAGS  = -fobjc-arc -Wno-deprecated-declarations \
 	-Isrc/Features/Fonts -Isrc/Features/Language -Isrc/Features/LikeConfirmation \
 	-Isrc/Features/Links -Isrc/Features/OLED -Isrc/Features/Onboarding \
 	-Isrc/Features/Stories -Isrc/Features/Update -Isrc/PluginsInject
-FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia Security PushKit CallKit
+# VideoToolbox and CoreVideo are for FBPMediaConverter: the AV1-decoder
+# capability probe calls VTDecompressionSessionCreate directly, and the decode
+# side hands back CVPixelBuffers.
+FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia CoreVideo VideoToolbox Security PushKit CallKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

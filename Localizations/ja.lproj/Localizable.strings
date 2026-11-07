@@ -98,6 +98,8 @@
 "download.reel.expired" = "このダウンロードリンクは期限切れです。もう一度ダウンロードをタップしてください。";
 "download.merge.progress" = "音声と映像を結合中…";
 "download.merge.failed" = "この動画の音声と映像を結合できませんでした。\n%@";
+"download.convert.failed" = "この動画を「写真」用に変換できませんでした。\n%@";
+"download.convert.unsupported" = "この iPhone ではこの画質を変換できません。別の画質を選んでください。";
 "download.stream.videoFailed" = "映像ストリームをダウンロードできませんでした。\n%@";
 "download.stream.audioFailed" = "音声ストリームをダウンロードできませんでした。\n%@";
 "download.quality.select.title" = "画質を選択";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "待機中…";
 "download.job.stage.fetching" = "ダウンロード中…";
 "download.job.stage.fetchingBoth" = "映像と音声をダウンロード中…";
+"download.job.stage.converting" = "「写真」用に変換中…";
 "download.job.stage.saving" = "写真に保存中…";
 "download.job.stage.done" = "写真に保存しました";
 "download.job.stage.failed" = "ダウンロードに失敗しました";

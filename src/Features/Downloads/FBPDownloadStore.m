@@ -30,6 +30,7 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
 @property (atomic, copy, nullable) NSString *quality;
 @property (atomic, copy, nullable) NSURL *thumbnailURL;
 @property (atomic, assign) BOOL needsMux;
+@property (atomic, assign) BOOL needsConversion;
 @property (atomic, assign) FBPDownloadJobStage stage;
 @property (atomic, assign) float fraction;
 @property (atomic, assign) long long bytesReceived;
@@ -61,6 +62,7 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
         case FBPDownloadJobStageQueued:
         case FBPDownloadJobStageFetching:
         case FBPDownloadJobStageMerging:
+        case FBPDownloadJobStageConverting:
         case FBPDownloadJobStageSaving:
             return YES;
         default:
@@ -95,6 +97,12 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
             // Reuses the wording the progress card already used for this step,
             // rather than a second key that could drift from it in translation.
             return FBPStoreL(@"download.merge.progress");
+        case FBPDownloadJobStageConverting:
+            // Its own key rather than the merge's: this step is minutes rather
+            // than a moment, and a row that said "Merging…" for three minutes
+            // would read as a hang. The wording names the reason, because
+            // "Converting…" on its own invites "converting to what".
+            return FBPStoreL(@"download.job.stage.converting");
         case FBPDownloadJobStageSaving:
             return FBPStoreL(@"download.job.stage.saving");
         case FBPDownloadJobStageDone:
@@ -233,6 +241,7 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
                               quality:(NSString *)quality
                          thumbnailURL:(NSURL *)thumbnailURL
                              needsMux:(BOOL)needsMux
+                      needsConversion:(BOOL)needsConversion
                         expectedBytes:(long long)expectedBytes {
     FBPDownloadJob *job = [[FBPDownloadJob alloc] init];
     job.identifier = NSUUID.UUID.UUIDString;
@@ -241,6 +250,7 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
     job.quality = quality.length ? quality : nil;
     job.thumbnailURL = thumbnailURL;
     job.needsMux = needsMux;
+    job.needsConversion = needsConversion;
     job.stage = FBPDownloadJobStageQueued;
     job.bytesExpected = MAX(0LL, expectedBytes);
     job.createdAt = [NSDate date];

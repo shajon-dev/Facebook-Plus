@@ -98,6 +98,8 @@
 "download.reel.expired" = "Link tải này đã hết hạn. Hãy nhấn tải lại.";
 "download.merge.progress" = "Đang ghép âm thanh và hình ảnh…";
 "download.merge.failed" = "Không thể ghép âm thanh và hình ảnh của video này.\n%@";
+"download.convert.failed" = "Không thể chuyển đổi video này cho Ảnh.\n%@";
+"download.convert.unsupported" = "iPhone này không chuyển đổi được chất lượng này. Hãy chọn mức khác.";
 "download.stream.videoFailed" = "Không tải được luồng hình ảnh.\n%@";
 "download.stream.audioFailed" = "Không tải được luồng âm thanh.\n%@";
 "download.quality.select.title" = "Chọn chất lượng";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "Đang chờ…";
 "download.job.stage.fetching" = "Đang tải…";
 "download.job.stage.fetchingBoth" = "Đang tải hình và tiếng…";
+"download.job.stage.converting" = "Đang chuyển đổi cho Ảnh…";
 "download.job.stage.saving" = "Đang lưu vào Photos…";
 "download.job.stage.done" = "Đã lưu vào Photos";
 "download.job.stage.failed" = "Tải xuống thất bại";

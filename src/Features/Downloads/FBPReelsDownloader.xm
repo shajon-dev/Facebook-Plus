@@ -503,6 +503,7 @@ static NSError *FBPReelError(NSString *message) {
                          quality:variant.title
                     thumbnailURL:thumbnailURL
                         needsMux:variant.needsMux
+                 needsConversion:variant.needsConversion
                    expectedBytes:variant.byteSize];
 
     // Retry deliberately captures nothing but the two values it needs, so the
@@ -546,10 +547,16 @@ static NSError *FBPReelError(NSString *message) {
 }
 
 - (void)begin {
-    // A variant with no separate audio is a complete MP4 — one GET, one file,
-    // audio already in it. That is the progressive tier, confirmed working on
-    // device, and it goes down exactly the path it always has.
-    if (self.variant.needsMux) {
+    // A variant with no separate audio *and* nothing to re-encode is a complete
+    // MP4 — one GET, one file, audio already in it. That is the progressive
+    // tier, confirmed working on device, and it goes down exactly the path it
+    // always has.
+    //
+    // An AV1 rung goes down the two-stream path even when it is silent and has
+    // no audio to pair, because that path is where the conversion lives: saving
+    // such a file straight from a single GET is precisely the "full download,
+    // then Photos refuses it" outcome the codec gate exists to prevent.
+    if (self.variant.needsMux || self.variant.needsConversion) {
         [self beginTwoStream];
     } else {
         [self beginSingleFile];
@@ -736,6 +743,21 @@ didCompleteWithError:(NSError *)error {
 
 #pragma mark Two-stream path
 
+/// Map the two-stream flow's stage onto the store's.
+///
+/// A switch rather than a ternary because there are three stages now, and the
+/// ternary this replaced would have silently reported a conversion as a fetch —
+/// a bar that kept moving under the word "Downloading…" for the length of an
+/// encode.
+static FBPDownloadJobStage FBPReelStageForDashStage(FBPDashDownloadStage stage) {
+    switch (stage) {
+        case FBPDashDownloadStageMerging:    return FBPDownloadJobStageMerging;
+        case FBPDashDownloadStageConverting: return FBPDownloadJobStageConverting;
+        case FBPDashDownloadStageFetching:   break;
+    }
+    return FBPDownloadJobStageFetching;
+}
+
 - (void)beginTwoStream {
     FBPDownloadStore *store = FBPDownloadStore.shared;
     [store job:self.job didEnterStage:FBPDownloadJobStageFetching];
@@ -746,6 +768,8 @@ didCompleteWithError:(NSError *)error {
         [FBPDashDownload startWithVideoURL:self.variant.url
                                  audioURL:self.variant.audioURL
                                 outputURL:[self outputURL]
+                             convertVideo:self.variant.needsConversion
+                            sourceBitRate:self.variant.bitRate
                                  progress:^(FBPDashDownloadStage stage, float fraction) {
 
             __typeof__(self) strongSelf = weakSelf;
@@ -754,9 +778,7 @@ didCompleteWithError:(NSError *)error {
             FBPDownloadStore *inner = FBPDownloadStore.shared;
             [inner job:strongSelf.job didProgress:fraction];
             [inner job:strongSelf.job
-                didEnterStage:(stage == FBPDashDownloadStageMerging)
-                                  ? FBPDownloadJobStageMerging
-                                  : FBPDownloadJobStageFetching];
+                didEnterStage:FBPReelStageForDashStage(stage)];
 
         } completion:^(NSURL *merged, NSError *error) {
 

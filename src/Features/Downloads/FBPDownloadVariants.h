@@ -78,6 +78,21 @@ typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
 /// @c audioURL != nil. A variant that cannot be saved by downloading one URL.
 @property (nonatomic, assign, readonly) BOOL needsMux;
 
+/// This rung is AV1, so the picture has to be re-encoded to H.264 before Photos
+/// will accept it (FBPMediaConverter) rather than copied (FBPMediaMuxer).
+///
+/// Only ever YES where the device can decode AV1 — the DASH reader refuses AV1
+/// rungs outright where it cannot — so a downloader can treat this as "convert
+/// it", never as "find out whether conversion is possible".
+///
+/// A converting variant is strictly more expensive than any other: minutes of
+/// encoding, a battery cost, and an output several times larger than the source.
+/// The ladder already ranks an H.264 rung ahead of an AV1 one at the same label,
+/// and the no-picker path below prefers a variant that needs neither a merge nor
+/// a conversion, so this is normally reached only when the whole ladder is AV1 —
+/// which, on real Meta content, it usually is.
+@property (nonatomic, assign, readonly) BOOL needsConversion;
+
 /// Which tier this rendition came from. Presentation only — the download path
 /// branches on @c needsMux, not on this.
 @property (nonatomic, assign, readonly) FBPDownloadVariantTier tier;

@@ -47,6 +47,18 @@ typedef NS_ENUM(NSInteger, FBPDownloadJobStage) {
     FBPDownloadJobStageFetching,
     /// Both streams are down and FBPMediaMuxer is running. DASH only.
     FBPDownloadJobStageMerging,
+    /// Both streams are down and FBPMediaConverter is re-encoding the picture to
+    /// H.264, because the chosen rung is AV1 and Photos refuses AV1. DASH only,
+    /// and mutually exclusive with @c FBPDownloadJobStageMerging — a conversion
+    /// does the merge in the same pass, so a job goes through one or the other,
+    /// never both.
+    ///
+    /// Unlike merging, this one is slow enough to need a bar of its own: a
+    /// 127-second 1080p rung is minutes of sustained encoding, so @c fraction
+    /// keeps advancing through it (FBPMediaConverter reports real per-frame
+    /// progress) and cancelling here actually stops work rather than tidying up
+    /// after it.
+    FBPDownloadJobStageConverting,
     /// Handing the finished file to Photos.
     FBPDownloadJobStageSaving,
     /// In Photos. Terminal.
@@ -115,8 +127,17 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 /// This job is a two-stream DASH save, so it has a merge step.
 @property (atomic, assign, readonly) BOOL needsMux;
 
+/// The chosen rung is AV1, so the picture has to be re-encoded to H.264 before
+/// Photos will take it. Set at the tap, from the variant, so a row can say the
+/// save will be slow *before* the stage arrives rather than only once it does.
+///
+/// When this is set the job's merge step is replaced by
+/// @c FBPDownloadJobStageConverting, not joined by it.
+@property (atomic, assign, readonly) BOOL needsConversion;
+
 @property (atomic, assign, readonly) FBPDownloadJobStage stage;
-/// 0…1. Holds where it was during a merge, which reports no progress of its own.
+/// 0…1. Holds where it was during a merge, which reports no progress of its
+/// own; keeps advancing through a conversion, which does.
 @property (atomic, assign, readonly) float fraction;
 
 /// Bytes, 0 when unknown. @c bytesExpected is the Content-Length when the CDN
@@ -183,6 +204,7 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
                               quality:(nullable NSString *)quality
                          thumbnailURL:(nullable NSURL *)thumbnailURL
                              needsMux:(BOOL)needsMux
+                      needsConversion:(BOOL)needsConversion
                         expectedBytes:(long long)expectedBytes;
 
 /// What the manager's Cancel button calls. Nil means this flow cannot be
