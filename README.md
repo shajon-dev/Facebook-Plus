@@ -28,39 +28,39 @@
   <tbody>
     <tr>
       <td nowrap>📰 <b>Feed</b></td>
-      <td>Remove Ads & Sponsored Posts (feed, video, stories & <b>Marketplace</b>)<br>Hide "People you may know", Group & Page suggestions<br>Remove Reels carousel, Threads promo & <b>Stories</b> (tray + single cards)<br><b>Remove survey prompts</b> — the "Are you interested in this post / Reel?" feedback cards, in the feed and on both Reels surfaces</td>
+      <td>Remove ads &amp; sponsored posts — feed, video, Stories and Marketplace<br>Hide "People you may know", Group and Page suggestions<br>Hide the Reels carousel, Threads promo and Stories tray<br>Remove survey prompts ("Are you interested in this post?")</td>
     </tr>
     <tr>
       <td nowrap>⬇️ <b>Downloads</b></td>
-      <td><b>Pick a quality before saving</b> — the full ladder Facebook serves (360p up to 1080p and beyond), not just HD/SD, read from the video's own DASH manifest<br>Video and audio arrive as separate streams and are merged losslessly with AVFoundation; AV1 rungs, which Photos refuses, are converted to HEVC first<br><b>Download manager</b> — every download is a job with its own progress, cancel and retry, reachable from Settings and from a HUD pill while one is running</td>
+      <td>Choose a quality before saving — every rung the video actually offers, not just HD/SD<br>Lossless merge of Facebook's separate video and audio streams<br>Download manager with progress, cancel and retry</td>
     </tr>
     <tr>
       <td nowrap>✅ <b>Confirmations</b></td>
-      <td>Opt-in prompts that catch accidental taps — a prompt appears before the action, Cancel stops it:<br><b>Like</b> (feed & Reels), <b>Comment</b>, <b>Share</b>, <b>Post</b>, <b>Friend request</b>, <b>Follow / Join</b></td>
+      <td>Opt-in prompts that catch accidental taps, with Cancel to stop the action<br>Covers Like, Comment, Share, Post, Friend request and Follow / Join</td>
     </tr>
     <tr>
       <td nowrap>🎬 <b>Reels</b></td>
-      <td><b>Hide overlay (cinema mode)</b> — one tap strips likes, comments, share & caption <em>and</em> fades the bottom tab bar, leaving just the clean video<br>Save <b>Reels</b> to Photos</td>
+      <td>Cinema mode — one tap hides the overlay and the tab bar<br>Save Reels to Photos</td>
     </tr>
     <tr>
       <td nowrap>📖 <b>Stories</b></td>
-      <td>Watch stories anonymously (Ghost Mode)<br>Disable auto-advance<br>Hide Story Suggestions<br>Save <b>Stories</b> (video & photo) to Photos</td>
+      <td>Ghost Mode — watch without being seen<br>Disable auto-advance and hide Story suggestions<br>Save Stories, video or photo, to Photos</td>
     </tr>
     <tr>
-      <td nowrap>📞 <b>Calls & Privacy</b></td>
-      <td><b>Incoming Call Blocker</b> — silently block incoming VoIP / Messenger calls inside Facebook without disturbing your app experience</td>
+      <td nowrap>📞 <b>Calls</b></td>
+      <td>Silently block incoming VoIP and Messenger calls</td>
     </tr>
     <tr>
       <td nowrap>🧭 <b>Links</b></td>
-      <td>Open external links in your <b>default browser</b> instead of the in-app browser<br><b>Open in Facebook</b> Safari extension — reopens facebook.com links from Safari in the app, routing directly to the <b>exact Reel / post / photo / story destination</b> (including FaceWeb deep links)</td>
+      <td>Open external links in your default browser<br>"Open in Facebook" Safari extension — reopens facebook.com links in the app, at the exact destination</td>
     </tr>
     <tr>
       <td nowrap>🎨 <b>Appearance</b></td>
-      <td><b>OLED Dark Mode</b> (true black — preserves post dividers, rounded avatars & status bar legibility)<br>Custom App-Icon Picker with multiple alternate icons<br><b>Custom Fonts</b> — replace the app's text font with a bundled or imported <code>.ttf</code>/<code>.otf</code>, with an adjustable size</td>
+      <td>OLED dark mode (true black)<br>Alternate app icons<br>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td>
     </tr>
     <tr>
       <td nowrap>🔔 <b>Updates</b></td>
-      <td>Built-in <b>update checker</b> — notified in-app when a new version ships, with the changelog and one-tap download from GitHub or Telegram<br>Manual re-check from <b>Settings → Check for Update</b></td>
+      <td>In-app update checker with changelog and one-tap download</td>
     </tr>
   </tbody>
 </table>
@@ -182,32 +182,23 @@ cannot: the session lives in Meta's App Groups (`group.com.facebook.*`) and
 keychain group (`T84QZS65DQ.platformFamily`), and Apple will never authorize
 another team's identifiers for your certificate.
 
-The released IPA now carries **`FBPNotifyBridge.dylib`** inside that extension: a
+The released IPA carries **`FBPNotifyBridge.dylib`** inside that extension: a
 ~70 KB dylib that applies the same container and keychain redirects the main app
-already uses, so both processes read and write the same place. Full write-up in
-**[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
+already uses, so both processes read and write the same place. **Confirmed
+working on a device**, with detailed notifications on the lock screen. Full
+write-up in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
 
-> [!NOTE]
-> **Confirmed working on a device**, with detailed notifications arriving on the
-> lock screen. That also settles the question the write-up used to leave open:
-> the extension does launch on a re-signed build, and an explicit (non-wildcard)
-> App ID is not an obstacle.
+What this means for you:
 
-What you need to know as a user:
-
-- **Your signing certificate must have at least one registered App Group.**
-  Without one there is no container to redirect into and the bridge does nothing.
-- **Using Feather? Turn on "Merge Entitlements"** — **Settings → Features →
-  Signing Options**, in its own section near the bottom, below "Delete After
-  Signing". It is off by default. That re-signs Facebook's keychain groups under
-  *your* team id, which is the other half of the fix. (The same switch is also in
-  the signing sheet, if you would rather set it per app. If it is greyed out you
-  have a custom entitlements file loaded, which disables the merge.) You do
-  **not** need "Inject into app extensions" — the bridge is already inside the
-  IPA — though enabling it is harmless.
-- **Messenger messages are out of scope.** They are end-to-end encrypted with
-  device-bound keys in `group.com.facebook.family`; a redirected container is
-  empty, so there is nothing to decrypt with. This targets **Facebook**
+- **Your certificate needs at least one registered App Group.** Without one
+  there is no container to redirect into and the bridge does nothing.
+- **Feather's "Merge Entitlements" is optional.** Notifications are confirmed
+  working without it, and as of Feather v2.9.0 the switch is not in any released
+  build. Enable it if your build offers it; otherwise a certificate with an App
+  Group is enough. "Inject into app extensions" is not needed either — the
+  bridge already ships inside the IPA.
+- **Messenger messages are out of scope**, being end-to-end encrypted with
+  device-bound keys the bridge cannot reach. The target is **Facebook**
   notifications: likes, comments, tags, friend requests.
 - **TrollStore users need none of this** — it preserves the original
   entitlements, so notifications already work.

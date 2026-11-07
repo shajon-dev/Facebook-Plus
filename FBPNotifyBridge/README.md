@@ -94,39 +94,50 @@ The bridge is **inert** unless the certificate you sign with has at least one
 redirect into. (The extension's own `Documents/` is not a usable fallback: an app
 extension gets its own data container, separate from the host app's.)
 
-Of the two profiles this repo was developed against:
+Two profiles were tested during development, and the difference between them is
+the whole requirement:
 
 | Profile | App Groups | Bridge works? |
 |---|---|---|
-| `<udid-device-a>` (team `<TEAM-A>`) | `group.<TEAM-A>.{g1,g2,g3,g4,g5}` | Has something to redirect into. |
-| `<udid-device-b>` (team `<TEAM-B>`) | `com.apple.security.application-groups` is an **empty array** | **No.** Nothing to redirect into — the bridge loads and does nothing. |
+| Paid certificate, several registered groups | `group.<yourTeam>.…` × 5 | **Yes.** There is a container to redirect into. |
+| Paid certificate, none registered | `com.apple.security.application-groups` is an empty array | **No.** The bridge loads and does nothing. |
 
-### If you sideload with Feather
+To check your own, decode the profile and look at that key:
 
-Feather can supply the other half of the fix, and **both of its relevant options
-default to off**:
+```bash
+security cms -D -i YourCertificate.mobileprovision > profile.plist
+/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.security.application-groups" profile.plist
+```
 
-- **Enable "Merge Entitlements"**, in Feather under
-  **Settings → Features → Signing Options**, in its own section near the bottom
-  (below "Delete After Signing", above "Experiments"), captioned *"This option
-  merges entitlements with the embedded entitlements from the app you're
-  signing."* The same switch also appears in the signing sheet itself, so you can
-  turn it on for one app without changing the default. If it is greyed out, you
-  have supplied a custom entitlements file — Feather disables the merge in that
-  case, so clear the file or put the keychain groups in it yourself.
+One or more `group.…` identifiers means the bridge has somewhere to work. An
+empty array means it does not, and no change to this tweak can alter that — the
+group has to be registered on the Apple Developer account the certificate
+belongs to.
 
-  What it does: Facebook's keychain groups are read out of the original binary
-  and re-written with *your* team id (`T84QZS65DQ.platformFamily` →
-  `<yourTeam>.platformFamily`), which works because a developer profile grants
-  `<yourTeam>.*` as a wildcard. Without this, the app and the extension have no
-  keychain group in common and the session cannot cross between them. Note that
-  app *groups* are deliberately **not** merged this way — `group.com.facebook.*`
-  can never be authorized — which is exactly the gap this bridge fills.
-- **"Inject into app extensions" is not required.** The released IPA already
-  carries the bridge inside the appex, so you do not need it. Turning it on is
-  harmless.
+### Optional: Feather's "Merge Entitlements"
 
-You still need a certificate with a registered App Group.
+Facebook's notification extension also reads part of the session from the
+**keychain**, under a group named after Meta's team. Keychain groups, unlike App
+Groups, *can* legitimately be re-issued under another team: a provisioning
+profile grants `<yourTeam>.*` as a wildcard, so `T84QZS65DQ.platformFamily` can
+be rewritten to `<yourTeam>.platformFamily`. Feather's **Merge Entitlements**
+option performs that rewrite.
+
+**It is not required.** Detailed notifications have been confirmed working
+without it, on a certificate that carries App Groups. Treat it as belt-and-braces
+rather than a prerequisite: if your build of Feather offers the switch, turning
+it on costs nothing; if it does not, a certificate with an App Group is enough.
+
+Two practical notes:
+
+- The option is **not in any released build** of Feather as of v2.9.0. It exists
+  only on the project's `main` branch, under **Settings → Features → Signing
+  Options**, in its own section below "Delete After Signing".
+- Where it does appear, it is disabled while a custom entitlements file is
+  loaded — Feather will not merge on top of one you supplied yourself.
+
+"Inject into app extensions" is **not** needed either: the released IPA already
+carries the bridge inside the appex. Enabling it is harmless.
 
 ## What it does *not* fix
 
@@ -172,27 +183,23 @@ local device test exercises the extension-injection path too.
 
 ## Explicit App IDs and whether the NSE launches — settled
 
-Both profiles on hand use an **explicit** App ID (`<TEAM-B>.<app-id-b>`,
-`<TEAM-A>.<app-id-a>`), not a wildcard. An app extension normally needs
-its own `application-identifier` (`<team>.<host bundle id>.NotificationServiceExtension`),
-which an explicit App ID does not cover — and `zsign` cannot help: it writes the
-provisioning profile's `Entitlements` dictionary **verbatim into every binary**,
-nested `.appex` bundles included, so the extension inherits the main bundle's
-`application-identifier` and there is no way to give it a profile of its own.
+Both certificates tested use an **explicit** App ID rather than a wildcard. An
+app extension normally needs its own `application-identifier`
+(`<team>.<host bundle id>.NotificationServiceExtension`), which an explicit App
+ID does not cover — and `zsign` cannot help: it writes the provisioning
+profile's `Entitlements` dictionary verbatim into every binary, nested `.appex`
+bundles included, so the extension inherits the main bundle's identifier and
+there is no way to give it a profile of its own.
 
-That sounds fatal, but it is not established that it is:
+That looked fatal while it was theory. It is not. Sideloading tools ship exactly
+this behaviour and it works for their users; their own source notes that
+per-extension provisioning is not something `zsign` can express, and registering
+only the main bundle is accepted as sufficient.
 
-- The sideloading tools people actually use ship exactly this behaviour and it
-  works in practice for them; their own source notes that per-extension
-  provisioning is simply not something `zsign` can express, and registering only
-  the main bundle is accepted as good enough.
-- So an explicit App ID is **not a demonstrated blocker** — but nothing here
-  proves the NSE launches either.
-
-— and the device run settled it. An explicit App ID is **not** a blocker: the NSE
-does launch on a re-signed build and does produce real notification text. An
-earlier project note recording `nse_seen:0`, read at the time as the extension
-never starting, was a tracing artefact rather than a finding.
+The device run then settled it outright: the extension launches on a re-signed
+build and produces real notification text. An earlier note recording
+`nse_seen:0`, read at the time as the extension never starting, turned out to be
+an artefact of how it was traced rather than a finding.
 
 ### Settled by the 2026-11-07 device run
 
