@@ -98,6 +98,8 @@
 "download.reel.expired" = "Ce lien de téléchargement a expiré. Appuyez à nouveau sur télécharger.";
 "download.merge.progress" = "Fusion de l’audio et de la vidéo…";
 "download.merge.failed" = "Impossible de fusionner l’audio et l’image de cette vidéo.\n%@";
+"download.convert.failed" = "Impossible de convertir cette vidéo pour Photos.\n%@";
+"download.convert.unsupported" = "Cet iPhone ne peut pas convertir cette qualité. Essayez-en une autre.";
 "download.stream.videoFailed" = "Le flux vidéo n’a pas été téléchargé.\n%@";
 "download.stream.audioFailed" = "Le flux audio n’a pas été téléchargé.\n%@";
 "download.quality.select.title" = "Choisir la qualité";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "En attente…";
 "download.job.stage.fetching" = "Téléchargement…";
 "download.job.stage.fetchingBoth" = "Téléchargement de l’image et du son…";
+"download.job.stage.converting" = "Conversion pour Photos…";
 "download.job.stage.saving" = "Enregistrement dans Photos…";
 "download.job.stage.done" = "Enregistré dans Photos";
 "download.job.stage.failed" = "Échec du téléchargement";

@@ -98,6 +98,8 @@
 "download.reel.expired" = "此下載連結已過期，請再點一次下載。";
 "download.merge.progress" = "正在合併音訊與畫面…";
 "download.merge.failed" = "無法合併這部影片的音訊與畫面。\n%@";
+"download.convert.failed" = "無法將此影片轉換為「照片」可儲存的格式。\n%@";
+"download.convert.unsupported" = "此 iPhone 無法轉換此畫質，請選擇其他畫質。";
 "download.stream.videoFailed" = "畫面串流未能下載。\n%@";
 "download.stream.audioFailed" = "音訊串流未能下載。\n%@";
 "download.quality.select.title" = "選擇畫質";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "等待中⋯";
 "download.job.stage.fetching" = "正在下載⋯";
 "download.job.stage.fetchingBoth" = "正在下載畫面與聲音⋯";
+"download.job.stage.converting" = "正在轉換以儲存至「照片」…";
 "download.job.stage.saving" = "正在儲存至「照片」⋯";
 "download.job.stage.done" = "已儲存至「照片」";
 "download.job.stage.failed" = "下載失敗";

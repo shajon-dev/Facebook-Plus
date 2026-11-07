@@ -1,4 +1,5 @@
 #import "FBPDashDownload.h"
+#import "FBPMediaConverter.h"
 #import "FBPMediaMuxer.h"
 
 #import <os/log.h>
@@ -28,6 +29,17 @@ NSString *const FBPDashDownloadStatusCodeKey = @"FBPDashDownloadStatusCode";
 // fraction of a second of passthrough I/O, plus enough headroom that the last
 // step reads as a step rather than a flicker.
 static const float kFBPDashFetchShare = 0.88f;
+
+// The same share, for a flow that converts instead of merging — and it is a very
+// different number, because the work behind it is a different shape. A merge is
+// a fraction of a second of passthrough I/O after seconds of network, so the
+// network is almost the whole wait. A conversion is minutes of sustained
+// encoding after those same seconds of network, so the network is the small
+// part. Measured on the real 127-second 1080p fixture: 8.1s to re-encode on an
+// Apple-silicon Mac, and a phone's encoder block is a good deal slower than
+// that. 0.30 keeps the bar honest about where the time actually goes; leaving it
+// at 0.88 would park the bar at 88% for the entire encode.
+static const float kFBPDashConvertFetchShare = 0.30f;
 
 // Matches FBPReelDownloadManager's own session: a request that has stalled for a
 // minute is not coming back, and a transfer still going after three minutes is
@@ -138,6 +150,15 @@ static BOOL FBPDashURLIsFetchable(NSURL *url) {
     /// backwards. See -reportProgress for the case that makes this necessary.
     float _reportedFraction;
 
+    /// Re-encode the picture rather than copy it, and the source's own bitrate
+    /// to derive the output's from. Write-once in +start…, read on the control
+    /// queue.
+    BOOL _convertVideo;
+    long long _sourceBitRate;
+    /// Where the conversion has got to, 0…1, as last reported by
+    /// FBPMediaConverter. Control queue only.
+    float _convertFraction;
+
     BOOL _cancelled;
     BOOL _muxStarted;
     /// Atomic only so -finished can be read from the main queue; the
@@ -180,12 +201,30 @@ static void FBPDashRelease(FBPDashDownload *download) {
                         outputURL:(NSURL *)outputURL
                          progress:(FBPDashDownloadProgress)progress
                        completion:(FBPDashDownloadCompletion)completion {
+    return [self startWithVideoURL:videoURL
+                          audioURL:audioURL
+                         outputURL:outputURL
+                      convertVideo:NO
+                     sourceBitRate:0
+                          progress:progress
+                        completion:completion];
+}
+
++ (instancetype)startWithVideoURL:(NSURL *)videoURL
+                         audioURL:(NSURL *)audioURL
+                        outputURL:(NSURL *)outputURL
+                     convertVideo:(BOOL)convertVideo
+                    sourceBitRate:(long long)sourceBitRate
+                         progress:(FBPDashDownloadProgress)progress
+                       completion:(FBPDashDownloadCompletion)completion {
     if (!completion) return nil;
 
     FBPDashDownload *download = [[FBPDashDownload alloc] init];
     download->_videoURL = [videoURL copy];
     download->_audioURL = [audioURL copy];
     download->_outputURL = [outputURL copy];
+    download->_convertVideo = convertVideo;
+    download->_sourceBitRate = MAX(sourceBitRate, 0LL);
     download->_progress = [progress copy];
     download->_completion = [completion copy];
     download->_control = dispatch_queue_create("com.shajon.fbplus.dashdownload",
@@ -223,9 +262,11 @@ static void FBPDashRelease(FBPDashDownload *download) {
                                         delegateQueue:queue];
 
     _videoTask = [_session downloadTaskWithRequest:[self requestForURL:_videoURL]];
-    _audioTask = [_session downloadTaskWithRequest:[self requestForURL:_audioURL]];
+    if (_audioURL) {
+        _audioTask = [_session downloadTaskWithRequest:[self requestForURL:_audioURL]];
+    }
 
-    if (!_videoTask || !_audioTask) {
+    if (!_videoTask || (_audioURL && !_audioTask)) {
         [self finishWithOutput:nil
                          error:[self errorWithCode:FBPDashDownloadErrorBadArguments
                                        description:@"could not create a transfer"
@@ -234,8 +275,9 @@ static void FBPDashRelease(FBPDashDownload *download) {
         return;
     }
 
-    FBPDashLog("start video=%{private}@ audio=%{private}@",
-               _videoURL.absoluteString, _audioURL.absoluteString);
+    FBPDashLog("start video=%{private}@ audio=%{private}@ convert=%{public}s",
+               _videoURL.absoluteString, _audioURL.absoluteString,
+               _convertVideo ? "yes" : "no");
 
     // Concurrently, on purpose: these are two independent complete files, there
     // is no ordering between them, and the audio one is small enough that
@@ -250,9 +292,16 @@ static void FBPDashRelease(FBPDashDownload *download) {
 /// Validate the arguments and build the scratch directory. NO when the flow has
 /// already been finished off with an error.
 - (BOOL)prepare {
-    if (!FBPDashURLIsFetchable(_videoURL) || !FBPDashURLIsFetchable(_audioURL) ||
-        !_outputURL.isFileURL || _outputURL.path.length == 0 ||
-        [_videoURL.absoluteString isEqualToString:_audioURL.absoluteString]) {
+    // A nil audio URL is allowed and means "silent video": the manifest listed
+    // no audio AdaptationSet at all, which is a real and ordinary case. One that
+    // is present but unusable, or identical to the video URL, is still a
+    // refusal.
+    BOOL audioIsUsable = (_audioURL == nil) ||
+        (FBPDashURLIsFetchable(_audioURL) &&
+         ![_videoURL.absoluteString isEqualToString:_audioURL.absoluteString]);
+
+    if (!FBPDashURLIsFetchable(_videoURL) || !audioIsUsable ||
+        !_outputURL.isFileURL || _outputURL.path.length == 0) {
         [self finishWithOutput:nil
                          error:[self errorWithCode:FBPDashDownloadErrorBadArguments
                                        description:@"missing or unusable URLs"
@@ -283,7 +332,14 @@ static void FBPDashRelease(FBPDashDownload *download) {
     // Extensions matter: AVURLAsset's type inference leans on them, and handing
     // the muxer an audio-only file named .mp4 is a needless way to lose.
     _videoFile = [scratch URLByAppendingPathComponent:@"video.mp4"];
-    _audioFile = [scratch URLByAppendingPathComponent:@"audio.m4a"];
+    _audioFile = _audioURL
+        ? [scratch URLByAppendingPathComponent:@"audio.m4a"]
+        : nil;
+
+    // A silent video's audio stream is finished before it begins, so the
+    // readiness test below needs no special case and -fetchFraction has one
+    // fewer thing to weigh.
+    if (!_audioURL) _audioProgress.done = true;
     return YES;
 }
 
@@ -310,17 +366,24 @@ static void FBPDashRelease(FBPDashDownload *download) {
         self->_cancelled = YES;
 
         FBPDashLog("cancelled during %{public}s",
-                   self->_muxStarted ? "merge" : "fetch");
+                   self->_muxStarted
+                       ? (self->_convertVideo ? "conversion" : "merge")
+                       : "fetch");
 
         // Both, unconditionally: a task that has already finished ignores this.
         [self->_videoTask cancel];
         [self->_audioTask cancel];
 
         if (self->_muxStarted) {
-            // Tens of megabytes of sample copying that nobody is waiting for.
-            // The muxer's completion still fires, with its own cancel error, and
-            // that is what reaches -finishWithOutput:error: below.
-            [FBPMediaMuxer cancelAll];
+            // Work nobody is waiting for: tens of megabytes of sample copying
+            // for a merge, or minutes of the encoder block running flat out for
+            // a conversion. The step's completion still fires, with its own
+            // cancel error, and that is what reaches -finishWithOutput:error:.
+            if (self->_convertVideo) {
+                [FBPMediaConverter cancelAll];
+            } else {
+                [FBPMediaMuxer cancelAll];
+            }
             return;
         }
 
@@ -352,6 +415,12 @@ static void FBPDashRelease(FBPDashDownload *download) {
 /// the weighting degenerates to when the two weights are equal.
 - (float)fetchFraction {
     float videoFraction = FBPDashStreamFraction(_videoProgress);
+
+    // A silent video has one stream, and its progress is the whole fetch.
+    // Without this the pre-satisfied audio stream would contribute a constant
+    // 1.0 to the average and the bar would open at 50%.
+    if (!_audioURL) return videoFraction;
+
     float audioFraction = FBPDashStreamFraction(_audioProgress);
 
     int64_t videoWeight = _videoProgress.expected;
@@ -369,9 +438,28 @@ static void FBPDashRelease(FBPDashDownload *download) {
 - (void)reportProgress {
     if (atomic_load(&_finishedFlag) || !_progress) return;
 
-    float fraction = (_stage == FBPDashDownloadStageMerging)
-        ? kFBPDashFetchShare
-        : [self fetchFraction] * kFBPDashFetchShare;
+    float share = _convertVideo ? kFBPDashConvertFetchShare : kFBPDashFetchShare;
+
+    // Initialized before the switch, which is then still written without a
+    // `default:` so that -Wswitch flags a new stage rather than letting it fall
+    // through silently. The initializer is what makes that safe: a stage nobody
+    // handled parks the bar instead of reading uninitialized stack.
+    float fraction = share;
+    switch (_stage) {
+        case FBPDashDownloadStageMerging:
+            // No progress of its own; park at the end of the fetch slice.
+            fraction = share;
+            break;
+        case FBPDashDownloadStageConverting:
+            // This one does have progress, so the remaining slice is spent
+            // rather than parked. The converter already caps itself just under
+            // 1.0, so the bar stops short of full until the file is finalized.
+            fraction = share + _convertFraction * (1.0f - share);
+            break;
+        case FBPDashDownloadStageFetching:
+            fraction = [self fetchFraction] * share;
+            break;
+    }
 
     // Never backwards. The weights arrive with the responses, not with the
     // requests, so there is a window in which one stream's length is known and
@@ -395,27 +483,40 @@ static void FBPDashRelease(FBPDashDownload *download) {
     dispatch_async(dispatch_get_main_queue(), ^{ block(stage, fraction); });
 }
 
-#pragma mark Merge
+#pragma mark Merge or convert
 
+/// Both streams are down: start whichever last step this flow was asked for.
+///
+/// The two are alternatives, not a sequence. FBPMediaConverter writes the audio
+/// track in the same pass it encodes the picture, so converting *is* the merge
+/// for an AV1 rung; running the muxer first would write the whole file twice for
+/// nothing.
 - (void)startMuxIfReady {
     if (atomic_load(&_finishedFlag) || _cancelled || _muxStarted) return;
     if (!_videoProgress.done || !_audioProgress.done) return;
 
     _muxStarted = YES;
-    _stage = FBPDashDownloadStageMerging;
+    _stage = _convertVideo ? FBPDashDownloadStageConverting
+                           : FBPDashDownloadStageMerging;
     // Force the stage change out even if the percentage happens not to move.
     _lastReportedPercent = -1;
     [self reportProgress];
 
     FBPDashLog("fetched video=%lld bytes type=%{public}@ · audio=%lld bytes "
-               "type=%{public}@ · merging",
+               "type=%{public}@ · %{public}s",
                (long long)_videoProgress.received, _videoContentType ?: @"(none)",
-               (long long)_audioProgress.received, _audioContentType ?: @"(none)");
+               (long long)_audioProgress.received, _audioContentType ?: @"(none)",
+               _convertVideo ? "converting" : "merging");
 
     // Replace whatever is at the output path first: the single-URL path does the
     // same before its move, and a stale file there would otherwise be what the
     // muxer refuses.
     [NSFileManager.defaultManager removeItemAtURL:_outputURL error:nil];
+
+    if (_convertVideo) {
+        [self startConversion];
+        return;
+    }
 
     [FBPMediaMuxer muxVideoURL:_videoFile
                       audioURL:_audioFile
@@ -444,6 +545,54 @@ static void FBPDashRelease(FBPDashDownload *download) {
                                                ? @"cancelled"
                                                : @"the two streams could not be merged")
                                        underlyingError:muxError
+                                            statusCode:0]];
+        });
+    }];
+}
+
+/// Re-encode the picture to H.264 and write both tracks, in one pass.
+///
+/// Structurally the same as the mux branch above, with one addition that is the
+/// reason this stage exists separately: a progress block. The conversion is the
+/// long pole of an AV1 save, so its fraction is forwarded into the flow's own
+/// bar rather than letting the bar sit still through it.
+- (void)startConversion {
+    [FBPMediaConverter convertVideoURL:_videoFile
+                             audioURL:_audioFile
+                        sourceBitRate:_sourceBitRate
+                            outputURL:_outputURL
+                             progress:^(float fraction) {
+        dispatch_async(self->_control, ^{
+            if (self->_stage != FBPDashDownloadStageConverting) return;
+            self->_convertFraction = fraction;
+            [self reportProgress];
+        });
+    }
+                           completion:^(NSURL *converted, NSError *convertError) {
+        dispatch_async(self->_control, ^{
+            if (converted && !convertError && !self->_cancelled) {
+                FBPDashLog("convert ok -> %{private}@", converted.path);
+                [self finishWithOutput:converted error:nil];
+                return;
+            }
+
+            BOOL wasCancelled =
+                self->_cancelled ||
+                ([convertError.domain isEqualToString:FBPMediaConverterErrorDomain] &&
+                 convertError.code == FBPMediaConverterErrorCancelled);
+
+            FBPDashLog("convert did not deliver (%{public}s) code=%ld",
+                       wasCancelled ? "cancelled" : "failed",
+                       (long)convertError.code);
+
+            [self finishWithOutput:nil
+                             error:[self errorWithCode:
+                                        (wasCancelled ? FBPDashDownloadErrorCancelled
+                                                      : FBPDashDownloadErrorConvert)
+                                           description:(wasCancelled
+                                               ? @"cancelled"
+                                               : @"the video could not be converted")
+                                       underlyingError:convertError
                                             statusCode:0]];
         });
     }];
@@ -723,6 +872,23 @@ NSString *FBPDashDownloadMessageForError(NSError *error) {
         case FBPDashDownloadErrorMux:
             return [NSString stringWithFormat:FBPDashL(@"download.merge.failed"),
                                               FBPDashDownloadReason(error)];
+
+        case FBPDashDownloadErrorConvert: {
+            // One case deserves its own sentence rather than the generic
+            // "couldn't be converted (reason)": a device with no AV1 decoder
+            // will never convert this rung, however many times it is tapped, and
+            // the only useful advice is to pick a different quality. Every other
+            // conversion failure is a this-time problem and reads like the merge
+            // one.
+            NSError *underlying = error.userInfo[NSUnderlyingErrorKey];
+            if ([underlying.domain isEqualToString:FBPMediaConverterErrorDomain] &&
+                (underlying.code == FBPMediaConverterErrorNoConversionPath ||
+                 underlying.code == FBPMediaConverterErrorVideoUndecodable)) {
+                return FBPDashL(@"download.convert.unsupported");
+            }
+            return [NSString stringWithFormat:FBPDashL(@"download.convert.failed"),
+                                              FBPDashDownloadReason(error)];
+        }
 
         case FBPDashDownloadErrorBadArguments:
             break;

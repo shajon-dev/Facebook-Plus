@@ -54,6 +54,14 @@ typedef NS_ENUM(NSInteger, FBPDashDownloadError) {
     /// error — which distinguishes an unreadable input from a missing track —
     /// is the underlying error.
     FBPDashDownloadErrorMux,
+    /// The streams arrived but FBPMediaConverter could not turn the picture into
+    /// H.264. Separate from @c FBPDashDownloadErrorMux because the two are
+    /// different conversations with the user: a merge failing points at the
+    /// download, while a conversion failing usually points at the device —
+    /// FBPMediaConverterErrorNoConversionPath means this iPhone has no AV1
+    /// decoder at all, which no amount of tapping again will fix. The
+    /// converter's own error is the underlying error.
+    FBPDashDownloadErrorConvert,
     /// -cancel was called before the output file was handed over.
     FBPDashDownloadErrorCancelled,
 };
@@ -76,6 +84,14 @@ typedef NS_ENUM(NSInteger, FBPDashDownloadStage) {
     /// intermediate progress, and inventing one would be a lie. The stage
     /// change is the signal; show it.
     FBPDashDownloadStageMerging,
+    /// Both streams are down and FBPMediaConverter is re-encoding the picture to
+    /// H.264. @c fraction *does* advance here, because this step has real
+    /// progress to report — frames encoded against the source's own duration —
+    /// and it is far too long to leave a bar sitting still through.
+    ///
+    /// Reached instead of @c FBPDashDownloadStageMerging, never after it: the
+    /// conversion merges in the same pass. A flow goes through one or the other.
+    FBPDashDownloadStageConverting,
 };
 
 /// Called on the main queue, at most once per whole percentage point.
@@ -108,7 +124,9 @@ typedef void (^FBPDashDownloadCompletion)(NSURL *_Nullable outputURL,
 ///   manifests carry @c SegmentBase index ranges, but the file they index is
 ///   already there in full.
 /// @param audioURL  The matching audio representation. Must differ from
-///   @c videoURL.
+///   @c videoURL. Nil for a silent video, whose manifest lists no audio at all:
+///   the flow then fetches one stream and the output has one track, which is a
+///   success rather than something to refuse.
 /// @param outputURL Where the merged MP4 goes. The caller chooses it so the
 ///   saved asset keeps the filename its single-URL counterpart would have had.
 + (nullable instancetype)startWithVideoURL:(nullable NSURL *)videoURL
@@ -117,12 +135,38 @@ typedef void (^FBPDashDownloadCompletion)(NSURL *_Nullable outputURL,
                                   progress:(nullable FBPDashDownloadProgress)progress
                                 completion:(FBPDashDownloadCompletion)completion;
 
+/// As above, but re-encode the picture to H.264 instead of copying it.
+///
+/// For an AV1 rung, which Photos refuses as-is. The conversion replaces the
+/// merge rather than following it — FBPMediaConverter writes both tracks in one
+/// pass — so a converting flow never reports
+/// @c FBPDashDownloadStageMerging.
+///
+/// @param convertVideo NO behaves exactly like the method above, so there is one
+///   flow to reason about rather than two.
+/// @param sourceBitRate The chosen representation's own @c bandwidth from the
+///   manifest, in bits per second, or 0 when it stated none. The output bitrate
+///   is derived from it; see FBPMediaConverter.m for the measurements that make
+///   this the number that matters.
++ (nullable instancetype)startWithVideoURL:(nullable NSURL *)videoURL
+                                  audioURL:(nullable NSURL *)audioURL
+                                 outputURL:(nullable NSURL *)outputURL
+                              convertVideo:(BOOL)convertVideo
+                             sourceBitRate:(long long)sourceBitRate
+                                  progress:(nullable FBPDashDownloadProgress)progress
+                                completion:(FBPDashDownloadCompletion)completion;
+
 /// Abandon the flow.
 ///
 /// Cancels both transfers if they are still running, and calls
-/// @c +[FBPMediaMuxer cancelAll] if the merge has started. The completion still
-/// fires, with @c FBPDashDownloadErrorCancelled, once everything is cleaned up.
-/// Calling this after the completion has run does nothing.
+/// @c +[FBPMediaMuxer cancelAll] or @c +[FBPMediaConverter cancelAll] if that
+/// step has started. The completion still fires, with
+/// @c FBPDashDownloadErrorCancelled, once everything is cleaned up. Calling this
+/// after the completion has run does nothing.
+///
+/// Cancelling a conversion matters far more than cancelling a merge: it stops
+/// the encoder within one frame, rather than letting minutes of work finish for
+/// a file nobody will save.
 - (void)cancel;
 
 /// NO until the completion has fired. Read from the main queue.

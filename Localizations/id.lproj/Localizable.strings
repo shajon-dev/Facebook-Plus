@@ -98,6 +98,8 @@
 "download.reel.expired" = "Tautan unduhan ini sudah kedaluwarsa. Ketuk unduh sekali lagi.";
 "download.merge.progress" = "Menggabungkan audio dan video…";
 "download.merge.failed" = "Audio dan gambar video ini tidak bisa digabungkan.\n%@";
+"download.convert.failed" = "Tidak bisa mengonversi video ini untuk Foto.\n%@";
+"download.convert.unsupported" = "iPhone ini tidak bisa mengonversi kualitas ini. Coba yang lain.";
 "download.stream.videoFailed" = "Aliran video gagal diunduh.\n%@";
 "download.stream.audioFailed" = "Aliran audio gagal diunduh.\n%@";
 "download.quality.select.title" = "Pilih Kualitas";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "Menunggu…";
 "download.job.stage.fetching" = "Mengunduh…";
 "download.job.stage.fetchingBoth" = "Mengunduh video dan audio…";
+"download.job.stage.converting" = "Mengonversi untuk Foto…";
 "download.job.stage.saving" = "Menyimpan ke Foto…";
 "download.job.stage.done" = "Disimpan ke Foto";
 "download.job.stage.failed" = "Unduhan gagal";

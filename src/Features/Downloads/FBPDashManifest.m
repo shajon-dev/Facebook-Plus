@@ -37,7 +37,11 @@
 // comes out short on a device can be explained from the diagnostic log without
 // another build. What is left of the refusal list is the two things that are
 // still true: a <BaseURL> that cannot be resolved to an absolute http(s) URL is
-// not fetchable, and AV1/VP9 cannot be passed through AVAssetWriter.
+// not fetchable, and VP9 cannot be saved to Photos with anything this tweak
+// has on the other end. AV1 used to be in that second clause and no longer is:
+// it is accepted when, and only when, a conversion path exists at runtime, and
+// such a rung comes back marked -needsConversion. See the codec policy section
+// below for the measurements.
 //
 // The bounds further down are bounds on work, not policy, and they all stay.
 //
@@ -52,6 +56,15 @@
 #import "FBPDashManifest.h"
 
 #import <math.h>
+
+// The one symbol this file needs from the rest of the tweak, declared here
+// rather than by importing FBPMediaConverter.h — which pulls in AVFoundation and
+// VideoToolbox and would stop this file compiling against desktop Foundation on
+// its own. Exactly the arrangement FBPDashDownload.m and FBPDownloadStore.m
+// already use for FBPLocalizedString; the canonical declaration lives in
+// FBPMediaConverter.h, so keep the signature in step. A host harness supplies
+// its own definition.
+extern BOOL FBPMediaConversionIsAvailable(void);
 
 #pragma mark - Bounds
 //
@@ -234,40 +247,67 @@ NSTimeInterval FBPDashParseISODuration(NSString *text) {
 /// "probably the H.264 Facebook has always served", not as a disqualification.
 ///
 /// This stays a whitelist rather than becoming "accept everything" because
-/// letting AV1 or VP9 through produces the worst outcome available: the rung is
-/// offered, the user waits for a full download, and the save fails at the end.
+/// letting a codec through with nothing on the other end to handle it produces
+/// the worst outcome available: the rung is offered, the user waits for a full
+/// download, and the save fails at the end.
 ///
 /// The failure is in **Photos, not the muxer** — an earlier comment here had
-/// that wrong. Measured on device (iPhone SE, A13, iOS 27.2) with the same
-/// muxer and the same code path for both: a remuxed `av01.0.08M.08` + `mp4a`
-/// file is refused by `PHAssetCreationRequest` with `PHPhotosErrorDomain` 3302
-/// (`PHPhotosErrorInvalidResource`), while a remuxed `avc1.4d001e` + `mp4a` file
-/// saves and returns an identifier. `AVAssetWriter` passes AV1 through fine —
-/// verified separately, ffprobe reads `av1 + aac` off the output. So the gate's
-/// effect is right and its old justification was not.
+/// that wrong. Measured on device (iPhone SE, A13) with the same muxer and the
+/// same code path for both: a remuxed `av01.0.08M.08` file is refused by
+/// `PHAssetCreationRequest` with `PHPhotosErrorDomain` 3302
+/// (`PHPhotosErrorInvalidResource`), while a remuxed `avc1.4d001e` file saves
+/// and returns an identifier. `AVAssetWriter` passes AV1 through fine —
+/// verified separately, ffprobe reads `av1 + aac` off the output — so the wall
+/// was never the muxer.
 ///
-/// This is expensive: five of six captured Meta manifests are AV1-only, and
-/// those carry the long ladders, so this gate is why the picker falls back to
-/// the progressive pair on most real content. Lifting it needs a destination
-/// that accepts AV1 (Files rather than Photos), a per-device capability probe
-/// (an A18 with hardware AV1 may well accept it; untested), or a transcode to
-/// H.264 — for which `FBSharedFramework` already exports dav1d, so no library
-/// would have to ship. Until one of those exists, refusing early is kinder than
-/// failing late.
+/// **AV1 is now accepted, conditionally, and that is the change.** Refusing it
+/// was expensive: five of six captured Meta manifests are AV1-only and those
+/// carry the long ladders, which is why the picker used to collapse to the
+/// progressive pair on most real content. The way out is the third of the three
+/// options this comment used to list — convert to H.264 before saving — and
+/// FBPMediaConverter now does exactly that, with no library shipped.
 ///
-/// It also has to run *before* dedupe, or a VP9 entry can win a label and take
+/// So the condition: AV1 survives only when a conversion path exists *in this
+/// process*, which @c FBPMediaConversionIsAvailable answers by asking
+/// VideoToolbox whether this device has an AV1 decoder at all. On the A13 above
+/// it says no and AV1 rungs are refused exactly as before; on a device with
+/// hardware or software AV1 the ladder appears and each AV1 rung is marked
+/// @c needsConversion so the flow knows to re-encode it. Offering a rung this
+/// device cannot decode would be the "fails late" outcome all over again.
+///
+/// **VP9 is still refused, unconditionally.** Same Photos wall, and nothing on
+/// the other end: there is no VP9 equivalent of the converter, because the
+/// borrowed-decoder tier that might have supplied one is declined
+/// (FBPDav1dBridge.h) and Facebook's bundled `libavcodec` VP9 decoder has no
+/// muxer with it. One captured manifest is `avc1 + vp09`, and in that one the
+/// H.264 lane carries the ladder, so refusing VP9 there costs nothing.
+///
+/// This all has to run *before* dedupe, or a VP9 entry can win a label and take
 /// the H.264 rung's place.
+static BOOL FBPDashVideoCodecIsAV1(NSString *codecs) {
+    if (codecs.length == 0) return NO;
+    NSString *lower = codecs.lowercaseString;
+    return [lower hasPrefix:@"av01"] || [lower hasPrefix:@"av1"];
+}
+
 static BOOL FBPDashVideoCodecIsSupported(NSString *codecs) {
     if (codecs.length == 0) return YES;
     NSString *lower = codecs.lowercaseString;
     for (NSString *needle in @[@"avc1", @"avc3", @"h264", @"hvc1", @"hev1", @"hevc"]) {
         if ([lower hasPrefix:needle]) return YES;
     }
+    if (FBPDashVideoCodecIsAV1(codecs)) return FBPMediaConversionIsAvailable();
     return NO;
 }
 
 /// The families we refuse on purpose and can name in a note, so a dropped rung
 /// reads as "we have no decoder for this" rather than "unrecognised".
+///
+/// AV1 is in this list *and* can be supported above: on a device with no AV1
+/// decoder it is refused and this is what makes the note say why, while on a
+/// device with one it never reaches here. The two are not in conflict — the
+/// question this answers is "if it was refused, was it for want of a decoder",
+/// and for AV1 on such a device the answer is yes.
 static BOOL FBPDashVideoCodecHasNoPassthrough(NSString *codecs) {
     if (codecs.length == 0) return NO;
     NSString *lower = codecs.lowercaseString;
@@ -289,11 +329,19 @@ static BOOL FBPDashAudioCodecIsAAC(NSString *codecs) {
     return [lower hasPrefix:@"mp4a"] || [lower hasPrefix:@"aac"];
 }
 
-/// 0 = H.264 (or unstated), 1 = HEVC. Only ever breaks a tie between two
-/// representations carrying the same FBQualityLabel; H.264 wins, because it is
-/// the family every iOS build remuxes without surprises.
+/// 0 = H.264 (or unstated), 1 = HEVC, 2 = AV1. Only ever breaks a tie between
+/// two representations carrying the same FBQualityLabel; the lowest rank wins.
+///
+/// H.264 first, because it is the family every iOS build remuxes without
+/// surprises. AV1 last, and that placement is load-bearing now that AV1 rungs
+/// are offered: a mixed manifest that has both an `avc1` and an `av01` lane at
+/// the same label gives the user a rung that is copied in a second over one that
+/// is re-encoded over minutes and comes out lossier. Converting is the fallback
+/// for a ladder that is AV1-only, which is the common case, not something to
+/// choose when Facebook has already served H.264.
 static NSInteger FBPDashVideoCodecRank(NSString *codecs) {
     NSString *lower = codecs.lowercaseString;
+    if (FBPDashVideoCodecIsAV1(codecs)) return 2;
     for (NSString *needle in @[@"hvc1", @"hev1", @"hevc"]) {
         if ([lower hasPrefix:needle]) return 1;
     }
@@ -349,6 +397,11 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
         _height = height;
         _bandwidth = bandwidth;
         _codecRank = FBPDashVideoCodecRank(codecs ?: @"");
+        // Set from the codecs string alone, which is safe because an AV1 rung
+        // only gets this far on a device the gate has already established can
+        // decode AV1. Audio representations run through this initializer too and
+        // never match, so there is nothing to exclude.
+        _needsConversion = FBPDashVideoCodecIsAV1(codecs ?: @"");
         _hasKnownChannelLayout = YES;
     }
     return self;
@@ -384,10 +437,11 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"<%@ %@ rank=%ld %ldx%ld bw=%lld codecs=%@>",
+    return [NSString stringWithFormat:@"<%@ %@ rank=%ld %ldx%ld bw=%lld codecs=%@%@>",
             NSStringFromClass(self.class), self.displayLabel ?: @"(unlabelled)",
             (long)self.qualityRank, (long)self.width, (long)self.height,
-            self.bandwidth, self.codecs ?: @"?"];
+            self.bandwidth, self.codecs ?: @"?",
+            self.needsConversion ? @" needs-conversion" : @""];
 }
 
 @end
@@ -747,11 +801,23 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
     if (isVideo) {
         if (!FBPDashVideoCodecIsSupported(codecs)) {
+            NSString *why;
+            if (FBPDashVideoCodecIsAV1(codecs)) {
+                // The one refusal that is about the device rather than the
+                // codec, and the most important note in this file now: it is
+                // what tells a maintainer looking at a two-row picker on a real
+                // phone that the ladder was there and this handset could not
+                // decode it.
+                why = @"is AV1 and this device has no AV1 decoder, so it cannot "
+                      @"be converted to H.264 for Photos";
+            } else if (FBPDashVideoCodecHasNoPassthrough(codecs)) {
+                why = @"cannot be passed through to Photos and has no conversion "
+                      @"path here";
+            } else {
+                why = @"is not an H.264/HEVC spelling we recognise";
+            }
             [self note:@"rep %@ (%@): codecs=\"%@\" %@", identifier,
-                       qualityLabel.length ? qualityLabel : @"?", codecs,
-                       FBPDashVideoCodecHasNoPassthrough(codecs)
-                           ? @"has no iOS decoder and AVAssetWriter cannot pass it through"
-                           : @"is not an H.264/HEVC spelling we recognise"];
+                       qualityLabel.length ? qualityLabel : @"?", codecs, why];
             return;
         }
 
@@ -981,11 +1047,17 @@ static NSRegularExpression *FBPDashExpression(NSString *pattern,
     }
 
     if (isVideo && !FBPDashVideoCodecIsSupported(codecs)) {
+        NSString *why;
+        if (FBPDashVideoCodecIsAV1(codecs)) {
+            why = @"is AV1 and this device has no AV1 decoder";
+        } else if (FBPDashVideoCodecHasNoPassthrough(codecs)) {
+            why = @"cannot be passed through to Photos and has no conversion "
+                  @"path here";
+        } else {
+            why = @"is not an H.264/HEVC spelling we recognise";
+        }
         [self note:@"scrape: %@ codecs=\"%@\" %@", label.length ? label : @"rung",
-                   codecs ?: @"",
-                   FBPDashVideoCodecHasNoPassthrough(codecs)
-                       ? @"has no iOS decoder and AVAssetWriter cannot pass it through"
-                       : @"is not an H.264/HEVC spelling we recognise"];
+                   codecs ?: @"", why];
         return;
     }
 

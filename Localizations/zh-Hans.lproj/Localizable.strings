@@ -98,6 +98,8 @@
 "download.reel.expired" = "该下载链接已过期，请再点一次下载。";
 "download.merge.progress" = "正在合并音频和画面…";
 "download.merge.failed" = "无法合并这个视频的音频和画面。\n%@";
+"download.convert.failed" = "无法将此视频转换为“照片”可保存的格式。\n%@";
+"download.convert.unsupported" = "此 iPhone 无法转换该画质，请选择其他画质。";
 "download.stream.videoFailed" = "画面流未能下载。\n%@";
 "download.stream.audioFailed" = "音频流未能下载。\n%@";
 "download.quality.select.title" = "选择画质";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "等待中…";
 "download.job.stage.fetching" = "正在下载…";
 "download.job.stage.fetchingBoth" = "正在下载画面和声音…";
+"download.job.stage.converting" = "正在转换以保存到“照片”…";
 "download.job.stage.saving" = "正在保存到照片…";
 "download.job.stage.done" = "已保存到照片";
 "download.job.stage.failed" = "下载失败";

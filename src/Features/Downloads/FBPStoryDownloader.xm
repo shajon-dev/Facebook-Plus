@@ -464,11 +464,25 @@ static void FBPStorySetStopGlyph(BOOL stop) {
     });
 }
 
+/// Map the two-stream flow's stage onto the store's. Same reasoning as the
+/// Reels copy: with three stages a ternary would report a conversion as a fetch.
+static FBPDownloadJobStage FBPStoryStageForDashStage(FBPDashDownloadStage stage) {
+    switch (stage) {
+        case FBPDashDownloadStageMerging:    return FBPDownloadJobStageMerging;
+        case FBPDashDownloadStageConverting: return FBPDownloadJobStageConverting;
+        case FBPDashDownloadStageFetching:   break;
+    }
+    return FBPDownloadJobStageFetching;
+}
+
 static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
                                       FBPDownloadJob *job,
                                       BOOL isRetry) {
     if (!FBPStoryDownloaderEnabled()) { FBPStoryHideButton(); return; }
-    if (!variant.url || !variant.audioURL) return;
+    // A missing audio URL is only a refusal when there is nothing else for this
+    // flow to do. An AV1 rung with no soundtrack still has to come through here,
+    // because this is the path that converts it.
+    if (!variant.url || (!variant.audioURL && !variant.needsConversion)) return;
     if (!isRetry && gStoryDownloading) return;
 
     if (!isRetry) gStoryDownloading = YES;
@@ -491,6 +505,8 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
         startWithVideoURL:variant.url
                  audioURL:variant.audioURL
                 outputURL:output
+             convertVideo:variant.needsConversion
+            sourceBitRate:variant.bitRate
                  progress:^(FBPDashDownloadStage stage, float fraction) {
         // Driven even though FBPStorySetProgress swallows it, so that one
         // function stays the only thing between Stories and a visible bar if the
@@ -499,9 +515,7 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
 
         FBPDownloadStore *store = FBPDownloadStore.shared;
         [store job:job didProgress:fraction];
-        [store job:job didEnterStage:(stage == FBPDashDownloadStageMerging)
-                                         ? FBPDownloadJobStageMerging
-                                         : FBPDownloadJobStageFetching];
+        [store job:job didEnterStage:FBPStoryStageForDashStage(stage)];
     } completion:^(NSURL *merged, NSError *error) {
         // A retry started from the manager never owned the on-screen button or
         // the global flow handle — the story it belongs to left the screen long
@@ -575,6 +589,7 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
                                quality:variant.title
                           thumbnailURL:gStoryThumbnailURL
                               needsMux:variant.needsMux
+                       needsConversion:variant.needsConversion
                          expectedBytes:variant.byteSize];
 
         // Captures the variant and the media type and nothing else, so the
@@ -592,9 +607,11 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
     }
 
     // A DASH rung is a video-only file plus a separate audio file, so it takes
-    // the two-stream path and gets merged before it is saved. Everything else is
+    // the two-stream path and gets merged before it is saved. An AV1 rung takes
+    // it too, soundtrack or not, because that is where the conversion to H.264
+    // happens and saving AV1 as-is is what Photos refuses. Everything else is
     // one complete MP4 — or a photo — and goes down the path it always has.
-    if (variant.needsMux) {
+    if (variant.needsMux || variant.needsConversion) {
         FBPStoryStartDashDownload(variant, job, isRetry);
     } else {
         FBPStoryStartDownload(variant.url, job, isRetry, isVideo);

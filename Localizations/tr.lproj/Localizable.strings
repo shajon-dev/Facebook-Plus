@@ -98,6 +98,8 @@
 "download.reel.expired" = "Bu indirme bağlantısının süresi doldu. İndirmeye yeniden dokun.";
 "download.merge.progress" = "Ses ve görüntü birleştiriliyor…";
 "download.merge.failed" = "Bu videonun sesi ve görüntüsü birleştirilemedi.\n%@";
+"download.convert.failed" = "Bu video Fotoğraflar için dönüştürülemedi.\n%@";
+"download.convert.unsupported" = "Bu iPhone bu kaliteyi dönüştüremiyor. Başka birini deneyin.";
 "download.stream.videoFailed" = "Görüntü akışı indirilemedi.\n%@";
 "download.stream.audioFailed" = "Ses akışı indirilemedi.\n%@";
 "download.quality.select.title" = "Kalite Seç";
@@ -186,6 +188,7 @@
 "download.job.stage.queued" = "Bekliyor…";
 "download.job.stage.fetching" = "İndiriliyor…";
 "download.job.stage.fetchingBoth" = "Görüntü ve ses indiriliyor…";
+"download.job.stage.converting" = "Fotoğraflar için dönüştürülüyor…";
 "download.job.stage.saving" = "Fotoğraflar'a kaydediliyor…";
 "download.job.stage.done" = "Fotoğraflar'a kaydedildi";
 "download.job.stage.failed" = "İndirme başarısız";
