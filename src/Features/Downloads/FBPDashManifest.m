@@ -233,12 +233,30 @@ NSTimeInterval FBPDashParseISODuration(NSString *text) {
 /// whatsoever and reads real Reels ladders, so silence here is treated as
 /// "probably the H.264 Facebook has always served", not as a disqualification.
 ///
-/// This stays a whitelist rather than becoming "accept everything" for one
-/// reason only: AV1 and VP9 are real in Meta's manifests, and letting one
-/// through produces the worst outcome available — the rung is offered, the user
-/// waits for a full download, and then the mux fails because AVAssetWriter
-/// cannot pass those through. It also has to run *before* dedupe, or a VP9
-/// entry can win a label and take the H.264 rung's place.
+/// This stays a whitelist rather than becoming "accept everything" because
+/// letting AV1 or VP9 through produces the worst outcome available: the rung is
+/// offered, the user waits for a full download, and the save fails at the end.
+///
+/// The failure is in **Photos, not the muxer** — an earlier comment here had
+/// that wrong. Measured on device (iPhone SE, A13, iOS 27.2) with the same
+/// muxer and the same code path for both: a remuxed `av01.0.08M.08` + `mp4a`
+/// file is refused by `PHAssetCreationRequest` with `PHPhotosErrorDomain` 3302
+/// (`PHPhotosErrorInvalidResource`), while a remuxed `avc1.4d001e` + `mp4a` file
+/// saves and returns an identifier. `AVAssetWriter` passes AV1 through fine —
+/// verified separately, ffprobe reads `av1 + aac` off the output. So the gate's
+/// effect is right and its old justification was not.
+///
+/// This is expensive: five of six captured Meta manifests are AV1-only, and
+/// those carry the long ladders, so this gate is why the picker falls back to
+/// the progressive pair on most real content. Lifting it needs a destination
+/// that accepts AV1 (Files rather than Photos), a per-device capability probe
+/// (an A18 with hardware AV1 may well accept it; untested), or a transcode to
+/// H.264 — for which `FBSharedFramework` already exports dav1d, so no library
+/// would have to ship. Until one of those exists, refusing early is kinder than
+/// failing late.
+///
+/// It also has to run *before* dedupe, or a VP9 entry can win a label and take
+/// the H.264 rung's place.
 static BOOL FBPDashVideoCodecIsSupported(NSString *codecs) {
     if (codecs.length == 0) return YES;
     NSString *lower = codecs.lowercaseString;
