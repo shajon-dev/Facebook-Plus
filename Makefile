@@ -45,6 +45,8 @@ FacebookPlus_FILES = \
 	src/Features/Downloads/FBPDownloadVariants.m \
 	src/Features/Downloads/FBPMediaMuxer.m \
 	src/Features/Downloads/FBPDashDownload.m \
+	src/Features/Downloads/FBPDownloadStore.m \
+	src/Features/Downloads/FBPDownloadManagerController.m \
 	src/Features/Downloads/FBPReelsDownloader.xm \
 	src/Features/Downloads/FBPStoryDownloader.xm \
 	src/Features/Links/FBPLinkHooks.xm \
