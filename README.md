@@ -197,10 +197,14 @@ What you need to know as a user:
 
 - **Your signing certificate must have at least one registered App Group.**
   Without one there is no container to redirect into and the bridge does nothing.
-- **Using Feather? Turn on "Merge entitlements"** (it is off by default). That
-  re-signs Facebook's keychain groups under *your* team id, which is the other
-  half of the fix. You do **not** need "Inject into app extensions" — the bridge
-  is already inside the IPA — though enabling it is harmless.
+- **Using Feather? Turn on "Merge Entitlements"** — **Settings → Features →
+  Signing Options**, in its own section near the bottom, below "Delete After
+  Signing". It is off by default. That re-signs Facebook's keychain groups under
+  *your* team id, which is the other half of the fix. (The same switch is also in
+  the signing sheet, if you would rather set it per app. If it is greyed out you
+  have a custom entitlements file loaded, which disables the merge.) You do
+  **not** need "Inject into app extensions" — the bridge is already inside the
+  IPA — though enabling it is harmless.
 - **Messenger messages are out of scope.** They are end-to-end encrypted with
   device-bound keys in `group.com.facebook.family`; a redirected container is
   empty, so there is nothing to decrypt with. This targets **Facebook**

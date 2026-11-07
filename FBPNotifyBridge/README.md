@@ -106,9 +106,18 @@ Of the two profiles this repo was developed against:
 Feather can supply the other half of the fix, and **both of its relevant options
 default to off**:
 
-- **Enable "Merge entitlements".** Facebook's keychain groups are read out of the
-  original binary and re-written with *your* team id (`T84QZS65DQ.platformFamily`
-  → `<yourTeam>.platformFamily`), which works because a developer profile grants
+- **Enable "Merge Entitlements"**, in Feather under
+  **Settings → Features → Signing Options**, in its own section near the bottom
+  (below "Delete After Signing", above "Experiments"), captioned *"This option
+  merges entitlements with the embedded entitlements from the app you're
+  signing."* The same switch also appears in the signing sheet itself, so you can
+  turn it on for one app without changing the default. If it is greyed out, you
+  have supplied a custom entitlements file — Feather disables the merge in that
+  case, so clear the file or put the keychain groups in it yourself.
+
+  What it does: Facebook's keychain groups are read out of the original binary
+  and re-written with *your* team id (`T84QZS65DQ.platformFamily` →
+  `<yourTeam>.platformFamily`), which works because a developer profile grants
   `<yourTeam>.*` as a wildcard. Without this, the app and the extension have no
   keychain group in common and the session cannot cross between them. Note that
   app *groups* are deliberately **not** merged this way — `group.com.facebook.*`
