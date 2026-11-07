@@ -249,21 +249,6 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
                                           byteSize:bytes];
 }
 
-/// The same variant with a different title and detail. Used to restate a
-/// progressive row by its rung once the DASH ladder gives the picker a scale to
-/// put it on; the URLs and every metric are carried over untouched.
-static FBPDownloadVariant *FBPDownloadRelabel(FBPDownloadVariant *variant,
-                                              NSString *title,
-                                              NSString *detail) {
-    return [[FBPDownloadVariant alloc] initWithURL:variant.url
-                                          audioURL:variant.audioURL
-                                             title:title
-                                            detail:detail
-                                       pixelHeight:variant.pixelHeight
-                                           bitRate:variant.bitRate
-                                          byteSize:variant.byteSize];
-}
-
 static NSString *FBPDownloadByteString(long long bytes) {
     if (bytes <= 0) return nil;
     return [NSByteCountFormatter stringFromByteCount:bytes
@@ -343,27 +328,24 @@ FBPDownloadMergeDashLadder(id item,
     NSMutableArray<FBPDownloadVariant *> *unranked = [NSMutableArray array];
     NSMutableSet<NSNumber *> *covered = [NSMutableSet set];
 
-    // The progressive rows get restated by their rung, because "High quality"
-    // is exactly what the user could not act on: on real content -HDPlaybackURL
-    // is 720p, and a row that will not say so is indistinguishable from the
-    // 1080p the ladder can offer. The detail keeps the exact size with no "~",
-    // which is the visible difference from an estimated DASH row.
+    // Progressive rows claim no rung, and never suppress one.
+    //
+    // This used to label them from -videoWidth/-videoHeight and add that number
+    // to `covered`. On device that produced the exact bug it was meant to
+    // prevent: those two describe the ITEM — the source upload — not the
+    // rendition behind -HDPlaybackURL. For a 1920x1080 upload whose HD
+    // progressive is 720p, the HD row was labelled "1080p", it covered rung
+    // 1080, the manifest's real 1080p representation was skipped as a duplicate,
+    // and tapping "1080p" downloaded the 720p file. Reported as "1080p download
+    // korleo 720p download hocche", and it is the only resolution Facebook
+    // publishes per item, so there is nothing here to correct it with.
+    //
+    // So the DASH ladder is the ladder, and the progressive pair sits below it
+    // keeping its own wording and its exact byte size. The redundancy is honest:
+    // those two rows need no second stream and no merge, which is a real reason
+    // to pick one, and they can no longer misname themselves or hide a rung.
     for (FBPDownloadVariant *variant in flat) {
-        if (variant.pixelHeight <= 0) {
-            // Facebook publishes one -videoHeight per item, so the SD stream's
-            // rung is genuinely unknown whenever HD took it. We will not invent
-            // a number for it, and without one it cannot be placed on the
-            // ladder or deduped against it — so it keeps its wording and goes
-            // last, where a row of unknown quality cannot be mistaken for one
-            // we can name.
-            [unranked addObject:variant];
-            continue;
-        }
-        [covered addObject:@(variant.pixelHeight)];
-        [ranked addObject:FBPDownloadRelabel(
-            variant,
-            [NSString stringWithFormat:@"%ldp", (long)variant.pixelHeight],
-            FBPDownloadByteString(variant.byteSize))];
+        [unranked addObject:variant];
     }
 
     NSString *estimateFormat = FBPL(@"download.quality.dash.detail");
@@ -378,12 +360,11 @@ FBPDownloadMergeDashLadder(id item,
         // the only thing that separates them.
         NSInteger rank = representation.qualityRank;
 
-        // Prefer progressive at a rung it already covers: one file, no mux,
-        // exact size — strictly cheaper. This can only ever drop a *duplicate*
-        // rung, which in practice is the 720p one, so every rung the
-        // progressive pair does not reach (360p, 480p, 540p, 640p, 1080p and
-        // anything above) survives. Collapsing back to two rows is the bug
-        // being fixed, not an acceptable outcome.
+        // Second guard against showing one rung twice. The parser already
+        // dedupes by label, so this only fires if a manifest repeats a rung
+        // across adaptation sets. Only DASH rows are ever entered into
+        // `covered` — a progressive row deliberately claims no rung, so it can
+        // never hide a representation here.
         if (rank > 0 && [covered containsObject:@(rank)]) continue;
 
         long long bytes =
