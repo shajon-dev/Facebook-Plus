@@ -28,7 +28,11 @@
   <tbody>
     <tr>
       <td nowrap>📰 <b>Feed</b></td>
-      <td>Remove Ads & Sponsored Posts (feed, video, stories & <b>Marketplace</b>)<br>Hide "People you may know", Group & Page suggestions<br>Remove Reels carousel, Threads promo & <b>Stories</b> (tray + single cards)</td>
+      <td>Remove Ads & Sponsored Posts (feed, video, stories & <b>Marketplace</b>)<br>Hide "People you may know", Group & Page suggestions<br>Remove Reels carousel, Threads promo & <b>Stories</b> (tray + single cards)<br><b>Remove survey prompts</b> — the "Are you interested in this post / Reel?" feedback cards, in the feed and on both Reels surfaces</td>
+    </tr>
+    <tr>
+      <td nowrap>⬇️ <b>Downloads</b></td>
+      <td><b>Pick a quality before saving</b> — the full ladder Facebook serves (360p up to 1080p and beyond), not just HD/SD, read from the video's own DASH manifest<br>Video and audio arrive as separate streams and are merged losslessly with AVFoundation; AV1 rungs, which Photos refuses, are converted to HEVC first<br><b>Download manager</b> — every download is a job with its own progress, cancel and retry, reachable from Settings and from a HUD pill while one is running</td>
     </tr>
     <tr>
       <td nowrap>✅ <b>Confirmations</b></td>
@@ -149,7 +153,7 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
      - fakesigns every injected binary for sideloading;
      - builds `FBPNotifyBridge/src` and adds the resulting dylib to the app's
        `NotificationServiceExtension.appex` (see
-       [below](#-notifications-on-sideloaded-builds-experimental-unverified));
+       [below](#-notifications-on-sideloaded-builds));
        skip it with `NSE_BRIDGE=0 ./build.sh`.
 
 
@@ -168,7 +172,7 @@ This writes a per-machine `.clangd` (with your theos path and SDK baked in) and 
 
 ---
 
-## 🔔 Notifications on sideloaded builds (experimental, unverified)
+## 🔔 Notifications on sideloaded builds
 
 Sideloaded builds show *"You have a new notification"* instead of the real text
 (issues [#12](../../issues/12), [#13](../../issues/13)). Facebook sends a stub
@@ -183,10 +187,11 @@ The released IPA now carries **`FBPNotifyBridge.dylib`** inside that extension: 
 already uses, so both processes read and write the same place. Full write-up in
 **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
 
-> [!WARNING]
-> **This is UNVERIFIED on a device.** It is a correct implementation of the fix,
-> not a confirmed one. There is also an open question — see the write-up — about
-> whether the extension even launches on a re-signed build.
+> [!NOTE]
+> **Confirmed working on a device**, with detailed notifications arriving on the
+> lock screen. That also settles the question the write-up used to leave open:
+> the extension does launch on a re-signed build, and an explicit (non-wildcard)
+> App ID is not an obstacle.
 
 What you need to know as a user:
 
@@ -225,7 +230,8 @@ What you need to know as a user:
 │   │   ├── AppIcons    # Custom app-icon picker logic
 │   │   ├── Calls       # Incoming Call Blocker (PushKit & CallKit interceptors)
 │   │   ├── Confirmations # Opt-in commit-level confirmations (comment, share, post, friend, follow)
-│   │   ├── Downloads   # Reel & Story media downloaders (save to Photos)
+│   │   ├── Downloads   # Quality picker, DASH manifest reader, two-stream fetch,
+│   │   │               # lossless mux, AV1→HEVC conversion, download manager
 │   │   ├── Feed        # Feed-related hooks (suggestions, Reels, Stories removal)
 │   │   ├── Fonts       # Custom UI font replacement (Core Text registration + picker)
 │   │   ├── Language    # UI language override hooks
