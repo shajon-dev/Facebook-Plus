@@ -102,7 +102,10 @@ the whole requirement:
 | Paid certificate, several registered groups | `group.<yourTeam>.…` × 5 | **Yes.** There is a container to redirect into. |
 | Paid certificate, none registered | `com.apple.security.application-groups` is an empty array | **No.** The bridge loads and does nothing. |
 
-To check your own, decode the profile and look at that key:
+The user-facing way to check is
+[**Check App Groups Support**](https://github.com/SHAJON-404/Facebook-Plus/wiki/Check-App-Groups-Support)
+in the wiki — sign and open a small checker app, which answers it outright. To
+read the profile directly instead, decode it and look at that key:
 
 ```bash
 security cms -D -i YourCertificate.mobileprovision > profile.plist

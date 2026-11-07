@@ -192,6 +192,9 @@ What this means for you:
 
 - **Your certificate needs at least one registered App Group.** Without one
   there is no container to redirect into and the bridge does nothing.
+  **[Check your certificate in a minute](../../wiki/Check-App-Groups-Support)**
+  — sign and open a small checker app and it tells you outright, before you
+  sign anything else.
 - **Feather's "Merge Entitlements" is optional.** Notifications are confirmed
   working without it, and as of Feather v2.9.0 the switch is not in any released
   build. Enable it if your build offers it; otherwise a certificate with an App
