@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Hiện nút tải xuống khi xem Reels.";
 "row.downloadstories.title" = "Tải Story";
 "row.downloadstories.desc" = "Hiện nút tải xuống khi xem Story.";
+"row.downloadquality.title" = "Hỏi chất lượng";
+"row.downloadquality.desc" = "Chọn chất lượng và dung lượng trước khi lưu, khi có nhiều hơn một.";
 "row.anonstories.title" = "Xem tin ẩn danh";
 "row.anonstories.desc" = "Xem tin mà không gửi xác nhận đã đọc.";
 "row.noautonext.title" = "Tắt tự động chuyển tiếp";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "Ghi nhật ký mã đơn vị bảng tin";
 "row.logfeedunits.desc" = "Ghi mã phân loại của từng đơn vị bảng tin vào nhật ký hệ thống.";
 "footer.logfeedunits" = "Chỉ dùng để tìm nguyên nhân khi một bộ lọc ngừng hoạt động. Bật lên, cuộn bảng tin một lượt, rồi đọc nhật ký trong Console.app ở «com.shajon.fbplus». Những lúc khác hãy để tắt.";
+"row.logdownloadqualities.title" = "Ghi nhật ký chất lượng tải xuống";
+"row.logdownloadqualities.desc" = "Ghi các chất lượng mà Facebook cung cấp cho một video vào nhật ký hệ thống.";
+"footer.logdownloadqualities" = "Chỉ dùng để biết những chất lượng nào có thể thêm vào bảng chọn khi tải. Bật lên, nhấn tải ở một Reel và một Story, rồi đọc nhật ký trong Console.app ở «com.shajon.fbplus». Những lúc khác hãy để tắt.";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
 "row.reset.title" = "Đặt lại tất cả cài đặt";
 "row.linksinsafari.title" = "Mở liên kết trong Safari";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN trả HTTP %ld.";
 "download.reel.tmpFailed" = "Không tạo được file video tạm.";
 "download.reel.noLink" = "Chưa lấy được link của video này.";
+"download.reel.expired" = "Link tải này đã hết hạn. Hãy nhấn tải lại.";
+"download.quality.title" = "Chất lượng tải xuống";
+"download.quality.hd" = "Chất lượng cao";
+"download.quality.sd" = "Chất lượng thường";
+"download.quality.spherical.hd" = "Chất lượng cao 360°";
+"download.quality.spherical.sd" = "Chất lượng thường 360°";
+"download.quality.spherical.detail" = "Nguồn 360° đầy đủ";
+"download.quality.original" = "Bản gốc";
 "reels.hideOverlay.a11y" = "Ẩn lớp phủ Reel";
 "update.title" = "Đã có bản cập nhật";
 "update.subtitle" = "Phiên bản %@ hiện đã có.";

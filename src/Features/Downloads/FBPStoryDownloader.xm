@@ -2,6 +2,7 @@
 #import "FBPHeaders.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
+#import "FBPDownloadVariants.h"
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
@@ -23,7 +24,10 @@ static BOOL gStoryHookInstalled = NO;
 
 static __weak UIViewController *gStoryController = nil;
 static __weak UIView *gStoryMediaView = nil;
-static NSURL *gStoryVideoURL = nil;
+// Every rendition of the current story, best first — resolved by the shared
+// resolver in FBPDownloadVariants.m, the same one Reels uses. A photo story has
+// exactly one, so it takes the same path with no special case.
+static NSArray<FBPDownloadVariant *> *gStoryVariants = nil;
 static NSString *gStoryVideoID = nil;
 static BOOL gStoryMediaIsVideo = NO;
 static UIButton *gStoryDownloadButton = nil;
@@ -122,20 +126,24 @@ static void FBPStorySetProgress(CGFloat value, BOOL visible) {
     });
 }
 
-static void FBPStoryShowSavedPopup(void) {
+static void FBPShowStoryMessage(NSString *message) {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIViewController *vc = gStoryController;
         if (!vc || !vc.view.window || vc.presentedViewController) return;
 
         UIAlertController *alert =
             [UIAlertController alertControllerWithTitle:nil
-                                                message:FBPL(@"download.story.saved")
+                                                message:message
                                          preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.ok")
                                                   style:UIAlertActionStyleDefault
                                                 handler:nil]];
         [vc presentViewController:alert animated:YES completion:nil];
     });
+}
+
+static void FBPStoryShowSavedPopup(void) {
+    FBPShowStoryMessage(FBPL(@"download.story.saved"));
 }
 
 static void FBPStoryFlashSymbol(NSString *symbol) {
@@ -173,6 +181,30 @@ totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
 - (void)URLSession:(NSURLSession *)session
       downloadTask:(NSURLSessionDownloadTask *)downloadTask
 didFinishDownloadingToURL:(NSURL *)location {
+    // A refused transfer still "finishes" — with the CDN's error body as its
+    // payload — so without this an expired link was saved to Photos as a
+    // seconds-long broken .mp4. 403 specifically means the signed URL's `oe=`
+    // expiry has passed, which tapping download again fixes.
+    NSHTTPURLResponse *response =
+        [downloadTask.response isKindOfClass:NSHTTPURLResponse.class]
+        ? (NSHTTPURLResponse *)downloadTask.response : nil;
+    NSInteger status = response ? response.statusCode : 0;
+
+    if (response && (status < 200 || status >= 300)) {
+        FBPStoryLog(@"download rejected HTTP %ld", (long)status);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            gStoryDownloading = NO;
+            FBPStorySetButtonState(YES);
+            FBPStorySetProgress(0, NO);
+            FBPStoryFlashSymbol(@"xmark");
+            if (status == 403) {
+                FBPShowStoryMessage(FBPL(@"download.reel.expired"));
+            }
+        });
+        [session finishTasksAndInvalidate];
+        return;
+    }
+
     NSString *extension = gStoryMediaIsVideo ? @"mp4" : @"jpg";
     NSString *tmpName = [NSString stringWithFormat:@"FBP-Story-%@-%@.%@",
                          gStoryVideoID ?: (gStoryMediaIsVideo ? @"video" : @"photo"),
@@ -244,11 +276,11 @@ didCompleteWithError:(NSError *)error {
 
 static NSMutableSet *gStoryDownloadDelegates = nil;
 
-static void FBPStoryStartDownload(void) {
+static void FBPStoryStartDownload(NSURL *sourceURL) {
     if (!FBPStoryDownloaderEnabled()) { FBPStoryHideButton(); return; }
-    if (gStoryDownloading || !gStoryVideoURL) return;
+    if (gStoryDownloading || !sourceURL) return;
 
-    NSURL *url = [gStoryVideoURL copy];
+    NSURL *url = [sourceURL copy];
     if (![url.scheme.lowercaseString hasPrefix:@"http"]) return;
 
     gStoryDownloading = YES;
@@ -301,13 +333,54 @@ static void FBPStoryStartDownload(void) {
 }
 - (void)downloadTapped:(UIButton *)sender {
     FBPStoryLog(@"button tapped currentVideoID=%@", gStoryVideoID);
-    FBPStoryStartDownload();
+
+    NSArray<FBPDownloadVariant *> *variants = gStoryVariants;
+
+    // Re-resolve at tap time. Story playback URLs are signed and carry a short
+    // `oe=` expiry, and the picker sheet below can stay open for as long as the
+    // user takes to choose, so the list read at the moment of the tap is the
+    // only one worth trusting. The live read is only used when it produces
+    // something; otherwise the captured list stands.
+    //
+    // Only video stories can be re-resolved — a photo story's single URL comes
+    // from the controller's own -_getMediaUrl and has no playback item behind it.
+    id playbackController = nil;
+    id item = nil;
+
+    if (gStoryMediaIsVideo && gStoryMediaView) {
+        playbackController = FBPStoryObjectGetter(gStoryMediaView, @"playbackController");
+        FBPDownloadSource *live =
+            FBPDownloadSourceFromPlaybackController(playbackController);
+        item = live.item;
+        if (live.variants.count > 0) {
+            variants = live.variants;
+            gStoryVariants = live.variants;
+            if (live.videoID.length > 0) gStoryVideoID = [live.videoID copy];
+        }
+    }
+
+    if (variants.count == 0) {
+        FBPStoryLog(@"tap with nothing downloadable captured");
+        return;
+    }
+
+    // Diagnostic (off by default, free when off).
+    FBPDownloadLogQualities(item, playbackController, variants);
+
+    FBPDownloadPresentPicker(
+        variants,
+        gStoryController,
+        sender,
+        ^(FBPDownloadVariant *variant) {
+            FBPStoryStartDownload(variant.url);
+        }
+    );
 }
 @end
 
 static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
     if (!FBPStoryDownloaderEnabled()) { FBPStoryHideButton(); return; }
-    if (!vc || !FBPStoryControllerVisible(vc) || !gStoryVideoURL) return;
+    if (!vc || !FBPStoryControllerVisible(vc) || gStoryVariants.count == 0) return;
 
     UIView *host = vc.view;
     if (!host) return;
@@ -367,32 +440,23 @@ static void FBPStoryCaptureCurrentVideo(id controller, id mediaView) {
     Class videoClass = objc_getClass("FBSnacksNewVideoView");
     if (!videoClass || !mediaView || ![mediaView isKindOfClass:videoClass]) return;
 
+    // The HD/SD longhand that used to live here is gone: both download surfaces
+    // now go through the one resolver in FBPDownloadVariants.m, so Stories gets
+    // the quality picker for free and a new format only has to be taught once.
     id playbackController = FBPStoryObjectGetter(mediaView, @"playbackController");
-    id item = FBPStoryObjectGetter(playbackController, @"currentVideoPlaybackItem");
-    if (!item) return;
-
-    id videoID = FBPStoryObjectGetter(item, @"videoID");
-    id hd = FBPStoryObjectGetter(item, @"HDPlaybackURL");
-    id sd = FBPStoryObjectGetter(item, @"SDPlaybackURL");
-
-    NSURL *url = nil;
-    if ([hd isKindOfClass:NSURL.class]) url = hd;
-    else if ([hd isKindOfClass:NSString.class]) url = [NSURL URLWithString:hd];
-
-    if (!url) {
-        if ([sd isKindOfClass:NSURL.class]) url = sd;
-        else if ([sd isKindOfClass:NSString.class]) url = [NSURL URLWithString:sd];
-    }
-
-    if (!url || ![url.scheme.lowercaseString hasPrefix:@"http"]) return;
+    FBPDownloadSource *source =
+        FBPDownloadSourceFromPlaybackController(playbackController);
+    if (source.variants.count == 0) return;
 
     gStoryController = controller;
     gStoryMediaView = mediaView;
     gStoryMediaIsVideo = YES;
-    gStoryVideoURL = [url copy];
-    gStoryVideoID = [videoID isKindOfClass:NSString.class] ? [videoID copy] : [videoID description];
+    gStoryVariants = source.variants;
+    gStoryVideoID = [source.videoID copy];
 
-    FBPStoryLog(@"captured videoID=%@ url=%@", gStoryVideoID, gStoryVideoURL.absoluteString);
+    FBPStoryLog(@"captured videoID=%@ variants=%lu best=%@", gStoryVideoID,
+                (unsigned long)source.variants.count,
+                source.variants.firstObject.url.absoluteString);
 
     dispatch_async(dispatch_get_main_queue(), ^{
         FBPStoryInstallOrUpdateButton((UIViewController *)controller);
@@ -417,7 +481,9 @@ static void FBPStoryCaptureCurrentPhoto(id controller, id mediaView) {
     gStoryController = controller;
     gStoryMediaView = mediaView;
     gStoryMediaIsVideo = NO;
-    gStoryVideoURL = [url copy];
+    // One rendition, so the picker is skipped entirely and the tap behaves
+    // exactly as it did before quality selection existed.
+    gStoryVariants = FBPDownloadSingleVariant(url, nil);
     gStoryVideoID = [NSString stringWithFormat:@"photo-%lu",
                      (unsigned long)url.absoluteString.hash];
 

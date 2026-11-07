@@ -418,6 +418,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyReelsDownloaderEnabled, FBPL(@"row.downloadreels.title"), FBPL(@"row.downloadreels.desc"), @"download"),
                 FBPSwitchRow(FBPKeyStoryDownloaderEnabled, FBPL(@"row.downloadstories.title"), FBPL(@"row.downloadstories.desc"), @"download"),
+                FBPSwitchRow(FBPKeyDownloadQualityPicker, FBPL(@"row.downloadquality.title"), FBPL(@"row.downloadquality.desc"), @"arrow.down.circle"),
             ]),
         ]},
         @{ kRowTitle : FBPL(@"cat.appearance.title"), kRowDesc : FBPL(@"cat.appearance.summary"),
@@ -444,6 +445,11 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             FBPSection(FBPL(@"footer.logfeedunits"), @[
                 FBPSwitchRow(FBPKeyLogFeedUnits, FBPL(@"row.logfeedunits.title"),
                              FBPL(@"row.logfeedunits.desc"), @"ladybug.fill"),
+            ]),
+            FBPSection(FBPL(@"footer.logdownloadqualities"), @[
+                FBPSwitchRow(FBPKeyLogDownloadQualities,
+                             FBPL(@"row.logdownloadqualities.title"),
+                             FBPL(@"row.logdownloadqualities.desc"), @"ladybug.fill"),
             ]),
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyKeychainRebind, FBPL(@"row.keychainrebind.title"), FBPL(@"row.keychainrebind.desc"), @"key.fill"),

@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Show the download button while viewing Reels.";
 "row.downloadstories.title" = "Download Stories";
 "row.downloadstories.desc" = "Show the download button while viewing Stories.";
+"row.downloadquality.title" = "Ask for Quality";
+"row.downloadquality.desc" = "Choose a quality and size before saving, when more than one is available.";
 "row.anonstories.title" = "Watch Stories Anonymously";
 "row.anonstories.desc" = "View stories without sending a read receipt.";
 "row.noautonext.title" = "Disable Auto-Advance";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "Log Feed Unit Tokens";
 "row.logfeedunits.desc" = "Writes each feed unit’s category token to the system log.";
 "footer.logfeedunits" = "Only for diagnosing a filter that stopped working. Turn it on, scroll the feed once, then read the log in Console.app under “com.shajon.fbplus”. Leave it off otherwise.";
+"row.logdownloadqualities.title" = "Log Download Qualities";
+"row.logdownloadqualities.desc" = "Writes the qualities Facebook offers for a video to the system log.";
+"footer.logdownloadqualities" = "Only for working out which qualities could be added to the download picker. Turn it on, tap download on a Reel and on a Story, then read the log in Console.app under “com.shajon.fbplus”. Leave it off otherwise.";
 "row.welcome.title" = "Show Welcome Screen";
 "row.reset.title" = "Reset All Settings";
 "row.linksinsafari.title" = "Open Links in Safari";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN returned HTTP %ld.";
 "download.reel.tmpFailed" = "Couldn’t create the temporary video file.";
 "download.reel.noLink" = "Couldn’t get this video’s link.";
+"download.reel.expired" = "This download link has expired. Tap download again.";
+"download.quality.title" = "Download quality";
+"download.quality.hd" = "High quality";
+"download.quality.sd" = "Standard quality";
+"download.quality.spherical.hd" = "360° high quality";
+"download.quality.spherical.sd" = "360° standard quality";
+"download.quality.spherical.detail" = "Full 360° source";
+"download.quality.original" = "Original";
 "reels.hideOverlay.a11y" = "Hide Reel overlay";
 "update.title" = "Update Available";
 "update.subtitle" = "Version %@ is now available.";

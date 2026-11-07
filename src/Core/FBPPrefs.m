@@ -45,15 +45,18 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyConfirmPost      : @NO,
         FBPKeyReelsDownloaderEnabled : @YES,
         FBPKeyStoryDownloaderEnabled : @YES,
+        FBPKeyDownloadQualityPicker : @YES,
         FBPKeyReelsHideOverlay : @YES,
         FBPKeyAnonymousStories : @YES,
         FBPKeyNoAutoNext       : @YES,
         FBPKeyFeedLike         : @YES,
         FBPKeyOLED             : @YES,
         FBPKeyLinksInSafari    : @YES,
-        // Diagnostics are off by default: the maintainer turns this on only to
-        // capture the live feed-unit token set, then turns it straight back off.
+        // Diagnostics are off by default: the maintainer turns one on only to
+        // capture the live feed-unit token set, or the quality ladder Facebook
+        // serves a given video in, then turns it straight back off.
         FBPKeyLogFeedUnits     : @NO,
+        FBPKeyLogDownloadQualities : @NO,
         FBPKeyKeychainRebind   : @YES,
         FBPKeyNotifyUpdates    : @YES,
         FBPKeyAutoClearCache   : @YES,

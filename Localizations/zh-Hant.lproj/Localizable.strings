@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "觀看 Reels 時顯示下載按鈕。";
 "row.downloadstories.title" = "下載限時動態";
 "row.downloadstories.desc" = "觀看限時動態時顯示下載按鈕。";
+"row.downloadquality.title" = "詢問畫質";
+"row.downloadquality.desc" = "有多種畫質時，儲存前先選擇畫質與大小。";
 "row.anonstories.title" = "匿名觀看限時動態";
 "row.anonstories.desc" = "觀看限時動態時不傳送已讀回條。";
 "row.noautonext.title" = "停用自動播放下一則";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "記錄動態單元標記";
 "row.logfeedunits.desc" = "將每個動態單元的分類標記寫入系統日誌。";
 "footer.logfeedunits" = "只在某個過濾項失效、需要排查時使用。開啟後把動態消息滑一遍，再到 Console.app 查看「com.shajon.fbplus」的日誌。其餘時候請保持關閉。";
+"row.logdownloadqualities.title" = "記錄下載畫質";
+"row.logdownloadqualities.desc" = "把 Facebook 為某部影片提供的畫質寫入系統日誌。";
+"footer.logdownloadqualities" = "只在想知道下載選單還能加入哪些畫質時使用。開啟後在一則 Reels 和一則限時動態上點下載，再到 Console.app 查看「com.shajon.fbplus」的日誌。其餘時候請保持關閉。";
 "row.welcome.title" = "顯示歡迎畫面";
 "row.reset.title" = "重設所有設定";
 "row.linksinsafari.title" = "在 Safari 中開啟連結";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN 傳回 HTTP %ld。";
 "download.reel.tmpFailed" = "無法建立影片暫存檔。";
 "download.reel.noLink" = "無法取得此影片的連結。";
+"download.reel.expired" = "此下載連結已過期，請再點一次下載。";
+"download.quality.title" = "下載畫質";
+"download.quality.hd" = "高畫質";
+"download.quality.sd" = "標準畫質";
+"download.quality.spherical.hd" = "360° 高畫質";
+"download.quality.spherical.sd" = "360° 標準畫質";
+"download.quality.spherical.detail" = "完整 360° 原始來源";
+"download.quality.original" = "原始畫質";
 "reels.hideOverlay.a11y" = "隱藏 Reels 畫面資訊";
 "update.title" = "有可用的更新";
 "update.subtitle" = "版本 %@ 現已推出。";

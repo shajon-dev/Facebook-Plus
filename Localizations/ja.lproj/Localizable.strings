@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "リールの視聴中にダウンロードボタンを表示します。";
 "row.downloadstories.title" = "ストーリーズをダウンロード";
 "row.downloadstories.desc" = "ストーリーズの視聴中にダウンロードボタンを表示します。";
+"row.downloadquality.title" = "画質を確認する";
+"row.downloadquality.desc" = "画質が複数ある場合は、保存する前に画質とサイズを選びます。";
 "row.anonstories.title" = "ストーリーズを匿名で見る";
 "row.anonstories.desc" = "既読を送らずにストーリーズを見ます。";
 "row.noautonext.title" = "自動送りを無効化";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "フィードユニットのトークンを記録";
 "row.logfeedunits.desc" = "各フィードユニットのカテゴリトークンをシステムログに書き出します。";
 "footer.logfeedunits" = "フィルターが効かなくなった原因を調べるためだけの項目です。オンにしてフィードを一度スクロールし、Console.app で「com.shajon.fbplus」のログを確認してください。それ以外はオフのままにしてください。";
+"row.logdownloadqualities.title" = "ダウンロード画質を記録";
+"row.logdownloadqualities.desc" = "Facebook が動画に用意している画質をシステムログに書き出します。";
+"footer.logdownloadqualities" = "ダウンロードの画質候補を増やせるかどうかを調べるためだけの項目です。オンにしてリールとストーリーズでダウンロードをタップし、Console.app で「com.shajon.fbplus」のログを確認してください。それ以外はオフのままにしてください。";
 "row.welcome.title" = "ようこそ画面を表示";
 "row.reset.title" = "すべての設定をリセット";
 "row.linksinsafari.title" = "リンクを Safari で開く";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN が HTTP %ld を返しました。";
 "download.reel.tmpFailed" = "一時動画ファイルを作成できませんでした。";
 "download.reel.noLink" = "この動画のリンクを取得できませんでした。";
+"download.reel.expired" = "このダウンロードリンクは期限切れです。もう一度ダウンロードをタップしてください。";
+"download.quality.title" = "ダウンロード画質";
+"download.quality.hd" = "高画質";
+"download.quality.sd" = "標準画質";
+"download.quality.spherical.hd" = "360° 高画質";
+"download.quality.spherical.sd" = "360° 標準画質";
+"download.quality.spherical.detail" = "360° のフル映像";
+"download.quality.original" = "オリジナル";
 "reels.hideOverlay.a11y" = "リールのオーバーレイを非表示";
 "update.title" = "アップデートがあります";
 "update.subtitle" = "バージョン %@ が利用可能です。";

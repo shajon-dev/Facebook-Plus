@@ -40,6 +40,8 @@
 "row.downloadreels.desc" = "Reels দেখার সময় ডাউনলোড বোতাম দেখায়।";
 "row.downloadstories.title" = "Stories ডাউনলোড";
 "row.downloadstories.desc" = "Story দেখার সময় ডাউনলোড বোতাম দেখায়।";
+"row.downloadquality.title" = "কোয়ালিটি জিজ্ঞাসা করুন";
+"row.downloadquality.desc" = "একাধিক কোয়ালিটি থাকলে সেভ করার আগে কোয়ালিটি ও আকার বেছে নিন।";
 "row.anonstories.title" = "স্টোরি বেনামে দেখুন";
 "row.anonstories.desc" = "পড়ার রসিদ না পাঠিয়ে স্টোরি দেখুন।";
 "row.noautonext.title" = "অটো-এগিয়ে যাওয়া বন্ধ করুন";
@@ -56,6 +58,9 @@
 "row.logfeedunits.title" = "ফিড ইউনিট টোকেন লগ করুন";
 "row.logfeedunits.desc" = "প্রতিটি ফিড ইউনিটের ক্যাটাগরি টোকেন সিস্টেম লগে লেখে।";
 "footer.logfeedunits" = "কোনো ফিল্টার কাজ করা বন্ধ করলে কারণ খুঁজতেই এটি। চালু করুন, একবার ফিড স্করল করুন, তারপর Console.app-এ «com.shajon.fbplus» দেখে লগ পড়ুন। অন্য সময় বন্ধ রাখুন।";
+"row.logdownloadqualities.title" = "ডাউনলোড কোয়ালিটি লগ করুন";
+"row.logdownloadqualities.desc" = "Facebook কোনো ভিডিওর জন্য যে কোয়ালিটিগুলো দেয় তা সিস্টেম লগে লেখে।";
+"footer.logdownloadqualities" = "ডাউনলোড পিকারে আর কোন কোয়ালিটি যোগ করা যায় তা বের করতেই এটি। চালু করুন, একটি Reel ও একটি Story-তে ডাউনলোড চাপুন, তারপর Console.app-এ «com.shajon.fbplus» দেখে লগ পড়ুন। অন্য সময় বন্ধ রাখুন।";
 "row.welcome.title" = "স্বাগত স্ক্রিন দেখান";
 "row.reset.title" = "সব সেটিং রিসেট করুন";
 "row.linksinsafari.title" = "লিংক Safari-তে খুলুন";
@@ -90,6 +95,14 @@
 "download.reel.httpError" = "Facebook CDN HTTP %ld ফেরত দিয়েছে।";
 "download.reel.tmpFailed" = "অস্থায়ী ভিডিও ফাইল তৈরি করা যায়নি।";
 "download.reel.noLink" = "এই ভিডিওর লিংক পাওয়া যায়নি।";
+"download.reel.expired" = "এই ডাউনলোড লিংকের সময় শেষ। আবার ডাউনলোড চাপুন।";
+"download.quality.title" = "ডাউনলোড কোয়ালিটি";
+"download.quality.hd" = "উচ্চ কোয়ালিটি";
+"download.quality.sd" = "সাধারণ কোয়ালিটি";
+"download.quality.spherical.hd" = "৩৬০° উচ্চ কোয়ালিটি";
+"download.quality.spherical.sd" = "৩৬০° সাধারণ কোয়ালিটি";
+"download.quality.spherical.detail" = "সম্পূর্ণ ৩৬০° সোর্স";
+"download.quality.original" = "আসল";
 "reels.hideOverlay.a11y" = "Reel ওভারলে লুকান";
 "update.title" = "আপডেট উপলব্ধ";
 "update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";
