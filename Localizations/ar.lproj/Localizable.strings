@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "جودة عادية 360°";
 "download.quality.spherical.detail" = "المصدر الكامل بزاوية 360°";
 "download.quality.original" = "الأصلي";
+"download.quality.dash.detail" = "~%@ · حجم تقديري";
 "reels.hideOverlay.a11y" = "إخفاء طبقة Reel";
 "update.title" = "يتوفر تحديث";
 "update.subtitle" = "الإصدار %@ متاح الآن.";

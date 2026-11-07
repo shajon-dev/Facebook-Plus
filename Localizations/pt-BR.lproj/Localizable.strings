@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "Qualidade padrão 360°";
 "download.quality.spherical.detail" = "Fonte 360° completa";
 "download.quality.original" = "Original";
+"download.quality.dash.detail" = "~%@ · tamanho estimado";
 "reels.hideOverlay.a11y" = "Ocultar sobreposição do Reel";
 "update.title" = "Atualização disponível";
 "update.subtitle" = "A versão %@ já está disponível.";

@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "Обычное качество 360°";
 "download.quality.spherical.detail" = "Полный источник 360°";
 "download.quality.original" = "Оригинал";
+"download.quality.dash.detail" = "~%@ · примерный размер";
 "reels.hideOverlay.a11y" = "Скрыть наложение Reel";
 "update.title" = "Доступно обновление";
 "update.subtitle" = "Версия %@ уже доступна.";

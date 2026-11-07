@@ -8,10 +8,21 @@
 // Everything that turns that item into "what can we download, and how big is
 // it" lives here, so a new format only has to be taught to one file.
 //
-// Scope note: every variant produced here is a *progressive* MP4 — one complete
-// file, audio muxed in, fetched with a single GET. Nothing here parses DASH or
-// muxes anything; the MPD is only read by the diagnostic, to tell the
-// maintainer whether a richer tier would even be worth building.
+// Two tiers of variant come out of here.
+//
+//   * Progressive — Facebook's -HDPlaybackURL / -SDPlaybackURL (and the
+//     spherical pair). Each is one complete MP4 with audio already muxed in,
+//     fetched with a single GET, and its byte length is published exactly as
+//     -atomSize. On real content -HDPlaybackURL tops out at 720p, which is why
+//     this tier alone can only ever offer two rows.
+//   * DASH — the representations listed in the MPD that -DashPlaylist inlines on
+//     the playback item, read by FBPDashManifest. This is where 360p, 480p,
+//     1080p and anything above it live. Video and audio are separate
+//     representations there, so such a variant carries two URLs (see -audioURL)
+//     and has to be muxed into one file after both are fetched.
+//
+// A DASH variant's byte size is an estimate (bandwidth x duration), never an
+// exact length, and its detail string says so.
 
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
@@ -25,8 +36,23 @@ NS_ASSUME_NONNULL_BEGIN
 /// download itself.
 @interface FBPDownloadVariant : NSObject
 
-/// The progressive MP4 to GET. Always non-nil for a variant that exists.
+/// The video file to GET. Always non-nil for a variant that exists.
+///
+/// A complete muxed MP4 for a progressive variant; a video-only DASH
+/// representation when @c audioURL is set.
 @property (nonatomic, copy, readonly) NSURL *url;
+
+/// The separate audio file to GET alongside @c url, or nil.
+///
+/// Nil for every progressive variant — those are already muxed, so there is
+/// nothing to pair. Non-nil for a DASH variant, where Facebook serves video and
+/// audio as separate representations: both files have to be fetched and then
+/// muxed into one (FBPMediaMuxer) before the result is worth saving. Saving
+/// @c url on its own when this is set would write a silent video.
+@property (nonatomic, copy, readonly, nullable) NSURL *audioURL;
+
+/// @c audioURL != nil. A variant that cannot be saved by downloading one URL.
+@property (nonatomic, assign, readonly) BOOL needsMux;
 
 /// Already-localized row title, e.g. "High quality".
 @property (nonatomic, copy, readonly) NSString *title;
@@ -35,10 +61,21 @@ NS_ASSUME_NONNULL_BEGIN
 /// resolution nor a size is known.
 @property (nonatomic, copy, readonly, nullable) NSString *detail;
 
+/// The rung this rendition sits on: the number in Facebook's own FBQualityLabel
+/// for a DASH variant, and the shorter frame edge for a progressive one (so a
+/// portrait 720x1280 stream reads 720, not 1280). Also the key the two tiers are
+/// deduped against each other on. 0 when Facebook never told us.
+///
+/// Deliberately not the pixel height, despite the name, which predates the DASH
+/// tier: Facebook encodes several rungs per resolution — 480p, 540p, 640p and
+/// 720p are all 1280x720 in a real feed manifest — so pixel height does not
+/// identify a quality.
 @property (nonatomic, assign, readonly) NSInteger pixelHeight;
 @property (nonatomic, assign, readonly) long long bitRate;
-/// Exact MP4 length in bytes, straight from -atomSize / -hdAtomSize, so the
-/// picker can promise a real size before a single byte is fetched.
+/// Bytes. Exact for a progressive variant (straight from -atomSize /
+/// -hdAtomSize, so the picker can promise a real size before a single byte is
+/// fetched); an estimate from bandwidth x duration for a DASH variant, which is
+/// why those rows show it with a "~".
 @property (nonatomic, assign, readonly) long long byteSize;
 
 @end
@@ -69,6 +106,18 @@ extern id _Nullable FBPDownloadSafeObjectGetter(id _Nullable object,
 ///
 /// Replaces the old `hdURL ?: sdURL` collapse: capture now keeps every
 /// rendition, and the choice is made later, by the user.
+///
+/// Both tiers are resolved here. The spherical pair, when the item is a 360°
+/// video, stays pinned to the front — for those the spherical streams *are* the
+/// content. Everything else is ranked by height, highest first, with the
+/// progressive stream winning any height the DASH ladder also offers (it needs
+/// no muxing and its size is exact). Rows whose height Facebook never told us —
+/// the SD progressive stream when HD exists — go last, since we cannot claim a
+/// rank for them.
+///
+/// Reads -DashPlaylist and parses it on every call. That is deliberate: the
+/// <BaseURL>s inside carry the same short-lived `oe=` signature as every other
+/// Facebook media URL, so a cached ladder is a ladder of dead links.
 extern NSArray<FBPDownloadVariant *> *
 FBPDownloadVariantsForItem(id _Nullable item,
                            NSString *_Nullable *_Nullable videoIDOut);
@@ -86,7 +135,11 @@ typedef NSArray<FBPDownloadVariant *> *_Nullable (^FBPDownloadVariantRefresher)(
 ///
 /// With a single variant — a photo story, a single-quality video, or the picker
 /// preference turned off — no sheet is shown and @c chosen runs synchronously,
-/// exactly as the downloaders behaved before the picker existed.
+/// exactly as the downloaders behaved before the picker existed. On that path
+/// the best variant that does *not* need muxing is chosen, so a caller that
+/// only knows how to GET one URL is never silently handed a video-only DASH
+/// rung; with the picker off the result is the progressive stream, exactly as
+/// before the DASH tier existed.
 ///
 /// @param refresh Optional. Facebook's media URLs are short-lived signed URLs
 ///   (they carry an @c oe= expiry and the app has FNFURLRefreshManager to renew

@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "360° 標準畫質";
 "download.quality.spherical.detail" = "完整 360° 原始來源";
 "download.quality.original" = "原始畫質";
+"download.quality.dash.detail" = "~%@ · 預估大小";
 "reels.hideOverlay.a11y" = "隱藏 Reels 畫面資訊";
 "update.title" = "有可用的更新";
 "update.subtitle" = "版本 %@ 現已推出。";

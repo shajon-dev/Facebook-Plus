@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "360° 标准画质";
 "download.quality.spherical.detail" = "完整 360° 源文件";
 "download.quality.original" = "原始画质";
+"download.quality.dash.detail" = "~%@ · 预估大小";
 "reels.hideOverlay.a11y" = "隐藏 Reel 浮层";
 "update.title" = "有可用更新";
 "update.subtitle" = "版本 %@ 现已可用。";

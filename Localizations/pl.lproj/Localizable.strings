@@ -103,6 +103,7 @@
 "download.quality.spherical.sd" = "Standardowa jakość 360°";
 "download.quality.spherical.detail" = "Pełne źródło 360°";
 "download.quality.original" = "Oryginał";
+"download.quality.dash.detail" = "~%@ · szacowany rozmiar";
 "reels.hideOverlay.a11y" = "Ukryj nakładkę rolki";
 "update.title" = "Dostępna aktualizacja";
 "update.subtitle" = "Wersja %@ jest już dostępna.";
