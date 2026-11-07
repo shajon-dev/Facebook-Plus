@@ -639,12 +639,14 @@ void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
     // is what keeps photo stories and single-quality videos unchanged.
     //
     // The best variant that needs no muxing is taken here rather than the best
-    // variant outright. A caller on this path downloads one URL and saves it,
-    // which for a DASH rung would write a silent video; with the picker off the
-    // result is the progressive stream, exactly as it was before the ladder
-    // existed. The list is best-first, so the first such variant is the best
-    // one. If every option needs muxing there is nothing better to offer and
-    // the best one goes through as-is.
+    // variant outright. Both callers can now fetch two streams and merge them
+    // (FBPDashDownload), so this is no longer a limitation — it is the policy
+    // for "don't ask me, just save it": one GET, an exact size known up front,
+    // and no merge step that can fail, which is what the picker being off asks
+    // for. The result is the progressive stream, exactly as it was before the
+    // ladder existed. The list is best-first, so the first such variant is the
+    // best one. If every option needs muxing there is nothing cheaper to offer
+    // and the best one goes through as-is — and is merged properly.
     if (variants.count < 2 || !FBPEnabled(FBPKeyDownloadQualityPicker)) {
         FBPDownloadVariant *direct = best;
         if (direct.needsMux) {
@@ -718,6 +720,12 @@ static void FBPDownloadRefreshQualityLogging(void) {
     atomic_store_explicit(&gFBPLogDownloadQualities,
                           FBPEnabled(FBPKeyLogDownloadQualities) ? true : false,
                           memory_order_relaxed);
+}
+
+BOOL FBPDownloadQualityLoggingEnabled(void) {
+    return atomic_load_explicit(&gFBPLogDownloadQualities, memory_order_relaxed)
+               ? YES
+               : NO;
 }
 
 void FBPDownloadInstallDiagnostic(void) {
