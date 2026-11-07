@@ -1254,6 +1254,19 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
             return again.variants;
         },
         ^(FBPDownloadVariant *variant) {
+            // TEMPORARY, remove with the two-stream download flow: a DASH
+            // variant's video representation carries no audio, so downloading
+            // variant.url alone would save a silent clip and look like a
+            // working download. Until the fetch-both-then-FBPMediaMuxer path is
+            // wired up, refuse rather than mislead. The picker still lists
+            // these rungs so the maintainer can see the real ladder on device.
+            if (variant.needsMux) {
+                FBPShowMessage(
+                    FBPL(@"download.appName"),
+                    FBPL(@"download.quality.muxPending")
+                );
+                return;
+            }
             [[FBPReelDownloadManager shared]
                 startDownloadWithURL:variant.url
                 videoID:downloadID];

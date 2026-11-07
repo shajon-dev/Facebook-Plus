@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "Tam 360° kaynak";
 "download.quality.original" = "Özgün";
 "download.quality.dash.detail" = "~%@ · tahmini boyut";
+"download.quality.muxPending" = "Bu kalite için sesin birleştirilmesi gerekiyor, bu henüz mevcut değil. Şimdilik başka birini seçin.";
 "reels.hideOverlay.a11y" = "Reel yer paylaşımını gizle";
 "update.title" = "Güncelleme mevcut";
 "update.subtitle" = "%@ sürümü şimdi mevcut.";

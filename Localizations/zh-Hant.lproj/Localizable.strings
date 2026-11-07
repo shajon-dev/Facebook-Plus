@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "完整 360° 原始來源";
 "download.quality.original" = "原始畫質";
 "download.quality.dash.detail" = "~%@ · 預估大小";
+"download.quality.muxPending" = "此畫質需要合併音軌，目前尚未支援。請先選擇其他畫質。";
 "reels.hideOverlay.a11y" = "隱藏 Reels 畫面資訊";
 "update.title" = "有可用的更新";
 "update.subtitle" = "版本 %@ 現已推出。";

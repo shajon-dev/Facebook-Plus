@@ -389,6 +389,13 @@ static void FBPStoryStartDownload(NSURL *sourceURL) {
         sender,
         storyRefresh,
         ^(FBPDownloadVariant *variant) {
+            // TEMPORARY, same reason as the Reels handler: a DASH variant has
+            // video without audio, so saving variant.url alone would produce a
+            // silent file. Refuse until the muxing flow is wired.
+            if (variant.needsMux) {
+                FBPShowStoryMessage(FBPL(@"download.quality.muxPending"));
+                return;
+            }
             FBPStoryStartDownload(variant.url);
         }
     );

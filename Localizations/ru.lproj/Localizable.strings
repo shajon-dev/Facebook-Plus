@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "Полный источник 360°";
 "download.quality.original" = "Оригинал";
 "download.quality.dash.detail" = "~%@ · примерный размер";
+"download.quality.muxPending" = "Для этого качества нужно объединять звук, а это пока недоступно. Пока выберите другое.";
 "reels.hideOverlay.a11y" = "Скрыть наложение Reel";
 "update.title" = "Доступно обновление";
 "update.subtitle" = "Версия %@ уже доступна.";

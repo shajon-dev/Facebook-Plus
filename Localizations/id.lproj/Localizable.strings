@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "Sumber 360° penuh";
 "download.quality.original" = "Asli";
 "download.quality.dash.detail" = "~%@ · perkiraan ukuran";
+"download.quality.muxPending" = "Kualitas ini perlu penggabungan audio, yang belum tersedia. Pilih yang lain dulu.";
 "reels.hideOverlay.a11y" = "Sembunyikan overlay Reel";
 "update.title" = "Pembaruan Tersedia";
 "update.subtitle" = "Versi %@ kini tersedia.";

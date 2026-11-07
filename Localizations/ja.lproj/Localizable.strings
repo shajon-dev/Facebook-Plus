@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "360° のフル映像";
 "download.quality.original" = "オリジナル";
 "download.quality.dash.detail" = "~%@ · 推定サイズ";
+"download.quality.muxPending" = "この画質は音声の結合が必要で、まだ利用できません。今は別の画質を選んでください。";
 "reels.hideOverlay.a11y" = "リールのオーバーレイを非表示";
 "update.title" = "アップデートがあります";
 "update.subtitle" = "バージョン %@ が利用可能です。";

@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "Sorgente 360° completa";
 "download.quality.original" = "Originale";
 "download.quality.dash.detail" = "~%@ · dimensione stimata";
+"download.quality.muxPending" = "Questa qualità richiede l’unione dell’audio, non ancora disponibile. Per ora scegline un’altra.";
 "reels.hideOverlay.a11y" = "Nascondi overlay del Reel";
 "update.title" = "Aggiornamento disponibile";
 "update.subtitle" = "La versione %@ è ora disponibile.";

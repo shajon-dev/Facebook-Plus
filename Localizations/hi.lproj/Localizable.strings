@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "पूरा 360° सोर्स";
 "download.quality.original" = "ओरिजिनल";
 "download.quality.dash.detail" = "~%@ · अनुमानित आकार";
+"download.quality.muxPending" = "इस क्वालिटी के लिए ऑडियो जोड़ना पड़ता है, जो अभी उपलब्ध नहीं है। फ़िलहाल दूसरी चुनें।";
 "reels.hideOverlay.a11y" = "Reel ओवरले छिपाएँ";
 "update.title" = "अपडेट उपलब्ध";
 "update.subtitle" = "संस्करण %@ अब उपलब्ध है।";

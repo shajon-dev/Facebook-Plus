@@ -104,6 +104,7 @@
 "download.quality.spherical.detail" = "সম্পূর্ণ ৩৬০° সোর্স";
 "download.quality.original" = "আসল";
 "download.quality.dash.detail" = "~%@ · আনুমানিক আকার";
+"download.quality.muxPending" = "এই কোয়ালিটির জন্য অডিও জোড়া লাগাতে হয়, যেটা এখনো নেই। আপাতত অন্যটা বেছে নিন।";
 "reels.hideOverlay.a11y" = "Reel ওভারলে লুকান";
 "update.title" = "আপডেট উপলব্ধ";
 "update.subtitle" = "সংস্করণ %@ এখন উপলব্ধ।";
