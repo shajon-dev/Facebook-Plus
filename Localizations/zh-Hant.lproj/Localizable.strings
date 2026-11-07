@@ -100,14 +100,13 @@
 "download.merge.failed" = "無法合併這部影片的音訊與畫面。\n%@";
 "download.stream.videoFailed" = "畫面串流未能下載。\n%@";
 "download.stream.audioFailed" = "音訊串流未能下載。\n%@";
-"download.quality.title" = "下載畫質";
-"download.quality.hd" = "高畫質";
-"download.quality.sd" = "標準畫質";
-"download.quality.spherical.hd" = "360° 高畫質";
-"download.quality.spherical.sd" = "360° 標準畫質";
+"download.quality.select.title" = "選擇畫質";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "完整 360° 原始來源";
 "download.quality.original" = "原始畫質";
-"download.quality.dash.detail" = "~%@ · 預估大小";
 "reels.hideOverlay.a11y" = "隱藏 Reels 畫面資訊";
 "update.title" = "有可用的更新";
 "update.subtitle" = "版本 %@ 現已推出。";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "刪除";
 "fonts.deleted" = "已刪除字型";
 
-"download.quality.dash.mergeDetail" = "~%@ · 估計大小 · 需要合併";
-"download.quality.merge.detail" = "需要合併";
-"download.quality.exact.detail" = "%@ · 實際大小";
 "download.quality.badge.best" = "最佳";
 "download.quality.badge.smallest" = "最小";
 "download.quality.badge.spherical" = "360°";

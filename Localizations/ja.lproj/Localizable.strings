@@ -100,14 +100,13 @@
 "download.merge.failed" = "この動画の音声と映像を結合できませんでした。\n%@";
 "download.stream.videoFailed" = "映像ストリームをダウンロードできませんでした。\n%@";
 "download.stream.audioFailed" = "音声ストリームをダウンロードできませんでした。\n%@";
-"download.quality.title" = "ダウンロード画質";
-"download.quality.hd" = "高画質";
-"download.quality.sd" = "標準画質";
-"download.quality.spherical.hd" = "360° 高画質";
-"download.quality.spherical.sd" = "360° 標準画質";
+"download.quality.select.title" = "画質を選択";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "360° のフル映像";
 "download.quality.original" = "オリジナル";
-"download.quality.dash.detail" = "~%@ · 推定サイズ";
 "reels.hideOverlay.a11y" = "リールのオーバーレイを非表示";
 "update.title" = "アップデートがあります";
 "update.subtitle" = "バージョン %@ が利用可能です。";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "削除";
 "fonts.deleted" = "フォントを削除しました";
 
-"download.quality.dash.mergeDetail" = "~%@ · 推定サイズ · 結合が必要";
-"download.quality.merge.detail" = "結合が必要";
-"download.quality.exact.detail" = "%@ · 実サイズ";
 "download.quality.badge.best" = "おすすめ";
 "download.quality.badge.smallest" = "最小";
 "download.quality.badge.spherical" = "360°";

@@ -100,14 +100,13 @@
 "download.merge.failed" = "تعذّر دمج صوت هذا الفيديو مع صورته.\n%@";
 "download.stream.videoFailed" = "لم يتم تنزيل مسار الصورة.\n%@";
 "download.stream.audioFailed" = "لم يتم تنزيل المسار الصوتي.\n%@";
-"download.quality.title" = "جودة التنزيل";
-"download.quality.hd" = "جودة عالية";
-"download.quality.sd" = "جودة عادية";
-"download.quality.spherical.hd" = "جودة عالية 360°";
-"download.quality.spherical.sd" = "جودة عادية 360°";
+"download.quality.select.title" = "اختر الجودة";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "المصدر الكامل بزاوية 360°";
 "download.quality.original" = "الأصلي";
-"download.quality.dash.detail" = "~%@ · حجم تقديري";
 "reels.hideOverlay.a11y" = "إخفاء طبقة Reel";
 "update.title" = "يتوفر تحديث";
 "update.subtitle" = "الإصدار %@ متاح الآن.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "حذف";
 "fonts.deleted" = "تمت إزالة الخط";
 
-"download.quality.dash.mergeDetail" = "~%@ · حجم تقديري · يحتاج دمجًا";
-"download.quality.merge.detail" = "يحتاج دمجًا";
-"download.quality.exact.detail" = "%@ · حجم فعلي";
 "download.quality.badge.best" = "الأفضل";
 "download.quality.badge.smallest" = "الأصغر";
 "download.quality.badge.spherical" = "360°";

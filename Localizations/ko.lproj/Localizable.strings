@@ -100,14 +100,13 @@
 "download.merge.failed" = "이 동영상의 오디오와 영상을 병합할 수 없습니다.\n%@";
 "download.stream.videoFailed" = "영상 스트림을 다운로드하지 못했습니다.\n%@";
 "download.stream.audioFailed" = "오디오 스트림을 다운로드하지 못했습니다.\n%@";
-"download.quality.title" = "다운로드 화질";
-"download.quality.hd" = "고화질";
-"download.quality.sd" = "일반 화질";
-"download.quality.spherical.hd" = "360° 고화질";
-"download.quality.spherical.sd" = "360° 일반 화질";
+"download.quality.select.title" = "화질 선택";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "360° 원본 전체";
 "download.quality.original" = "원본";
-"download.quality.dash.detail" = "~%@ · 예상 크기";
 "reels.hideOverlay.a11y" = "릴 오버레이 숨기기";
 "update.title" = "업데이트 있음";
 "update.subtitle" = "버전 %@ 을(를) 사용할 수 있습니다.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "삭제";
 "fonts.deleted" = "글꼴 삭제됨";
 
-"download.quality.dash.mergeDetail" = "~%@ · 예상 크기 · 병합 필요";
-"download.quality.merge.detail" = "병합 필요";
-"download.quality.exact.detail" = "%@ · 실제 크기";
 "download.quality.badge.best" = "추천";
 "download.quality.badge.smallest" = "가장 작은 용량";
 "download.quality.badge.spherical" = "360°";

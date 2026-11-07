@@ -239,25 +239,36 @@ static NSURL *FBPDownloadURLFromObject(id object) {
 
 @end
 
-/// "1080p · 12.4 MB", or whichever half of that we actually know.
+static NSString *FBPDownloadByteString(long long bytes) {
+    if (bytes <= 0) return nil;
+    return [NSByteCountFormatter stringFromByteCount:bytes
+                                          countStyle:NSByteCountFormatterCountStyleFile];
+}
+
+/// The whole of a row's second line: how big it is, and nothing else.
+///
+/// The row's title is the resolution — that is the decision — so all the detail
+/// has to carry is the cost, which is why it is one short measurement rather
+/// than the sentence it used to be ("~24.8 MB · estimated size · needs
+/// merging", reading alongside a title that had already said "1080p").
+///
+/// The one distinction kept is the one that is real: a progressive row's size is
+/// the MP4's own byte length (-atomSize / -hdAtomSize), while a DASH rung's is
+/// bandwidth x duration and routinely lands either side of the truth. So an
+/// estimate wears a "~" and an exact size does not. That is the entire
+/// difference, said in one character, which is as subtle as it can be while
+/// still being said.
+///
+/// Nil when there is no size at all — the row then shows its resolution alone,
+/// which is honest, rather than a word standing in for a number we do not have.
 ///
 /// The byte count is formatted by NSByteCountFormatter, so it follows the
 /// *system* locale rather than the tweak's own language setting — a number and a
 /// unit, which reads correctly either way.
-static NSString *FBPDownloadDetailString(NSInteger pixelHeight, long long byteSize) {
-    NSMutableArray<NSString *> *parts = [NSMutableArray array];
-
-    if (pixelHeight > 0) {
-        [parts addObject:[NSString stringWithFormat:@"%ldp", (long)pixelHeight]];
-    }
-    if (byteSize > 0) {
-        [parts addObject:[NSByteCountFormatter
-                             stringFromByteCount:byteSize
-                                          countStyle:NSByteCountFormatterCountStyleFile]];
-    }
-
-    if (parts.count == 0) return nil;
-    return [parts componentsJoinedByString:@" · "];
+static NSString *FBPDownloadSizeDetail(long long byteSize, BOOL estimated) {
+    NSString *size = FBPDownloadByteString(byteSize);
+    if (size.length == 0) return nil;
+    return estimated ? [@"~" stringByAppendingString:size] : size;
 }
 
 static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
@@ -273,16 +284,8 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
     long long bytes = (byteSize > 0) ? (long long)llround(byteSize) : 0;
     long long bits = (bitRate > 0) ? (long long)llround(bitRate) : 0;
 
-    NSString *detail = detailOverride ?: FBPDownloadDetailString(pixelHeight, bytes);
-
-    // A progressive row's size is the MP4's real length (-atomSize), so it says
-    // so — that is half of what separates these rows from a DASH rung at the
-    // same quality, and the picker's whole job is to make that visible. Only
-    // when there *is* a size: "720p · exact size" with no number would be a
-    // promise about something not shown.
-    if (!detailOverride && bytes > 0 && detail.length) {
-        detail = [NSString stringWithFormat:FBPL(@"download.quality.exact.detail"), detail];
-    }
+    // Progressive sizes come straight from the MP4's atom, so no "~".
+    NSString *detail = detailOverride ?: FBPDownloadSizeDetail(bytes, NO);
 
     return [[FBPDownloadVariant alloc] initWithURL:url
                                           audioURL:nil
@@ -292,12 +295,6 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
                                            bitRate:bits
                                           byteSize:bytes
                                               tier:tier];
-}
-
-static NSString *FBPDownloadByteString(long long bytes) {
-    if (bytes <= 0) return nil;
-    return [NSByteCountFormatter stringFromByteCount:bytes
-                                          countStyle:NSByteCountFormatterCountStyleFile];
 }
 
 #pragma mark - DASH ladder
@@ -360,48 +357,40 @@ FBPDownloadMergeDashLadder(id item,
     FBPDashRepresentation *audio = manifest.audioRepresentation;
     if (!audio && manifest.hasUnusableAudio) return progressive;
 
+    // Everything before `flatStart` is the spherical pair on a 360° video, and
+    // it stays: those are not a quality choice, they are a different rendering
+    // of the content, and the ladder is the flat one.
     NSArray<FBPDownloadVariant *> *pinned = (flatStart > 0)
         ? [progressive subarrayWithRange:NSMakeRange(0, flatStart)]
         : @[];
-    NSArray<FBPDownloadVariant *> *flat = (flatStart < progressive.count)
-        ? [progressive subarrayWithRange:
-               NSMakeRange(flatStart, progressive.count - flatStart)]
-        : @[];
 
-    // Rows we can place on the ladder, and rows we cannot.
     NSMutableArray<FBPDownloadVariant *> *ranked = [NSMutableArray array];
-    NSMutableArray<FBPDownloadVariant *> *unranked = [NSMutableArray array];
     NSMutableSet<NSNumber *> *covered = [NSMutableSet set];
 
-    // Progressive rows claim no rung, and never suppress one.
+    // The progressive pair — `progressive` from `flatStart` on — is deliberately
+    // not carried into the result below, and this is the one place that decision
+    // lives.
     //
-    // This used to label them from -videoWidth/-videoHeight and add that number
-    // to `covered`. On device that produced the exact bug it was meant to
-    // prevent: those two describe the ITEM — the source upload — not the
-    // rendition behind -HDPlaybackURL. For a 1920x1080 upload whose HD
-    // progressive is 720p, the HD row was labelled "1080p", it covered rung
-    // 1080, the manifest's real 1080p representation was skipped as a duplicate,
-    // and tapping "1080p" downloaded the 720p file. Reported as "1080p download
-    // korleo 720p download hocche", and it is the only resolution Facebook
-    // publishes per item, so there is nothing here to correct it with.
+    // Every row in this picker is a resolution: "1080p", "720p", one rung per
+    // row. A progressive row cannot be one. Facebook publishes exactly one
+    // resolution per item (-videoWidth / -videoHeight, and the
+    // -videoOriginal* pair beside them), and it describes the SOURCE UPLOAD,
+    // not the rendition behind -HDPlaybackURL — a 1440p upload's HD progressive
+    // is typically 720p. Labelling the HD row from it is how "1080p download
+    // korleo 720p download hocche" happened: the row said 1080p, covered rung
+    // 1080 so the manifest's real 1080p representation was dropped as a
+    // duplicate, and delivered the 720p file. 09c3120 stopped it claiming the
+    // rung; neither item class carries a per-rendition height to name it with
+    // instead, so there is no honest number to put on it at all.
     //
-    // So the DASH ladder is the ladder, and the progressive pair sits below it
-    // keeping its own wording and its exact byte size. The redundancy is honest:
-    // those two rows need no second stream and no merge, which is a real reason
-    // to pick one, and they can no longer misname themselves or hide a rung.
-    for (FBPDownloadVariant *variant in flat) {
-        [unranked addObject:variant];
-    }
-
-    // Three wordings, because a DASH row can carry two independent caveats: the
-    // size is an estimate (always), and there may be a merge step (only when
-    // there is an audio representation to pair — a silent video's rungs are
-    // complete on their own).
-    NSString *estimateFormat = audio
-        ? FBPL(@"download.quality.dash.mergeDetail")
-        : FBPL(@"download.quality.dash.detail");
-    NSString *sizelessDetail = audio ? FBPL(@"download.quality.merge.detail") : nil;
-
+    // So when the ladder is here, the ladder is the whole picker. It covers the
+    // same ground, every rung names itself from Facebook's own FBQualityLabel,
+    // and nothing in the list can promise a resolution it will not deliver.
+    // When it is not here — no MPD, a renamed getter, audio we had to refuse,
+    // or nothing that survived the gates — `progressive` is returned untouched
+    // and those two rows carry the download under their own names (see
+    // FBPDownloadVariantsForItem), which is what keeps every Facebook build
+    // without a usable DASH ladder working exactly as it did.
     for (FBPDashRepresentation *representation in manifest.videoRepresentations) {
         NSString *label = representation.displayLabel;
         if (label.length == 0) continue;
@@ -421,10 +410,9 @@ FBPDownloadMergeDashLadder(id item,
 
         long long bytes =
             FBPDownloadEstimatedBytes(representation, audio, manifest.duration);
-        NSString *sizeText = FBPDownloadByteString(bytes);
-        NSString *detail = sizeText
-            ? [NSString stringWithFormat:estimateFormat, sizeText]
-            : sizelessDetail;
+        // Always an estimate here — bandwidth x duration, never a real length —
+        // so every one of these rows wears the "~".
+        NSString *detail = FBPDownloadSizeDetail(bytes, YES);
 
         if (rank > 0) [covered addObject:@(rank)];
         [ranked addObject:
@@ -452,12 +440,17 @@ FBPDownloadMergeDashLadder(id item,
         return NSOrderedSame;
     }];
 
+    // Not one rung survived its gates — an all-VP9 manifest, every
+    // representation on a SegmentTemplate, labels we could not read. Dropping
+    // the progressive pair for a ladder that turned out empty would leave
+    // nothing to download at all, so this is the last place the old behaviour is
+    // handed back intact.
+    if (ranked.count == 0) return progressive;
+
     NSMutableArray<FBPDownloadVariant *> *merged =
-        [NSMutableArray arrayWithCapacity:
-             pinned.count + ranked.count + unranked.count];
+        [NSMutableArray arrayWithCapacity:pinned.count + ranked.count];
     [merged addObjectsFromArray:pinned];
     [merged addObjectsFromArray:ranked];
-    [merged addObjectsFromArray:unranked];
     return [merged copy];
 }
 
@@ -484,30 +477,22 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
         }
     }
 
-    // Paired metrics. -atomSize is the MP4's byte length, which is why the
-    // picker can show a real size rather than an estimate.
-    double sdBitRate = 0, sdSize = 0, hdBitRate = 0, hdSize = 0, height = 0, width = 0;
+    // Paired metrics. -atomSize is the MP4's byte length, which is why these two
+    // rows can show a real size rather than an estimate.
+    //
+    // -videoWidth / -videoHeight are deliberately NOT read. They are the only
+    // resolution Facebook publishes per item and they describe the source
+    // upload, not either progressive rendition: a 1440p upload's -HDPlaybackURL
+    // is typically a 720p transcode. Reading them here is what put "1440p" on a
+    // row that delivered 720p. There is no per-rendition height on either item
+    // class to replace them with — see FBPDownloadMergeDashLadder — so these two
+    // rows carry no resolution at all, and `pixelHeight` stays 0 so no later
+    // pass can mistake one for a rung.
+    double sdBitRate = 0, sdSize = 0, hdBitRate = 0, hdSize = 0;
     FBPDownloadScalarGetter(item, @"bitRate", &sdBitRate);
     FBPDownloadScalarGetter(item, @"atomSize", &sdSize);
     FBPDownloadScalarGetter(item, @"hdBitRate", &hdBitRate);
     FBPDownloadScalarGetter(item, @"hdAtomSize", &hdSize);
-    FBPDownloadScalarGetter(item, @"videoHeight", &height);
-    FBPDownloadScalarGetter(item, @"videoWidth", &width);
-
-    // -videoHeight is a single number for the whole item, so it is attributed to
-    // the best progressive rendition and to nothing else: when both HD and SD
-    // exist it describes the HD stream, and when only SD exists it describes
-    // that. Guessing a second resolution from it would be inventing a label.
-    //
-    // The *shorter* edge is what a quality ladder is named after. Reels and
-    // Stories are portrait, so a 720p stream there is 720x1280 and its height
-    // is 1280 — calling it "1280p" would be wrong, and it would also fail to
-    // match the DASH ladder's 720p rung and so show the same quality twice.
-    // -videoWidth missing (a rename, an older build) just means we fall back to
-    // the height, which is right for landscape and no worse than before.
-    NSInteger bestHeight = (height > 0 && height < 100000) ? (NSInteger)llround(height) : 0;
-    NSInteger bestWidth = (width > 0 && width < 100000) ? (NSInteger)llround(width) : 0;
-    if (bestWidth > 0 && bestHeight > 0) bestHeight = MIN(bestWidth, bestHeight);
 
     double spherical = 0;
     BOOL isSpherical = FBPDownloadScalarGetter(item, @"isSpherical", &spherical) &&
@@ -541,20 +526,25 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
 
     NSUInteger beforeProgressive = variants.count;
 
+    // The fallback pair, for the builds and the items that have no usable DASH
+    // ladder. They are named by Facebook's own name for the stream — "HD" is
+    // literally the H and D of -HDPlaybackURL — and never by a number, because
+    // the only number available describes the upload rather than the file these
+    // URLs serve. "HD" claims a class, which these do deliver; "1440p" would
+    // claim a frame height, which they do not. The exact byte size beside it is
+    // what actually separates the two rows, and that one is exact — straight
+    // from the MP4's atom.
     add(FBPDownloadMakeVariant(FBPDownloadFirstGetter(item, FBPDownloadHDURLNames()),
-                               FBPL(@"download.quality.hd"), nil,
-                               bestHeight, hdBitRate, hdSize,
+                               FBPL(@"download.quality.progressive.hd"), nil,
+                               0, hdBitRate, hdSize,
                                FBPDownloadVariantTierProgressive));
-
-    // SD only gets the item's height when HD did not take it.
-    NSInteger sdHeight = (variants.count > beforeProgressive) ? 0 : bestHeight;
     add(FBPDownloadMakeVariant(FBPDownloadFirstGetter(item, FBPDownloadSDURLNames()),
-                               FBPL(@"download.quality.sd"), nil,
-                               sdHeight, sdBitRate, sdSize,
+                               FBPL(@"download.quality.progressive.sd"), nil,
+                               0, sdBitRate, sdSize,
                                FBPDownloadVariantTierProgressive));
 
-    // Everything above is the progressive tier, unchanged. The ladder is merged
-    // in on top of it, and returns this list untouched when there is none.
+    // Everything above is the progressive tier. The ladder replaces it when
+    // there is one, and leaves this list untouched when there is not.
     return FBPDownloadMergeDashLadder(item, [variants copy], beforeProgressive);
 }
 
@@ -673,24 +663,26 @@ static FBPDownloadVariant *FBPDownloadFreshenVariant(
     return match;
 }
 
-/// The leading glyph for a row, chosen so the six rows no longer read as six
-/// copies of the same arrow.
+/// The leading glyph for a row.
 ///
-/// It answers the one question the detail line cannot answer at a glance: what
-/// does picking this cost?
+/// Every resolution row gets the same one — a camcorder. The rows are a ladder
+/// of one thing, a video at N pixels, and the glyph's job here is to say "video"
+/// and then get out of the way so the eye lands on the number. It used to vary
+/// per row (a bolt for a single file, a merge arrow for a pair) which made the
+/// picker read as a list of mechanisms rather than a list of qualities; that
+/// distinction now lives in the "~" on the size and in the diagnostic log, where
+/// it belongs.
 ///
-///   * globe — a 360° stream. For a spherical video this is the content.
-///   * arrow.triangle.merge — two streams that have to be joined. The slow pick,
-///     and the only one with a step that can fail after the bytes are down.
-///   * bolt.circle — one complete file, straight to Photos. Every progressive
-///     row, and a silent video's DASH rungs, which have nothing to pair.
+/// A spherical row keeps the globe, because it is the one row that is not a
+/// resolution: for a 360° video those two streams are the content, and the badge
+/// beside the title says so too.
 ///
 /// A symbol the running iOS does not have resolves to nil and the row simply has
 /// no glyph, which is why none of this is gated on a version check.
+/// "video.fill" has shipped since iOS 13.
 static NSString *FBPDownloadIconForVariant(FBPDownloadVariant *variant) {
     if (variant.tier == FBPDownloadVariantTierSpherical) return @"globe";
-    if (variant.needsMux) return @"arrow.triangle.merge";
-    return @"bolt.circle";
+    return @"video.fill";
 }
 
 /// Index of the cheapest row worth pointing at, or NSNotFound.
@@ -753,17 +745,17 @@ static void FBPDownloadShowSheet(NSArray<FBPDownloadVariant *> *variants,
                                    handler:^{
                 chosen(FBPDownloadFreshenVariant(pick, refresh));
             }];
-        // The quality is the decision; the size and its caveat only qualify it,
-        // so the title goes on the first line. The sheet's default order puts
-        // the grey detail on top, which had a row reading
-        // "~12.4 MB · estimated size" before it said "1080p".
+        // The resolution is the decision; the size only qualifies it, so the
+        // title goes on the first line. The sheet's default order puts the grey
+        // detail on top, which had a row reading "~12.4 MB" before it said
+        // "1080p".
         action.titleFirst = YES;
         action.badge = badge;
         [actions addObject:action];
     }
 
     [FBPSheetPresenter presentActions:actions
-                               title:FBPL(@"download.quality.title")
+                               title:FBPL(@"download.quality.select.title")
                   fromViewController:presenter
                           sourceView:sourceView];
 }
@@ -787,10 +779,11 @@ void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
     // (FBPDashDownload), so this is no longer a limitation — it is the policy
     // for "don't ask me, just save it": one GET, an exact size known up front,
     // and no merge step that can fail, which is what the picker being off asks
-    // for. The result is the progressive stream, exactly as it was before the
-    // ladder existed. The list is best-first, so the first such variant is the
-    // best one. If every option needs muxing there is nothing cheaper to offer
-    // and the best one goes through as-is — and is merged properly.
+    // for. The list is best-first, so the first such variant is the best one.
+    // With a DASH ladder present every row needs muxing — the progressive pair
+    // is not in the list at all then, see FBPDownloadMergeDashLadder — so there
+    // is nothing cheaper to prefer and the top rung goes through as-is, and is
+    // merged properly.
     if (variants.count < 2 || !FBPEnabled(FBPKeyDownloadQualityPicker)) {
         FBPDownloadVariant *direct = best;
         if (direct.needsMux) {

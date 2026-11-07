@@ -100,14 +100,13 @@
 "download.merge.failed" = "Не удалось объединить звук и изображение этого видео.\n%@";
 "download.stream.videoFailed" = "Видеопоток не загрузился.\n%@";
 "download.stream.audioFailed" = "Аудиопоток не загрузился.\n%@";
-"download.quality.title" = "Качество скачивания";
-"download.quality.hd" = "Высокое качество";
-"download.quality.sd" = "Обычное качество";
-"download.quality.spherical.hd" = "Высокое качество 360°";
-"download.quality.spherical.sd" = "Обычное качество 360°";
+"download.quality.select.title" = "Выберите качество";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "Полный источник 360°";
 "download.quality.original" = "Оригинал";
-"download.quality.dash.detail" = "~%@ · примерный размер";
 "reels.hideOverlay.a11y" = "Скрыть наложение Reel";
 "update.title" = "Доступно обновление";
 "update.subtitle" = "Версия %@ уже доступна.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "Удалить";
 "fonts.deleted" = "Шрифт удалён";
 
-"download.quality.dash.mergeDetail" = "~%@ · примерный размер · нужно объединить";
-"download.quality.merge.detail" = "Нужно объединить";
-"download.quality.exact.detail" = "%@ · точный размер";
 "download.quality.badge.best" = "Лучшее";
 "download.quality.badge.smallest" = "Самое лёгкое";
 "download.quality.badge.spherical" = "360°";

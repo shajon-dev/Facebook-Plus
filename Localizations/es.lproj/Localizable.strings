@@ -100,14 +100,13 @@
 "download.merge.failed" = "No se pudo combinar el audio y la imagen de este vídeo.\n%@";
 "download.stream.videoFailed" = "No se descargó la pista de vídeo.\n%@";
 "download.stream.audioFailed" = "No se descargó la pista de audio.\n%@";
-"download.quality.title" = "Calidad de descarga";
-"download.quality.hd" = "Calidad alta";
-"download.quality.sd" = "Calidad estándar";
-"download.quality.spherical.hd" = "Calidad alta 360°";
-"download.quality.spherical.sd" = "Calidad estándar 360°";
+"download.quality.select.title" = "Selecciona la calidad";
+"download.quality.progressive.hd" = "HD";
+"download.quality.progressive.sd" = "SD";
+"download.quality.spherical.hd" = "360° HD";
+"download.quality.spherical.sd" = "360° SD";
 "download.quality.spherical.detail" = "Fuente 360° completa";
 "download.quality.original" = "Original";
-"download.quality.dash.detail" = "~%@ · tamaño estimado";
 "reels.hideOverlay.a11y" = "Ocultar superposición del Reel";
 "update.title" = "Actualización disponible";
 "update.subtitle" = "La versión %@ ya está disponible.";
@@ -161,9 +160,6 @@
 "fonts.delete.confirm" = "Eliminar";
 "fonts.deleted" = "Fuente eliminada";
 
-"download.quality.dash.mergeDetail" = "~%@ · tamaño estimado · requiere unión";
-"download.quality.merge.detail" = "Requiere unión";
-"download.quality.exact.detail" = "%@ · tamaño exacto";
 "download.quality.badge.best" = "Mejor";
 "download.quality.badge.smallest" = "Más pequeño";
 "download.quality.badge.spherical" = "360°";
