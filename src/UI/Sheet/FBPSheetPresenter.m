@@ -53,13 +53,20 @@
     if (@available(iOS 15.0, *)) {
         sheet.modalPresentationStyle = UIModalPresentationPageSheet;
         UISheetPresentationController *presentation = sheet.sheetPresentationController;
-        CGFloat height = sheet.preferredSheetHeight;
         if (@available(iOS 16.0, *)) {
+            // Asked of the sheet on every resolution rather than captured once:
+            // the height depends on the row count, the safe area and Dynamic
+            // Type, and the sheet calls -invalidateDetents when those move. The
+            // reference is weak because the detent is ultimately owned by the
+            // controller it measures.
+            __weak FBPSheetController *weakSheet = sheet;
             presentation.detents = @[
                 [UISheetPresentationControllerDetent
                     customDetentWithIdentifier:@"fbp.content"
                                       resolver:^CGFloat(id<UISheetPresentationControllerDetentResolutionContext> ctx) {
-                        return MIN(height, ctx.maximumDetentValue);
+                        FBPSheetController *measured = weakSheet;
+                        if (!measured) return ctx.maximumDetentValue * 0.5;
+                        return MIN(measured.preferredDetentHeight, ctx.maximumDetentValue);
                     }],
                 UISheetPresentationControllerDetent.largeDetent,
             ];
