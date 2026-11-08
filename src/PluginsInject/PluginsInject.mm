@@ -1,12 +1,16 @@
-// Constructor: resolve the keychain access group this process can actually
-// hold, then install the SecItem* rebinds that steer keychain calls at it.
+// Constructor: install the SecItem* rebinds, and the entitlement-derived
+// fallback for the keychain access group.
+//
+// Note what is *not* here any more: the access group used to be resolved once,
+// eagerly, in this constructor, and whatever it got — including nothing — was
+// what the whole process used for the rest of its life. In the notification
+// extension that is a race it can lose, so resolution now lives in
+// SecRebinds.xm, happens on first use, and is retried until it succeeds.
 
 #import <objc/runtime.h>
 
 #import "Header.h"
 
-NSString *accessGroupId;
-NSString *accessGroupSource;
 NSString *bundleId;
 
 #if FBP_DIAG
@@ -28,61 +32,19 @@ void FBPDiagLogv(NSString *format, ...) {
 }
 #endif
 
-// The probe item is deliberately AfterFirstUnlock. The default for SecItemAdd
-// is WhenUnlocked, and the notification extension runs on push delivery, which
-// routinely happens with the device locked — a WhenUnlocked probe item is
-// unreadable there, the probe fails, and the extension loses the access group
-// it needs. The account name carries ".afu" so an item left behind by an
-// earlier (WhenUnlocked) build is not what we read back.
-static NSString *const kProbeAccount = @"com.shajon.fbplus.accessGroupProbe.afu";
-
-// Ask the keychain where an item with no explicit access group actually lands.
-// This is ground truth — whatever the entitlements say, this is the group the
-// app's own untagged keychain traffic ends up in — so it is tried first.
-static NSString *probeAccessGroup() {
-	NSDictionary *common = @{
-		(__bridge NSString *)kSecClass: (__bridge NSString *)kSecClassGenericPassword,
-		(__bridge NSString *)kSecAttrAccount: kProbeAccount,
-		(__bridge NSString *)kSecAttrService: @"",
-		(__bridge id)kSecReturnAttributes: (id)kCFBooleanTrue
-	};
-
-	NSMutableDictionary *search = [common mutableCopy];
-	// Match the item whether or not an earlier run marked it synchronizable.
-	search[(__bridge NSString *)kSecAttrSynchronizable] = (__bridge id)kSecAttrSynchronizableAny;
-	search[(__bridge NSString *)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
-
-	CFDictionaryRef result = nil;
-	OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)search, (CFTypeRef *)&result);
-	if (status == errSecItemNotFound) {
-		NSMutableDictionary *add = [common mutableCopy];
-		add[(__bridge NSString *)kSecAttrAccessible] =
-			(__bridge id)kSecAttrAccessibleAfterFirstUnlock;
-		status = SecItemAdd((__bridge CFDictionaryRef)add, (CFTypeRef *)&result);
-	}
-
-	NSString *group = nil;
-	if (status == errSecSuccess) {
-		group = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
-	}
-	if (result) {
-		CFRelease(result);
-	}
-
-	FBPDiagLog(@"access-group probe: OSStatus %d, group %@", (int)status, group ?: @"(none)");
-	return group.length > 0 ? group : nil;
-}
-
-// Fallback for when the probe cannot run — above all a locked device, where a
-// keychain add or read is refused outright (errSecInteractionNotAllowed).
+// Fallback for when the keychain cannot answer — above all a locked device,
+// where an add or a read is refused outright (errSecInteractionNotAllowed).
 // iOS places an item with no explicit access group in the FIRST entry of the
 // keychain-access-groups entitlement, so reading that entitlement gives the
-// same answer the probe would have, without touching the keychain. A signer
-// gives the app and its extensions the same entitlement, so the two processes
-// still converge. Note the first entry on a development profile is usually the
+// same answer the keychain would have, without touching it. A signer gives the
+// app and its extensions the same entitlement, so the two processes still
+// converge. Note the first entry on a development profile is usually the
 // literal wildcard "<TeamID>.*", which is also what the keychain reports as the
 // group of an untagged item on such a profile.
-static NSString *accessGroupFromEntitlements() {
+//
+// application-identifier is the last resort: with no keychain-access-groups
+// entitlement at all, that is what iOS uses as the default group.
+NSString *fbpAccessGroupFromEntitlements(void) {
 	LSBundleProxy *bundleProxy = [objc_getClass("LSBundleProxy") bundleProxyForCurrentProcess];
 	NSDictionary *entitlements = bundleProxy.entitlements;
 	if (![entitlements isKindOfClass:NSDictionary.class]) {
@@ -90,41 +52,40 @@ static NSString *accessGroupFromEntitlements() {
 	}
 
 	id groups = entitlements[@"keychain-access-groups"];
-	if (![groups isKindOfClass:NSArray.class]) {
-		return nil;
+	if ([groups isKindOfClass:NSArray.class]) {
+		for (id group in (NSArray *)groups) {
+			if (![group isKindOfClass:NSString.class] || ((NSString *)group).length == 0) {
+				continue;
+			}
+			// com.apple.token and friends are shared system groups, never the
+			// one this app's own items land in.
+			if ([(NSString *)group hasPrefix:@"com.apple."]) {
+				continue;
+			}
+			return (NSString *)group;
+		}
 	}
 
-	for (id group in (NSArray *)groups) {
-		if (![group isKindOfClass:NSString.class] || ((NSString *)group).length == 0) {
-			continue;
-		}
-		// com.apple.token and friends are shared system groups, never the one
-		// this app's own items land in.
-		if ([(NSString *)group hasPrefix:@"com.apple."]) {
-			continue;
-		}
-		return (NSString *)group;
+	id identifier = entitlements[@"application-identifier"];
+	if ([identifier isKindOfClass:NSString.class] && ((NSString *)identifier).length > 0) {
+		return (NSString *)identifier;
 	}
 	return nil;
 }
 
-static void resolveAccessGroup() {
+__attribute__((constructor)) static void PluginsInjectInit() {
 	bundleId = [[NSBundle mainBundle] bundleIdentifier];
 
-	if ((accessGroupId = probeAccessGroup())) {
-		accessGroupSource = @"keychain probe";
-	} else if ((accessGroupId = accessGroupFromEntitlements())) {
-		accessGroupSource = @"keychain-access-groups entitlement";
-	} else {
-		accessGroupSource = @"unresolved";
-	}
-
-	PILog(@"access group %@ (%@)", accessGroupId ?: @"(none)", accessGroupSource);
-	FBPDiagLog(@"process %@: access group %@ via %@", bundleId ?: @"(unknown)",
-	           accessGroupId ?: @"(none)", accessGroupSource);
-}
-
-__attribute__((constructor)) static void PluginsInjectInit() {
-	resolveAccessGroup();
+	// Must come first: the access-group probe calls the *original* SecItem*
+	// functions, which only exist once the rebinds have been installed.
 	rebindSecFuncs();
+
+	// Warm the resolution so the main app has a group before Facebook's own
+	// keychain traffic starts, and so the trace records it at launch. A failure
+	// here is no longer fatal — it is retried on first use.
+	// Only read by the logs, which compile away in a release build.
+	__attribute__((unused)) NSString *group = fbpResolvedAccessGroup();
+	PILog(@"access group at launch: %@", group ?: @"(unresolved, will retry)");
+	FBPDiagLog(@"process %@: access group at launch %@", bundleId ?: @"(unknown)",
+	           group ?: @"(unresolved, will retry)");
 }

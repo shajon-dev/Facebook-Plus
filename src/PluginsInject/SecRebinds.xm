@@ -55,6 +55,16 @@
 // only protects the no-group case, where a system caller might really own the
 // item. See .agent/notification-extension.md.
 //
+// WHY THE GROUP IS RESOLVED LAZILY AND RETRIED
+//
+// It used to be resolved once, eagerly, in the constructor, and a failure there
+// was cached for the life of the process. An extension woken by a push on a
+// locked device cannot read or add a keychain item, so it failed there and then
+// never had a group at all. Resolution now happens on first use, under a lock,
+// and is cached only on success — the same shape zxPluginsInject-derived
+// libraries settled on. The probe calls the *original* SecItem* functions so
+// running it from inside a shim does not recurse.
+//
 // WHY A FAILED LOOKUP STRIPS THE GROUP RATHER THAN PASSING IT THROUGH
 //
 // Also from the issue-#13 narrowing, which replaced "assign a nil
@@ -124,15 +134,122 @@ static void primeKeychainRebindPref() {
 	}];
 }
 
+#pragma mark - Resolving the access group we can actually hold
+
+// The probe item is deliberately AfterFirstUnlock. The default for SecItemAdd
+// is WhenUnlocked, and the notification extension runs on push delivery, which
+// routinely happens with the device locked — a WhenUnlocked probe item is
+// unreadable there, the probe fails, and the extension loses the access group
+// it needs. The account name carries ".afu" so an item left behind by an
+// earlier (WhenUnlocked) build is not what we read back.
+static NSString *const kProbeAccount = @"com.shajon.fbplus.accessGroupProbe.afu";
+
+// Ask the keychain where an item with no explicit access group actually lands.
+// This is ground truth — whatever the entitlements say, this is the group the
+// app's own untagged keychain traffic ends up in.
+//
+// It calls the ORIGINAL SecItem* functions, not the rebound ones, because this
+// runs from inside the shims: going through the shims would recurse.
+static NSString *probeAccessGroupSentinel(OSStatus *statusOut) {
+	if (!origSecItemCopyMatching || !origSecItemAdd) {
+		if (statusOut) *statusOut = errSecUnimplemented;
+		return nil;
+	}
+
+	NSDictionary *common = @{
+		(__bridge NSString *)kSecClass: (__bridge NSString *)kSecClassGenericPassword,
+		(__bridge NSString *)kSecAttrAccount: kProbeAccount,
+		(__bridge NSString *)kSecAttrService: @"",
+		(__bridge id)kSecReturnAttributes: (id)kCFBooleanTrue
+	};
+
+	NSMutableDictionary *search = [common mutableCopy];
+	// Match the item whether or not an earlier run marked it synchronizable.
+	search[(__bridge NSString *)kSecAttrSynchronizable] = (__bridge id)kSecAttrSynchronizableAny;
+	search[(__bridge NSString *)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
+
+	CFTypeRef result = nil;
+	OSStatus status = origSecItemCopyMatching((__bridge CFDictionaryRef)search, &result);
+	if (status == errSecItemNotFound) {
+		NSMutableDictionary *add = [common mutableCopy];
+		add[(__bridge NSString *)kSecAttrAccessible] =
+			(__bridge id)kSecAttrAccessibleAfterFirstUnlock;
+		add[(__bridge NSString *)kSecValueData] = [NSData data];
+		status = origSecItemAdd((__bridge CFDictionaryRef)add, &result);
+	}
+	if (statusOut) *statusOut = status;
+
+	NSString *group = nil;
+	if (status == errSecSuccess && result) {
+		id attributes = (__bridge id)result;
+		if ([attributes isKindOfClass:NSDictionary.class]) {
+			group = [attributes[(__bridge NSString *)kSecAttrAccessGroup] copy];
+		}
+	}
+	if (result) {
+		CFRelease(result);
+	}
+	return group.length > 0 ? group : nil;
+}
+
+// Lazy, locked, and **cached only on success**. The eager constructor-time
+// version cached a failure for the whole process, which in an extension woken
+// on a locked device meant it never had a group at all. Retrying costs one
+// keychain round trip per call until it works once.
+NSString *fbpResolvedAccessGroup(void) {
+	static NSString *resolved = nil;
+	static NSObject *resolutionLock = nil;
+	static BOOL loggedFailure = NO;
+	static dispatch_once_t lockOnceToken;
+	dispatch_once(&lockOnceToken, ^{
+		resolutionLock = [NSObject new];
+	});
+
+	@synchronized (resolutionLock) {
+		if (resolved.length > 0) {
+			return resolved;
+		}
+
+		OSStatus probeStatus = errSecSuccess;
+		NSString *group = probeAccessGroupSentinel(&probeStatus);
+		// Only read by the logs, which compile away in a release build.
+		__attribute__((unused)) NSString *source = @"keychain probe";
+		if (group.length == 0) {
+			group = fbpAccessGroupFromEntitlements();
+			source = @"keychain-access-groups entitlement";
+		}
+
+		if (group.length > 0) {
+			resolved = [group copy];
+			PILog(@"resolved access group via %@ (probe OSStatus %d)", source, (int)probeStatus);
+			FBPDiagLog(@"resolved access group %@ via %@ (probe OSStatus %d)", resolved, source,
+			           (int)probeStatus);
+			return resolved;
+		}
+
+		if (!loggedFailure) {
+			loggedFailure = YES;
+			PILog(@"no access group resolved yet (probe OSStatus %d) — will retry", (int)probeStatus);
+			FBPDiagLog(@"no access group resolved yet (probe OSStatus %d) — will retry",
+			           (int)probeStatus);
+		}
+		return nil;
+	}
+}
+
 #pragma mark - What to do with a query's access group
 
 typedef NS_ENUM(NSUInteger, FBPAccessGroupAction) {
 	FBPAccessGroupLeave,  // hand the query to the keychain exactly as given
-	FBPAccessGroupPin,    // set kSecAttrAccessGroup to accessGroupId
+	FBPAccessGroupPin,    // set kSecAttrAccessGroup to the resolved group
 	FBPAccessGroupStrip   // remove kSecAttrAccessGroup entirely
 };
 
-static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query) {
+// injectWhenMissing is NO for SecItemUpdate's attributesToUpdate: adding a
+// group that was not there would *migrate* the item to another access group,
+// which is not what an update meant to do. A group already present there is
+// still normalised, because leaving a foreign one fails the update.
+static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query, BOOL injectWhenMissing) {
 	if (!gKeychainRebindEnabled) return FBPAccessGroupLeave;
 	if (![query isKindOfClass:NSDictionary.class]) return FBPAccessGroupLeave;
 
@@ -150,22 +267,25 @@ static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query) {
 		// A system or auth framework asking for a group it is entitled to.
 		if ([requested hasPrefix:@"com.apple."]) return FBPAccessGroupLeave;
 
+		NSString *ours = fbpResolvedAccessGroup();
+
 		// Already where we would put it.
-		if (accessGroupId.length > 0 && [requested isEqualToString:accessGroupId]) {
+		if (ours.length > 0 && [requested isEqualToString:ours]) {
 			return FBPAccessGroupLeave;
 		}
 
 		// Another team's group. Apple will not grant it to this signature, so
 		// the query cannot succeed as written whatever else it carries.
-		return accessGroupId.length > 0 ? FBPAccessGroupPin : FBPAccessGroupStrip;
+		return ours.length > 0 ? FBPAccessGroupPin : FBPAccessGroupStrip;
 	}
 
 	// No access group from here on. These are the queries where a caller may
 	// legitimately own the item it is asking about, so the modern-keychain
 	// markers are honoured and nothing is pinned without a group to pin to.
+	if (!injectWhenMissing) return FBPAccessGroupLeave;
 	if (query[(__bridge NSString *)kSecUseDataProtectionKeychain]) return FBPAccessGroupLeave;
 	if (query[(__bridge NSString *)kSecAttrAccessControl]) return FBPAccessGroupLeave;
-	if (accessGroupId.length == 0) return FBPAccessGroupLeave;
+	if (fbpResolvedAccessGroup().length == 0) return FBPAccessGroupLeave;
 
 	return FBPAccessGroupPin;
 }
@@ -173,14 +293,14 @@ static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query) {
 // The dictionary actually handed to the real SecItem* call. Returned as an
 // NSDictionary (not a CFDictionaryRef) so ARC keeps the rewritten copy alive
 // for the duration of the call.
-static NSDictionary *effectiveQuery(CFDictionaryRef query) {
+static NSDictionary *effectiveDictionary(CFDictionaryRef query, BOOL injectWhenMissing) {
 	NSDictionary *incoming = (__bridge NSDictionary *)query;
-	switch (accessGroupActionForQuery(incoming)) {
+	switch (accessGroupActionForQuery(incoming, injectWhenMissing)) {
 		case FBPAccessGroupLeave:
 			return incoming;
 		case FBPAccessGroupPin: {
 			NSMutableDictionary *rewritten = [incoming mutableCopy];
-			rewritten[(__bridge NSString *)kSecAttrAccessGroup] = accessGroupId;
+			rewritten[(__bridge NSString *)kSecAttrAccessGroup] = fbpResolvedAccessGroup();
 			return rewritten;
 		}
 		case FBPAccessGroupStrip: {
@@ -191,6 +311,16 @@ static NSDictionary *effectiveQuery(CFDictionaryRef query) {
 			return rewritten;
 		}
 	}
+}
+
+static NSDictionary *effectiveQuery(CFDictionaryRef query) {
+	return effectiveDictionary(query, YES);
+}
+
+// SecItemUpdate's second dictionary: normalise a group that is there, never
+// add one that is not.
+static NSDictionary *effectiveUpdateAttributes(CFDictionaryRef attributes) {
+	return effectiveDictionary(attributes, NO);
 }
 
 #pragma mark - Tracing
@@ -214,7 +344,7 @@ static void logSecCall(const char *name, CFDictionaryRef query, OSStatus status)
 	if (![incoming isKindOfClass:NSDictionary.class]) return;
 
 	id group = incoming[(__bridge NSString *)kSecAttrAccessGroup];
-	NSString *action = describeAction(accessGroupActionForQuery(incoming));
+	NSString *action = describeAction(accessGroupActionForQuery(incoming, YES));
 
 	PILog(@"%s group %@ [%@] -> OSStatus %d", name, group ?: @"(unset)", action, (int)status);
 	FBPDiagLog(@"%s svce=%@ acct=%@ group=%@ [%@] -> OSStatus %d", name,
@@ -246,7 +376,9 @@ static OSStatus fbpSecItemCopyMatching(CFDictionaryRef query, CFTypeRef *result)
 
 static OSStatus fbpSecItemUpdate(CFDictionaryRef query, CFDictionaryRef attributesToUpdate) {
 	@autoreleasepool {
-		OSStatus status = origSecItemUpdate((__bridge CFDictionaryRef)effectiveQuery(query), attributesToUpdate);
+		OSStatus status = origSecItemUpdate(
+			(__bridge CFDictionaryRef)effectiveQuery(query),
+			(__bridge CFDictionaryRef)effectiveUpdateAttributes(attributesToUpdate));
 		logSecCall("SecItemUpdate", query, status);
 		return status;
 	}

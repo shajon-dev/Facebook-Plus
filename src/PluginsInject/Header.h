@@ -38,10 +38,14 @@ extern void FBPDiagLogv(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 #endif
 
 // The keychain access group every SecItem* call a re-signed build makes should
-// end up in, and how it was arrived at. Empty/nil means "not resolved" — see
-// SecRebinds.xm for what happens then.
-extern NSString *accessGroupId;
-extern NSString *accessGroupSource;
+// end up in. Resolved lazily and **retried until it succeeds** — see
+// SecRebinds.xm. Returns nil while it is still unresolved, which is a state the
+// callers have to handle rather than a permanent answer.
+extern NSString *fbpResolvedAccessGroup(void);
+
+// The entitlement-derived fallback, used when the keychain cannot be reached.
+extern NSString *fbpAccessGroupFromEntitlements(void);
+
 extern NSString *bundleId;
 
 extern void rebindSecFuncs();

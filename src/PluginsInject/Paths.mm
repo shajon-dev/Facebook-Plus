@@ -27,34 +27,50 @@ BOOL createDirectoryIfNotExists(NSString *path) {
 	return YES;
 }
 
+// Resolved on demand and **cached only on success**. This used to be a
+// dispatch_once, which cached a *failure* just as permanently: in the
+// notification extension LSBundleProxy is not always usable at the moment of
+// the first call, and one lost race then left every later call in that process
+// falling back to the extension's private Documents directory — which is not
+// shared with the app, so the Msys store and the group defaults both read empty
+// and the extension concluded the user was logged out. Retrying costs a cheap
+// LSBundleProxy lookup until it works once.
 NSURL *getAppGroupPathIfExists() {
 	static NSURL *cachedAppGroupPath = nil;
-	static dispatch_once_t onceToken;
+	static NSObject *resolutionLock = nil;
+	static dispatch_once_t lockOnceToken;
+	dispatch_once(&lockOnceToken, ^{
+		resolutionLock = [NSObject new];
+	});
 
-	dispatch_once(&onceToken, ^{
+	@synchronized (resolutionLock) {
+		if (cachedAppGroupPath) {
+			return cachedAppGroupPath;
+		}
+
 		PILog(@"fetching app group path...");
 
 		LSBundleProxy *bundleProxy = [objc_getClass("LSBundleProxy") bundleProxyForCurrentProcess];
 		if (!bundleProxy) {
 			PILog(@"failed to retrieve LSBundleProxy for the current process");
-			return;
+			return nil;
 		}
 
 		NSDictionary *entitlements = bundleProxy.entitlements;
 		if (!entitlements || ![entitlements isKindOfClass:[NSDictionary class]]) {
 			PILog(@"failed to retrieve entitlements");
-			return;
+			return nil;
 		}
 
 		NSArray *appGroups = entitlements[@"com.apple.security.application-groups"];
 		if (!appGroups) {
 			PILog(@"no app groups found in entitlements");
-			return;
+			return nil;
 		}
 
 		if (appGroups.count == 0) {
 			PILog(@"app group entitlement exists, but no app groups are configured");
-			return;
+			return nil;
 		}
 
 		// Why the choice has to be deterministic, not just "the first one":
@@ -84,7 +100,7 @@ NSURL *getAppGroupPathIfExists() {
 
 		if (candidates.count == 0) {
 			PILog(@"no third-party app group in entitlements — nothing to redirect to");
-			return;
+			return nil;
 		}
 
 		[candidates sortUsingComparator:^NSComparisonResult(NSString *a, NSString *b) {
@@ -95,7 +111,7 @@ NSURL *getAppGroupPathIfExists() {
 		NSDictionary *appGroupsPaths = bundleProxy.groupContainerURLs;
 		if (!appGroupsPaths || ![appGroupsPaths isKindOfClass:[NSDictionary class]]) {
 			PILog(@"failed to retrieve group container URLs");
-			return;
+			return nil;
 		}
 
 		for (NSString *appGroupName in candidates) {
@@ -118,7 +134,7 @@ NSURL *getAppGroupPathIfExists() {
 		FBPDiagLog(@"app group container: %@ (from %lu candidate%@)",
 				   cachedAppGroupPath.path ?: @"(none)",
 				   (unsigned long)candidates.count, candidates.count == 1 ? @"" : @"s");
-	});
 
-	return cachedAppGroupPath;
+		return cachedAppGroupPath;
+	}
 }
