@@ -144,7 +144,7 @@ static void fbpBeginBackgroundTask(void) {
 
 static FBPClientSyncListener *gListener;
 
-static void fbpRunClientSync(id observer) {
+static void fbpRunClientSync(id observer, NSString *pnid) {
 	FBPDiagLog(@"client sync: background fetch observed");
 
 	if (!FBPEnabled(FBPKeyNotifClientSync)) {
@@ -178,9 +178,14 @@ static void fbpRunClientSync(id observer) {
 		if (!manager) return;
 
 		// Delay 0: the push has already arrived, so there is nothing to wait for.
-		// The name is only carried into Facebook's own logging.
+		// The extra is the pnid. Without it the sync asks the server for nothing
+		// in particular and comes back succeeded-but-empty, which is exactly
+		// what the device showed: SUCCEEDED, no notification, no drop reason.
+		// FBPushNotifClientSyncQueryBuilder keys its GraphQL query on pnids, and
+		// the extension's own trigger is built the same way.
 		FBPClientSyncTrigger *trigger =
-			[[triggerClass alloc] initWithName:@"FBPlusBadgeUpdate" withDelay:0 andExtra:nil];
+			[[triggerClass alloc] initWithName:@"FBPlusBadgeUpdate" withDelay:0 andExtra:pnid];
+		FBPDiagLog(@"client sync: trigger extra %@", pnid ?: @"(none)");
 		if (!trigger) return;
 
 		if (!gListener) gListener = [[FBPClientSyncListener alloc] init];
@@ -224,7 +229,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 - (void)handleBackgroundFetchRequest:(id)request {
 	%orig;
 	FBPDiagLog(@"client sync: background fetch observed");
-	fbpRunClientSync(self);
+	fbpRunClientSync(self, nil);
 }
 
 %end
@@ -249,8 +254,15 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 	%orig;
 
 	if (!fbpIsBadgeUpdatePush(userInfo)) return;
+
+	id pnid = userInfo[@"pnid"];
+	if (![pnid isKindOfClass:NSString.class]) {
+		NSDictionary *p = userInfo[@"p"];
+		pnid = [p isKindOfClass:NSDictionary.class] ? p[@"PushNotifID"] : nil;
+	}
+
 	FBPDiagLog(@"client sync: badge-update push delivered to the app delegate");
-	fbpRunClientSync(nil);
+	fbpRunClientSync(nil, [pnid isKindOfClass:NSString.class] ? pnid : nil);
 }
 
 %end
