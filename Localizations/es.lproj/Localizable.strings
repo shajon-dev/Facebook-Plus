@@ -201,3 +201,5 @@
 "resetpushkeys.message" = "Facebook will create and register new push keys the next time it starts. Nothing about your account or your login changes. Force-quit Facebook and open it again afterwards.";
 "resetpushkeys.confirm" = "Reset Keys";
 "toast.pushKeysReset" = "Push keys cleared (%lu) — reopen Facebook";
+"row.notifclientsync.title" = "Fetch Missing Notifications";
+"row.notifclientsync.desc" = "When only the badge moves, pull the notification and show it";

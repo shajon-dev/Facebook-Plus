@@ -54,6 +54,7 @@ FacebookPlus_FILES = \
 	src/Features/Links/FBPLinkHooks.xm \
 	src/Features/Links/FBPLinkBridge.xm \
 	src/Features/Calls/FBPCallBlocker.xm \
+	src/Features/Notifications/FBPNotifClientSync.xm \
 	src/Features/Update/FBPUpdateController.m \
 	src/Features/Update/FBPUpdateChecker.m \
 	src/PluginsInject/PluginsInject.mm \
@@ -73,7 +74,7 @@ FacebookPlus_CFLAGS  = -fobjc-arc -Wno-deprecated-declarations \
 	-Isrc/Features -Isrc/Features/AppChrome -Isrc/Features/AppIcons \
 	-Isrc/Features/Calls -Isrc/Features/Downloads -Isrc/Features/Feed \
 	-Isrc/Features/Fonts -Isrc/Features/Language -Isrc/Features/LikeConfirmation \
-	-Isrc/Features/Links -Isrc/Features/OLED -Isrc/Features/Onboarding \
+	-Isrc/Features/Links -Isrc/Features/Notifications -Isrc/Features/OLED -Isrc/Features/Onboarding \
 	-Isrc/Features/Stories -Isrc/Features/Update -Isrc/PluginsInject
 # VideoToolbox and CoreVideo are for FBPMediaConverter: the AV1-decoder
 # capability probe calls VTDecompressionSessionCreate directly, and the decode

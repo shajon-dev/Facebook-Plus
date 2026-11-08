@@ -107,6 +107,11 @@ extern NSString *const FBPKeyLogDownloadQualities;
 /// suite — keep the two in step.
 extern NSString *const FBPKeyKeychainRebind;
 
+/// Run Facebook's own push client sync when a badge-only silent push arrives,
+/// so a like / comment / tag notification is fetched and shown instead of only
+/// moving the badge. See src/Features/Notifications/FBPNotifClientSync.xm.
+extern NSString *const FBPKeyNotifClientSync;
+
 // Other
 extern NSString *const FBPKeyNotifyUpdates;
 extern NSString *const FBPKeyAutoClearCache;

@@ -49,6 +49,7 @@ NSString *const FBPKeyLinksInSafari    = @"linksInSafari";
 NSString *const FBPKeyLogFeedUnits     = @"logFeedUnits";
 NSString *const FBPKeyLogDownloadQualities = @"logDownloadQualities";
 NSString *const FBPKeyKeychainRebind   = @"keychainRebind";
+NSString *const FBPKeyNotifClientSync  = @"notifClientSync";
 NSString *const FBPKeyNotifyUpdates    = @"notifyUpdates";
 NSString *const FBPKeyAutoClearCache   = @"autoClearCache";
 NSString *const FBPKeyLanguage         = @"uiLanguage";
