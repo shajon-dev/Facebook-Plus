@@ -267,6 +267,34 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 
 %end
 
+// What the GraphQL query actually asks for. The run reports SUCCEEDED and posts
+// nothing, so the question is whether it carries any pnids at all.
+%hook FBPushNotifClientSyncQueryBuilder
+
++ (id)builderWithCount:(NSInteger)count
+                cursor:(id)cursor
+              deviceId:(id)deviceId
+             extraData:(id)extraData
+                 pnids:(id)pnids {
+	FBPDiagLog(@"client sync: query count=%ld cursor=%@ deviceId=%@ pnids=%@ extra=%@",
+	           (long)count, cursor ?: @"(nil)", deviceId ?: @"(nil)", pnids ?: @"(nil)",
+	           extraData ?: @"(nil)");
+	return %orig;
+}
+
+%end
+
+// Called once per notification the server returned. Silence here means the
+// response was empty.
+%hook FBPushNotifClientSyncManager
+
+- (void)evaluatePush:(id)push {
+	FBPDiagLog(@"client sync: evaluating a fetched push");
+	%orig;
+}
+
+%end
+
 // Why a fetched notification was not shown.
 %hook FBPushNotifClientSyncLocalFilterResult
 
