@@ -40,6 +40,7 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
+#import "Header.h"
 
 @interface FBPClientSyncTrigger: NSObject
 - (instancetype)initWithName:(NSString *)name withDelay:(NSInteger)delay andExtra:(NSString *)extra;
@@ -65,15 +66,28 @@ static id fbpIvarValue(id object, const char *name) {
 }
 
 static void fbpRunClientSync(id observer) {
-	if (!FBPEnabled(FBPKeyNotifClientSync)) return;
+	FBPDiagLog(@"client sync: background fetch observed");
+
+	if (!FBPEnabled(FBPKeyNotifClientSync)) {
+		FBPDiagLog(@"client sync: disabled in settings");
+		return;
+	}
 
 	Class networkerClass = objc_getClass("FBPushNotifClientSyncGraphQLNetworker");
 	Class managerClass = objc_getClass("FBPushNotifClientSyncManager");
 	Class triggerClass = objc_getClass("FBPushNotifClientSyncSimpleTrigger");
-	if (!networkerClass || !managerClass || !triggerClass) return;
+	if (!networkerClass || !managerClass || !triggerClass) {
+		FBPDiagLog(@"client sync: missing class (networker=%d manager=%d trigger=%d)",
+		           networkerClass != nil, managerClass != nil, triggerClass != nil);
+		return;
+	}
 
 	id session = fbpIvarValue(observer, "_session");
-	if (!session) return;
+	if (!session) {
+		FBPDiagLog(@"client sync: no session on the observer");
+		return;
+	}
+	FBPDiagLog(@"client sync: session %@", NSStringFromClass([session class]));
 
 	@try {
 		FBPClientSyncNetworker *networker = [[networkerClass alloc] initWithSession:session];
@@ -89,8 +103,11 @@ static void fbpRunClientSync(id observer) {
 		if (!trigger) return;
 
 		gInFlightManager = manager;
+		FBPDiagLog(@"client sync: running");
 		[manager runWithTrigger:trigger];
+		FBPDiagLog(@"client sync: runWithTrigger returned");
 	} @catch (NSException *exception) {
+		FBPDiagLog(@"client sync: threw %@ — %@", exception.name, exception.reason);
 		// A changed initialiser signature would land here rather than take the
 		// app down inside a background wake.
 		gInFlightManager = nil;
@@ -111,10 +128,13 @@ static void fbpRunClientSync(id observer) {
 	// Facebook that renames either costs this feature and nothing else.
 	Class observer = objc_getClass("FBNotificationsPushNotifClientSyncBackgroundFetchObserver");
 	if (!observer || !class_getInstanceMethod(observer, @selector(handleBackgroundFetchRequest:))) {
+		FBPDiagLog(@"client sync: observer class or selector missing — hook not installed");
 		return;
 	}
 	if (!class_getInstanceVariable(observer, "_session")) {
+		FBPDiagLog(@"client sync: observer has no _session ivar — hook not installed");
 		return;
 	}
+	FBPDiagLog(@"client sync: hook installed");
 	%init;
 }
