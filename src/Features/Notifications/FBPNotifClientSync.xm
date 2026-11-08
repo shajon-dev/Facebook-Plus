@@ -60,6 +60,18 @@
 // server-side and Facebook's own rate limiter sits behind it.
 static id gInFlightManager;
 
+// The FBUserSession the client-sync networker needs. There is no global
+// accessor for it in the main binary, so it is taken from whichever of
+// Facebook's own objects is handed one first — both initialisers below take it,
+// and a push-woken launch constructs at least one of them before any fetch.
+static id gSession;
+
+static void fbpRememberSession(id session) {
+	if (!session || gSession) return;
+	gSession = session;
+	FBPDiagLog(@"client sync: captured session %@", NSStringFromClass([session class]));
+}
+
 static id fbpIvarValue(id object, const char *name) {
 	Ivar ivar = class_getInstanceVariable(object_getClass(object), name);
 	return ivar ? object_getIvar(object, ivar) : nil;
@@ -82,9 +94,11 @@ static void fbpRunClientSync(id observer) {
 		return;
 	}
 
-	id session = fbpIvarValue(observer, "_session");
+	id session = observer ? fbpIvarValue(observer, "_session") : nil;
+	if (session) fbpRememberSession(session);
+	if (!session) session = gSession;
 	if (!session) {
-		FBPDiagLog(@"client sync: no session on the observer");
+		FBPDiagLog(@"client sync: no session yet — nothing to run with");
 		return;
 	}
 	FBPDiagLog(@"client sync: session %@", NSStringFromClass([session class]));
@@ -114,11 +128,54 @@ static void fbpRunClientSync(id observer) {
 	}
 }
 
+// Is this one of the pushes Facebook deliberately leaves empty?
+static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
+	if (![userInfo isKindOfClass:NSDictionary.class]) return NO;
+	NSDictionary *pim = userInfo[@"pim"];
+	if (![pim isKindOfClass:NSDictionary.class]) return NO;
+	id type = pim[@"nt"];
+	return [type isKindOfClass:NSString.class] && [type isEqualToString:@"badge_update"];
+}
+
 %hook FBNotificationsPushNotifClientSyncBackgroundFetchObserver
 
+- (instancetype)initWithSession:(id)session {
+	fbpRememberSession(session);
+	return %orig;
+}
+
+// Not called for a badge-update push on this build — the device proved that —
+// but it is still the cleanest point when Facebook does route one here.
 - (void)handleBackgroundFetchRequest:(id)request {
 	%orig;
+	FBPDiagLog(@"client sync: background fetch observed");
 	fbpRunClientSync(self);
+}
+
+%end
+
+%hook FBPushNotifClientSyncGraphQLNetworker
+
+- (instancetype)initWithSession:(id)session {
+	fbpRememberSession(session);
+	return %orig;
+}
+
+%end
+
+// The hook that actually fires. iOS wakes the app for the content-available
+// push and hands it straight to the app delegate; the background-fetch observer
+// above never sees it.
+%hook FBBaseAppDelegate
+
+- (void)application:(id)application
+    didReceiveRemoteNotification:(NSDictionary *)userInfo
+          fetchCompletionHandler:(id)handler {
+	%orig;
+
+	if (!fbpIsBadgeUpdatePush(userInfo)) return;
+	FBPDiagLog(@"client sync: badge-update push delivered to the app delegate");
+	fbpRunClientSync(nil);
 }
 
 %end
@@ -126,13 +183,16 @@ static void fbpRunClientSync(id observer) {
 %ctor {
 	// House rule: verify the class and the selector before installing, so a
 	// Facebook that renames either costs this feature and nothing else.
-	Class observer = objc_getClass("FBNotificationsPushNotifClientSyncBackgroundFetchObserver");
-	if (!observer || !class_getInstanceMethod(observer, @selector(handleBackgroundFetchRequest:))) {
-		FBPDiagLog(@"client sync: observer class or selector missing — hook not installed");
+	Class delegate = objc_getClass("FBBaseAppDelegate");
+	if (!delegate ||
+	    !class_getInstanceMethod(
+	        delegate,
+	        @selector(application:didReceiveRemoteNotification:fetchCompletionHandler:))) {
+		FBPDiagLog(@"client sync: app delegate class or selector missing — hook not installed");
 		return;
 	}
-	if (!class_getInstanceVariable(observer, "_session")) {
-		FBPDiagLog(@"client sync: observer has no _session ivar — hook not installed");
+	if (!objc_getClass("FBPushNotifClientSyncManager")) {
+		FBPDiagLog(@"client sync: no client-sync manager in this build — hook not installed");
 		return;
 	}
 	FBPDiagLog(@"client sync: hook installed");
