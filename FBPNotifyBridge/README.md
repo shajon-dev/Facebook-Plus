@@ -78,14 +78,24 @@ other.**
 The container redirect alone cannot surface a session: Facebook's NSE asks the
 keychain for access group `T84QZS65DQ.platformFamily`, which a re-signed
 extension can never be granted, so the request fails before any container is
-consulted. The probe-and-pin pair is what makes it succeed, and it is the same
+consulted. Rewriting that group is what makes it succeed, and it is the same
 shared code the app uses, so the two processes converge on the same group.
 
-**Known concern:** the rebind is blanket — it forces `kSecAttrAccessGroup` on
-*every* `SecItem*` call in the process. Project notes record a suspicion that
-this aggravates crashes elsewhere in the app. In an NSE a crash costs a
-notification, so this is the riskiest part of the bridge and the first thing to
-remove if the extension starts dying.
+**This is the half that was broken, and it is why the bridge only ever half
+worked.** The rebind used to force `kSecAttrAccessGroup` on *every* `SecItem*`
+call in the process; it was then narrowed for issue #13, and the narrowing
+passed `kSecUseDataProtectionKeychain` queries through untouched — which in this
+binary is precisely Meta's own Swift keychain stores asking for
+`T84QZS65DQ.platformFamily`. The extension got a null token, so likes, comments
+and friend requests stayed generic while Messenger messages (container-backed)
+kept working. Fixed 2026-11-08; the reasoning and the disassembly that shows it
+are in
+[`.agent/notification-extension.md`](../.agent/notification-extension.md#root-cause-of-the-half-working-state-found-2026-11-08).
+
+**Known concern that remains:** fishhook rebinds the symbol process-wide, so
+these shims see every framework's keychain traffic, and in an NSE a crash costs
+a notification. `com.apple.*` groups are left alone for that reason. If the
+extension starts dying, this is still the first thing to suspect.
 
 ## Your signing certificate has to cooperate
 
@@ -144,11 +154,12 @@ carries the bridge inside the appex. Enabling it is harmless.
 
 ## What it does *not* fix
 
-- **Messenger messages.** Those are end-to-end encrypted, with device-bound keys
-  in `group.com.facebook.family`. A redirected container starts out empty, so
-  there are no keys to decrypt with, and no amount of path rewriting produces
-  them. The target here is **Facebook** notifications — likes, comments, tags,
-  friend requests — which the NSE resolves with an auth-token GraphQL fetch.
+- ~~**Messenger messages.**~~ **Corrected 2026-11-08: Messenger messages and
+  calls are the ones that *do* work.** They come out of the Msys store in the
+  redirected app-group container, so the container half already serves them. The
+  half that needed fixing was the **keychain**, which is what Facebook
+  notifications — likes, comments, tags, friend requests — depend on for the
+  client-sync token behind their GraphQL fetch.
 - **TrollStore installs.** They already work today, and this changes nothing for
   them: TrollStore preserves the original entitlements, so Facebook's real App
   Groups and keychain group are intact and no redirect is needed.
@@ -209,17 +220,38 @@ an artefact of how it was traced rather than a finding.
 1. The NSE launches on a re-signed install. ✅
 2. No wildcard profile and no per-extension App IDs are needed. ✅
 3. The redirected App-Group container carries what the NSE needs. ✅
-4. Notification text becomes specific. ✅
+4. Notification text becomes specific — **for Messenger messages and calls
+   only.** Read as "the bridge works" at the time; the keychain half was in fact
+   still broken, and Facebook notifications stayed generic. Corrected
+   2026-11-08.
+
+### Tracing it on a device
+
+`FBP_DIAG=1` compiles an `os_log` trace into both this dylib and the main tweak
+— the access group each process resolved and *how*, every container redirect, and
+every `SecItem*` call with its requested group, the decision taken and the
+`OSStatus`, plus the notification request and the content finally handed back:
+
+```bash
+make FBP_DIAG=1
+make -C FBPNotifyBridge/src FBP_DIAG=1 FINALPACKAGE=1
+./build.sh && ./test/sign-and-install.py
+idevicesyslog | grep FBPDIAG     # or Console.app, subsystem com.shajon.fbplus
+```
+
+A diagnostic build is ~90 KB instead of 70 KB. **Keep it out of releases** — the
+lines name keychain services and container paths.
 
 ### Still unverified
 
 - Whether the `SecItem*` rebind is comfortable inside an NSE's memory and time
-  budget. It has since been narrowed so it no longer rewrites system access
-  groups, and **Settings → General → Keychain Compatibility** turns it off
-  entirely, which is the first thing to try if the extension starts misbehaving.
+  budget. **Settings → General → Keychain Compatibility** turns it off, but only
+  for the main app: an appex has its own preferences domain, so the read there
+  finds nothing and falls back to on.
 - Behaviour on a certificate whose profile grants a *different* set of App
   Groups, or more than one. The resolver sorts and picks the first that actually
   resolves, so both processes converge, but only one certificate has been tested.
-- Messenger messages remain out of scope by design, not by omission: they are
-  end-to-end encrypted with device-bound keys in `group.com.facebook.family`, and
-  a redirected container is empty.
+- Whether Facebook sends this build HPKE-encrypted payloads at all. The NSE has
+  the machinery (`MetaPushEncryptionKeyStore`, `is_encrypted`), and its keychain
+  queries were broken by the same rule and fixed by the same change, but nothing
+  has shown it is on the path in practice.

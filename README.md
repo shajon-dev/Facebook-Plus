@@ -184,9 +184,10 @@ another team's identifiers for your certificate.
 
 The released IPA carries **`FBPNotifyBridge.dylib`** inside that extension: a
 ~70 KB dylib that applies the same container and keychain redirects the main app
-already uses, so both processes read and write the same place. **Confirmed
-working on a device**, with detailed notifications on the lock screen. Full
-write-up in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
+already uses, so both processes read and write the same place. Messenger messages
+and calls were confirmed on a device first; the keychain half that Facebook's own
+notifications depend on was found broken and fixed afterwards. Full write-up in
+**[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
 
 What this means for you:
 
@@ -200,9 +201,10 @@ What this means for you:
   build. Enable it if your build offers it; otherwise a certificate with an App
   Group is enough. "Inject into app extensions" is not needed either — the
   bridge already ships inside the IPA.
-- **Messenger messages are out of scope**, being end-to-end encrypted with
-  device-bound keys the bridge cannot reach. The target is **Facebook**
-  notifications: likes, comments, tags, friend requests.
+- **Both kinds of notification go through the bridge**, by two different
+  routes: Messenger messages and calls come out of the redirected shared
+  container, while Facebook's own — likes, comments, tags, friend requests —
+  need the keychain, because the extension fetches their text itself.
 - **TrollStore users need none of this** — it preserves the original
   entitlements, so notifications already work.
 

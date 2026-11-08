@@ -77,6 +77,14 @@ FacebookPlus_CFLAGS  = -fobjc-arc -Wno-deprecated-declarations \
 # VideoToolbox and CoreVideo are for FBPMediaConverter: the AV1-decoder
 # capability probe calls VTDecompressionSessionCreate directly, and the decode
 # side hands back CVPixelBuffers.
+# Diagnostic build. FBP_DIAG=1 compiles in the [FBPDIAG] os_log trace that
+# src/PluginsInject/Header.h declares — the keychain and container decisions, on
+# subsystem com.shajon.fbplus. Off by default, and it must stay off in a release:
+# the lines name keychain services. See FBPNotifyBridge/README.md.
+ifeq ($(FBP_DIAG),1)
+FacebookPlus_CFLAGS += -DFBP_DIAG=1
+endif
+
 FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia CoreVideo VideoToolbox Security PushKit CallKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk

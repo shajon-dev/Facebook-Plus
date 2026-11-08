@@ -1,38 +1,69 @@
 // Rebinds the SecItem* keychain functions (via fishhook) so a re-signed app's
 // own keychain I/O lands in an access group it actually holds.
 //
-// The rebind is deliberately NARROW. It used to force-overwrite
-// kSecAttrAccessGroup on every SecItem* call, which is too blunt: fishhook
-// rebinds the symbol process-wide, so the keychain traffic of system and auth
-// frameworks running inside Facebook (Accounts, AuthKit, SafariServices, the
-// Messenger hand-off) was rewritten as well. Those callers ask for groups they
-// are entitled to, and moving the group turns a hit into errSecItemNotFound or
-// -34018 errSecMissingEntitlement. Facebook's own code logs that and degrades;
-// a system caller is free to treat it as fatal — the suspected cause of GitHub
-// issue #13, where tapping Message on a profile killed the app.
+// The rule, in one sentence: **never leave a query asking for an access group
+// this process cannot possibly hold, and never move a query that already asks
+// for one it can.**
 //
-// What we still rewrite, exactly as before:
-//   * a query with NO access group — pinned to the probed group, so every item
-//     a re-signed app writes and reads back lands in one group it holds instead
-//     of whichever group the keychain picks by default. This is the case the
-//     rebind was written for.
-//   * any other app's / team's group — Facebook's own keychain code and the
+// That matters because fishhook rebinds the symbol process-wide, so these shims
+// see the keychain traffic of the system and auth frameworks running inside
+// Facebook (Accounts, AuthKit, SafariServices, the Messenger hand-off) as well.
+// Those callers ask for groups they are entitled to, and moving the group turns
+// a hit into errSecItemNotFound or -34018 errSecMissingEntitlement — Facebook's
+// own code logs that and degrades, a system caller is free to treat it as fatal,
+// which is the suspected cause of GitHub issue #13 (tapping Message on a
+// profile killed the app). Hence the three outcomes below.
+//
+// WHAT HAPPENS TO A QUERY
+//
+//   * it names ANOTHER TEAM's group — Facebook's own keychain code and the
 //     notification extension ask for Meta-owned groups (the NSE's Info.plist
-//     names T84QZS65DQ.platformFamily) that a re-signed build can never hold.
-//     Redirecting those is what keeps a sideloaded login persisting and what
-//     lets the NSE find the session, so it is left alone deliberately.
+//     names T84QZS65DQ.platformFamily) that a re-signed build can never be
+//     granted. The query as written can only fail, so it is always rewritten:
+//     pinned to the resolved group, or, if none was resolved, the access group
+//     is REMOVED, which makes the keychain search every group the process *is*
+//     entitled to. Nothing else in the query changes this — see the note on
+//     kSecUseDataProtectionKeychain below.
+//   * it names a com.apple.* group — system owned (com.apple.token,
+//     com.apple.accounts.*.defaultaccess, …). Left exactly as it is: that is a
+//     system or auth framework asking on its own behalf, and the issue-#13 fix.
+//   * it names the group we resolved — left alone, the rewrite was a no-op.
+//   * it names NO group — pinned to the resolved group, so everything a
+//     re-signed app writes and reads back lands in one group it holds instead
+//     of whichever group the keychain picks by default. This is the case the
+//     rebind was originally written for. Two exceptions, both left untouched:
+//     a kSecUseDataProtectionKeychain or kSecAttrAccessControl query (modern,
+//     caller-owned, possibly bound to an access-control object), and the case
+//     where no access group was resolved at all.
 //
-// What we now pass through untouched:
-//   * kSecUseDataProtectionKeychain / kSecAttrAccessControl queries — modern,
-//     caller-owned items, possibly bound to an access-control object. Rewriting
-//     the group can only break them.
-//   * com.apple.* groups — system owned (com.apple.token,
-//     com.apple.accounts.*.defaultaccess, …). This is the issue-#13 change:
-//     those are the lookups a system or auth framework makes on its own behalf.
-//   * the probed group itself, where a rewrite was always a no-op.
-//   * every query, when the access-group probe failed. The old code assigned a
-//     nil accessGroupId, which under ARC REMOVES the key and so silently
-//     stripped a legitimate group from the query.
+// WHY kSecUseDataProtectionKeychain NO LONGER EXCLUDES A FOREIGN GROUP
+//
+// It used to. Passing those queries through untouched was added with the
+// issue-#13 narrowing, on the reasoning that they are caller-owned items a
+// rewrite can only break. In the notification extension that reasoning is
+// exactly backwards: disassembling NotificationServiceExtension (Facebook
+// 586.0.0) shows kSecUseDataProtectionKeychain is loaded in the *same*
+// dictionary build as kSecAttrAccessGroup, four instructions apart, and the
+// only code that does it is Meta's own Swift keychain stores — the push-notif
+// token store behind the client-sync fetch that resolves Facebook notification
+// text, and MetaPushEncryptionKeyStore / MetaHPKEManager. The access group they
+// pass is T84QZS65DQ.platformFamily, the one string of its kind in the binary.
+// So the exclusion skipped precisely the queries that had to be redirected, the
+// extension got a null token, and likes / comments / friend requests fell back
+// to generic text while Messenger messages and calls — which come out of the
+// redirected app-group container, not the keychain — kept working. The flag now
+// only protects the no-group case, where a system caller might really own the
+// item. See .agent/notification-extension.md.
+//
+// WHY A FAILED LOOKUP STRIPS THE GROUP RATHER THAN PASSING IT THROUGH
+//
+// Also from the issue-#13 narrowing, which replaced "assign a nil
+// accessGroupId" (ARC removes the key, so the group was stripped) with "leave
+// the query alone". Leaving it alone is strictly worse: the query keeps a group
+// the process cannot hold and is guaranteed to fail, whereas a query with no
+// access group searches every group the process *is* entitled to, which is the
+// right answer for a re-signed app. Stripping is now deliberate, and only ever
+// applied to a foreign group — a caller's own group is never removed.
 //
 // The whole rebind is gated on the keychainRebind preference (default on), so
 // it can be switched off at runtime with no rebuild — the A/B a keychain crash
@@ -93,36 +124,50 @@ static void primeKeychainRebindPref() {
 	}];
 }
 
-#pragma mark - Which queries we may touch
+#pragma mark - What to do with a query's access group
 
-static BOOL shouldPinAccessGroup(NSDictionary *query) {
-	if (!gKeychainRebindEnabled) return NO;
-	// Probe failed: we have no group to pin to, and assigning nil would strip
-	// whatever group the caller asked for.
-	if (accessGroupId.length == 0) return NO;
-	if (![query isKindOfClass:NSDictionary.class]) return NO;
+typedef NS_ENUM(NSUInteger, FBPAccessGroupAction) {
+	FBPAccessGroupLeave,  // hand the query to the keychain exactly as given
+	FBPAccessGroupPin,    // set kSecAttrAccessGroup to accessGroupId
+	FBPAccessGroupStrip   // remove kSecAttrAccessGroup entirely
+};
 
-	// Caller-owned modern keychain items: leave the group exactly as given.
-	if (query[(__bridge NSString *)kSecUseDataProtectionKeychain]) return NO;
-	if (query[(__bridge NSString *)kSecAttrAccessControl]) return NO;
+static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query) {
+	if (!gKeychainRebindEnabled) return FBPAccessGroupLeave;
+	if (![query isKindOfClass:NSDictionary.class]) return FBPAccessGroupLeave;
 
 	id group = query[(__bridge NSString *)kSecAttrAccessGroup];
-	if (!group) return YES;  // the sideload case this rebind exists for
-	if (![group isKindOfClass:NSString.class]) return NO;
 
-	// System and auth frameworks running inside Facebook query their own groups
-	// (com.apple.token, com.apple.accounts.*.defaultaccess, …). They are
-	// entitled to them; moving the group is what breaks them.
-	if ([group hasPrefix:@"com.apple."]) return NO;
+	// Present but not a group name we can reason about: leave it exactly as it
+	// is rather than pinning over it.
+	if (group && (![group isKindOfClass:NSString.class] || ((NSString *)group).length == 0)) {
+		return FBPAccessGroupLeave;
+	}
 
-	// Already where we would put it.
-	if ([group isEqualToString:accessGroupId]) return NO;
+	if (group) {
+		NSString *requested = (NSString *)group;
 
-	// Everything else — Facebook's own Meta-owned groups above all — keeps the
-	// behaviour the sideload fix depends on. Narrowing this further would risk
-	// the login and the notification-extension session lookup, which the toggle
-	// is there to test instead.
-	return YES;
+		// A system or auth framework asking for a group it is entitled to.
+		if ([requested hasPrefix:@"com.apple."]) return FBPAccessGroupLeave;
+
+		// Already where we would put it.
+		if (accessGroupId.length > 0 && [requested isEqualToString:accessGroupId]) {
+			return FBPAccessGroupLeave;
+		}
+
+		// Another team's group. Apple will not grant it to this signature, so
+		// the query cannot succeed as written whatever else it carries.
+		return accessGroupId.length > 0 ? FBPAccessGroupPin : FBPAccessGroupStrip;
+	}
+
+	// No access group from here on. These are the queries where a caller may
+	// legitimately own the item it is asking about, so the modern-keychain
+	// markers are honoured and nothing is pinned without a group to pin to.
+	if (query[(__bridge NSString *)kSecUseDataProtectionKeychain]) return FBPAccessGroupLeave;
+	if (query[(__bridge NSString *)kSecAttrAccessControl]) return FBPAccessGroupLeave;
+	if (accessGroupId.length == 0) return FBPAccessGroupLeave;
+
+	return FBPAccessGroupPin;
 }
 
 // The dictionary actually handed to the real SecItem* call. Returned as an
@@ -130,24 +175,52 @@ static BOOL shouldPinAccessGroup(NSDictionary *query) {
 // for the duration of the call.
 static NSDictionary *effectiveQuery(CFDictionaryRef query) {
 	NSDictionary *incoming = (__bridge NSDictionary *)query;
-	if (!shouldPinAccessGroup(incoming)) return incoming;
-
-	NSMutableDictionary *pinned = [incoming mutableCopy];
-	pinned[(__bridge NSString *)kSecAttrAccessGroup] = accessGroupId;
-	return pinned;
+	switch (accessGroupActionForQuery(incoming)) {
+		case FBPAccessGroupLeave:
+			return incoming;
+		case FBPAccessGroupPin: {
+			NSMutableDictionary *rewritten = [incoming mutableCopy];
+			rewritten[(__bridge NSString *)kSecAttrAccessGroup] = accessGroupId;
+			return rewritten;
+		}
+		case FBPAccessGroupStrip: {
+			NSMutableDictionary *rewritten = [incoming mutableCopy];
+			// Assigning nil through the subscript removes the key, which is
+			// what makes the keychain search every entitled group.
+			rewritten[(__bridge NSString *)kSecAttrAccessGroup] = nil;
+			return rewritten;
+		}
+	}
 }
 
-// Debug-only trace of what each shim saw and what the keychain answered.
-// PILog is a no-op under FINALPACKAGE, and in the release build the macro
-// discards its arguments, so nothing here costs anything once shipped.
-#if DEBUG
+#pragma mark - Tracing
+
+#if DEBUG || FBP_DIAG
+static NSString *describeAction(FBPAccessGroupAction action) {
+	switch (action) {
+		case FBPAccessGroupLeave: return @"untouched";
+		case FBPAccessGroupPin:   return @"pinned";
+		case FBPAccessGroupStrip: return @"stripped";
+	}
+}
+
+// What each shim saw and what the keychain answered. In the FBP_DIAG build this
+// also names the service and account, because on a device that is the only way
+// to tell the push-notif token lookup apart from the fifty other keychain calls
+// an extension makes. PILog is a no-op under FINALPACKAGE and FBPDiagLog is a
+// no-op unless FBP_DIAG=1, so a shipped build costs nothing here.
 static void logSecCall(const char *name, CFDictionaryRef query, OSStatus status) {
 	NSDictionary *incoming = (__bridge NSDictionary *)query;
-	id group = [incoming isKindOfClass:NSDictionary.class]
-	    ? incoming[(__bridge NSString *)kSecAttrAccessGroup]
-	    : nil;
-	PILog(@"%s group %@%@ -> OSStatus %d", name, group ?: @"(unset)",
-	      shouldPinAccessGroup(incoming) ? @" [pinned]" : @" [untouched]", (int)status);
+	if (![incoming isKindOfClass:NSDictionary.class]) return;
+
+	id group = incoming[(__bridge NSString *)kSecAttrAccessGroup];
+	NSString *action = describeAction(accessGroupActionForQuery(incoming));
+
+	PILog(@"%s group %@ [%@] -> OSStatus %d", name, group ?: @"(unset)", action, (int)status);
+	FBPDiagLog(@"%s svce=%@ acct=%@ group=%@ [%@] -> OSStatus %d", name,
+	           incoming[(__bridge NSString *)kSecAttrService] ?: @"(unset)",
+	           incoming[(__bridge NSString *)kSecAttrAccount] ?: @"(unset)",
+	           group ?: @"(unset)", action, (int)status);
 }
 #else
 #define logSecCall(name, query, status) do {} while (0)
@@ -198,8 +271,10 @@ void rebindSecFuncs() {
 		{"SecItemUpdate", (void *)fbpSecItemUpdate, (void **)&origSecItemUpdate},
 		{"SecItemDelete", (void *)fbpSecItemDelete, (void **)&origSecItemDelete}
 	};
-	// The rebind itself must always run — only the log is debug-gated, so the
-	// result is unused in the release build (PILog compiles to a no-op).
+	// The rebind itself must always run — only the logs are build-gated, so the
+	// result is unused in a plain release build.
 	__attribute__((unused)) int result = rebind_symbols(rebinds, 4);
 	PILog(@"rebind_symbols result: %d", result);
+	FBPDiagLog(@"SecItem rebinds installed (result %d), rebind %@", result,
+	           gKeychainRebindEnabled ? @"enabled" : @"disabled");
 }

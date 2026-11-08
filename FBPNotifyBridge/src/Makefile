@@ -38,6 +38,13 @@ FBPNotifyBridge_FILES = \
 
 FBPNotifyBridge_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I../../src/PluginsInject
 FBPNotifyBridge_FRAMEWORKS = Foundation Security MobileCoreServices
+# Diagnostic build — see the root Makefile. In the extension this is the only
+# way to see anything at all, so it also traces the notification request and the
+# content Facebook finally hands back.
+ifeq ($(FBP_DIAG),1)
+FBPNotifyBridge_CFLAGS += -DFBP_DIAG=1
+endif
+
 FBPNotifyBridge_INSTALL_PATH = /Applications/Facebook.app/PlugIns/NotificationServiceExtension.appex
 
 include $(THEOS_MAKE_PATH)/library.mk

@@ -114,6 +114,10 @@ NSURL *getAppGroupPathIfExists() {
 			PILog(@"none of the %lu app group candidates resolved to a container URL",
 				  (unsigned long)candidates.count);
 		}
+
+		FBPDiagLog(@"app group container: %@ (from %lu candidate%@)",
+				   cachedAppGroupPath.path ?: @"(none)",
+				   (unsigned long)candidates.count, candidates.count == 1 ? @"" : @"s");
 	});
 
 	return cachedAppGroupPath;

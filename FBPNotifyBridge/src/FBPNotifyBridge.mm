@@ -61,6 +61,7 @@
 	if (NSURL *ourAppGroupURL = getAppGroupPathIfExists()) {
 		NSURL *fakeAppGroupURL = [ourAppGroupURL URLByAppendingPathComponent:groupIdentifier];
 		createDirectoryIfNotExists(fakeAppGroupURL.path);
+		FBPDiagLog(@"containerURL for %@ -> %@", groupIdentifier, fakeAppGroupURL.path);
 		return fakeAppGroupURL;
 	}
 
@@ -119,6 +120,42 @@
 
 @end
 
+#pragma mark - Diagnostics: what the extension was handed, and what it produced
+
+// FBP_DIAG only. Never compiled into a shipped build: it logs push payloads.
+#if FBP_DIAG
+
+@interface FBPDiagNotificationService: NSObject
+- (void)fbp_didReceiveNotificationRequest:(id)request withContentHandler:(void (^)(id))contentHandler;
+@end
+
+@implementation FBPDiagNotificationService
+
+// After the exchange this selector holds Facebook's own implementation, so
+// calling it on self is the %orig equivalent.
+- (void)fbp_didReceiveNotificationRequest:(id)request withContentHandler:(void (^)(id))contentHandler {
+	id content = [request valueForKey:@"content"];
+	NSDictionary *userInfo = [content valueForKey:@"userInfo"];
+	FBPDiagLog(@"didReceiveNotificationRequest: payload keys %@, incoming body %@",
+	           [[userInfo.allKeys sortedArrayUsingSelector:@selector(compare:)] componentsJoinedByString:@","]
+	               ?: @"(none)",
+	           [content valueForKey:@"body"] ?: @"(empty)");
+
+	NSDate *start = NSDate.date;
+	[self fbp_didReceiveNotificationRequest:request
+	                    withContentHandler:^(id finalContent) {
+		FBPDiagLog(@"contentHandler after %.2fs: title %@, body %@",
+		           -start.timeIntervalSinceNow,
+		           [finalContent valueForKey:@"title"] ?: @"(empty)",
+		           [finalContent valueForKey:@"body"] ?: @"(empty)");
+		if (contentHandler) contentHandler(finalContent);
+	}];
+}
+
+@end
+
+#endif
+
 #pragma mark - Install
 
 // Swaps two instance methods, but only when both really exist — a future
@@ -153,7 +190,27 @@ __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 						@selector(_initWithSuiteName:container:),
 						@selector(initFBPWithSuiteName:container:));
 
+#if FBP_DIAG
+		// The trace lives on its own class, so graft its implementation onto
+		// FBNotificationService before exchanging — fbpExchange needs both
+		// methods on the same class, and it verifies they exist, so a Facebook
+		// that renames the principal class costs the trace and nothing else.
+		if (Class service = objc_getClass("FBNotificationService")) {
+			SEL replacement = @selector(fbp_didReceiveNotificationRequest:withContentHandler:);
+			Method donor = class_getInstanceMethod([FBPDiagNotificationService class], replacement);
+			if (donor) {
+				class_addMethod(service, replacement, method_getImplementation(donor),
+								method_getTypeEncoding(donor));
+				fbpExchange(service,
+							@selector(didReceiveNotificationRequest:withContentHandler:),
+							replacement);
+			}
+		}
+#endif
+
 		PILog(@"notify bridge loaded into %@ (container=%d, suite=%d)",
 			  NSBundle.mainBundle.bundleIdentifier, container, suite);
+		FBPDiagLog(@"notify bridge loaded into %@ (container=%d, suite=%d)",
+				   NSBundle.mainBundle.bundleIdentifier ?: @"(unknown)", container, suite);
 	}
 }

@@ -3,8 +3,8 @@
 // storage break. This transparently restores both, and keeps CloudKit from
 // hard-faulting on an iCloud container the re-signed build can never be granted.
 //
-// PluginsInject.mm  — constructor: probe the keychain access group, install rebinds
-// SecRebinds.xm     — pin SecItem* to that access group via fishhook
+// PluginsInject.mm  — constructor: resolve the keychain access group, install rebinds
+// SecRebinds.xm     — steer SecItem* at that access group via fishhook
 // SideloadFix.xm    — redirect CloudKit / App-Group / group NSUserDefaults containers
 // Paths.mm          — resolve (or fabricate) the App-Group container path
 
@@ -17,7 +17,31 @@
 #define PILog(fmt, ...) do {} while (0)
 #endif
 
+// Diagnostic logging that survives a release build, for the one thing PILog
+// cannot do: tell us what the *notification extension* saw on a real device.
+// An appex is not attached to a debugger and NSLog from it is easy to lose, so
+// this goes through os_log on subsystem "com.shajon.fbplus", category
+// "FBPDIAG", and every line is prefixed [FBPDIAG] so it can be grepped out of
+// `idevicesyslog` as well as filtered in Console.app.
+//
+// Off unless the build asks for it:
+//
+//   make FBP_DIAG=1 && make -C FBPNotifyBridge/src FBP_DIAG=1 FINALPACKAGE=1
+//
+// See FBPNotifyBridge/README.md ("Tracing it on a device"). Keep it out of
+// shipped builds: the lines name keychain services and container paths.
+#if FBP_DIAG
+#define FBPDiagLog(fmt, ...) FBPDiagLogv(fmt, ##__VA_ARGS__)
+extern void FBPDiagLogv(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
+#else
+#define FBPDiagLog(fmt, ...) do {} while (0)
+#endif
+
+// The keychain access group every SecItem* call a re-signed build makes should
+// end up in, and how it was arrived at. Empty/nil means "not resolved" — see
+// SecRebinds.xm for what happens then.
 extern NSString *accessGroupId;
+extern NSString *accessGroupSource;
 extern NSString *bundleId;
 
 extern void rebindSecFuncs();
