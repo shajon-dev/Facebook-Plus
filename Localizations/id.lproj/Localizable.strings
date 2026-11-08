@@ -194,3 +194,10 @@
 "download.job.stage.failed" = "Unduhan gagal";
 "download.job.stage.cancelled" = "Dihentikan";
 "download.job.bytes" = "%@ / %@";
+
+"row.resetpushkeys.title" = "Reset Notification Keys";
+"row.resetpushkeys.desc" = "Make Facebook register fresh push-encryption keys";
+"footer.resetpushkeys" = "Facebook encrypts the text of a notification with a key your device registers with it. If that registration never completed, the server sends only a badge and no notification text. This clears the stored keys so Facebook makes new ones the next time it starts.";
+"resetpushkeys.message" = "Facebook will create and register new push keys the next time it starts. Nothing about your account or your login changes. Force-quit Facebook and open it again afterwards.";
+"resetpushkeys.confirm" = "Reset Keys";
+"toast.pushKeysReset" = "Push keys cleared (%lu) — reopen Facebook";
