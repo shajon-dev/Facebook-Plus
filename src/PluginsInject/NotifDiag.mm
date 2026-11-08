@@ -96,11 +96,14 @@ static void fbpAddNotificationRequest(id self, SEL _cmd, UNNotificationRequest *
 // an id the app could resolve), the tweak could post the notification itself —
 // which is the whole point of looking.
 static void hookRemoteNotificationDelivery(void) {
+	static BOOL hooked = NO;
+	if (hooked) return;
+
 	id delegate = UIApplication.sharedApplication.delegate;
 	if (!delegate) {
-		FBPDiagLog(@"no app delegate yet — cannot trace remote notifications");
-		return;
+		return;  // -setDelegate: will call back here
 	}
+	hooked = YES;
 
 	SEL selector = @selector(application:didReceiveRemoteNotification:fetchCompletionHandler:);
 	Method method = class_getInstanceMethod([delegate class], selector);
@@ -124,6 +127,16 @@ static void hookRemoteNotificationDelivery(void) {
 	FBPDiagLog(@"tracing remote notifications on %@", NSStringFromClass([delegate class]));
 }
 
+// -[UIApplication setDelegate:] is where the delegate first becomes reachable.
+// Waiting on a timer is not good enough: a push-woken launch is suspended within
+// a couple of seconds, which is exactly the launch whose payload we want.
+static void (*origSetDelegate)(id, SEL, id);
+
+static void fbpSetDelegate(id self, SEL _cmd, id delegate) {
+	origSetDelegate(self, _cmd, delegate);
+	hookRemoteNotificationDelivery();
+}
+
 static void installDeliveryHooks(void) {
 	static BOOL installed = NO;
 	if (installed) return;
@@ -137,16 +150,25 @@ static void installDeliveryHooks(void) {
 		FBPDiagLog(@"tracing addNotificationRequest:");
 	}
 
+	Method setDelegate = class_getInstanceMethod([UIApplication class], @selector(setDelegate:));
+	if (setDelegate) {
+		origSetDelegate = (void (*)(id, SEL, id))method_setImplementation(setDelegate,
+		                                                                 (IMP)fbpSetDelegate);
+	}
+
+	// Covers the case where the delegate was already set before we got here.
 	hookRemoteNotificationDelivery();
 }
 
 __attribute__((constructor)) static void FBPNotifDiagInit() {
+	// At load, so a background launch that lives two seconds is still traced.
+	installDeliveryHooks();
+
 	// Read it twice: at launch Facebook may not have finished registering, and
 	// the authorization prompt (on a fresh install) may still be on screen.
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(8 * NSEC_PER_SEC)),
 	               dispatch_get_main_queue(), ^{
 		dumpNotificationSettings(@"8s after launch");
-		installDeliveryHooks();
 	});
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_SEC)),
 	               dispatch_get_main_queue(), ^{
