@@ -276,9 +276,19 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
               deviceId:(id)deviceId
              extraData:(id)extraData
                  pnids:(id)pnids {
-	FBPDiagLog(@"client sync: query count=%ld cursor=%@ deviceId=%@ pnids=%@ extra=%@",
-	           (long)count, cursor ?: @"(nil)", deviceId ?: @"(nil)", pnids ?: @"(nil)",
-	           extraData ?: @"(nil)");
+	// One line: an NSArray description spans lines and a line-based log filter
+	// loses everything after the opening bracket.
+	NSString *ids = @"(nil)";
+	if ([pnids isKindOfClass:NSArray.class]) {
+		ids = ((NSArray *)pnids).count
+		    ? [(NSArray *)pnids componentsJoinedByString:@" | "]
+		    : @"(empty)";
+	} else if (pnids) {
+		ids = [pnids description];
+	}
+
+	FBPDiagLog(@"client sync: query count=%d cursor=%@ deviceId=%@ extra=%@ pnids=%@",
+	           (int)count, cursor ?: @"(nil)", deviceId ?: @"(nil)", extraData ?: @"(nil)", ids);
 	return %orig;
 }
 
