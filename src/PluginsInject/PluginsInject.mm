@@ -74,6 +74,19 @@ NSString *fbpAccessGroupFromEntitlements(void) {
 }
 
 __attribute__((constructor)) static void PluginsInjectInit() {
+	// Device logs on 2026-11-08 show this constructor running TWICE inside the
+	// notification extension: build.sh's insert_dylib adds a load command for
+	// the bridge, and test/sign-and-install.py then passes zsign -l … -P, which
+	// adds another. dyld honours both, so every rebind and redirect was
+	// installed twice in a process with a ~24 MB budget. Idempotent is cheaper
+	// than hunting down whichever path added the second one.
+	static BOOL alreadyRan = NO;
+	if (alreadyRan) {
+		FBPDiagLog(@"PluginsInject constructor ran again — ignoring the duplicate");
+		return;
+	}
+	alreadyRan = YES;
+
 #if FBP_NOTIFY_BRIDGE
 	// Inside FBPNotifyBridge.dylib. zsign's -P injects that dylib into the main
 	// binary as well as the appex, where the full tweak already installs all of
