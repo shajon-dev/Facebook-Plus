@@ -27,6 +27,27 @@ BOOL createDirectoryIfNotExists(NSString *path) {
 	return YES;
 }
 
+// A once-guard that holds across SEPARATE COPIES of this dylib in one process.
+// A plain `static BOOL` cannot: the notification extension ends up with two
+// images of FBPNotifyBridge.dylib (build.sh inserts a load command and zsign -P
+// inserts another), and each image gets its own statics, so each ran the
+// constructor again. For method_exchangeImplementations that is worse than
+// wasteful — exchanging the same pair twice puts the originals back, silently
+// turning the container and defaults redirects off.
+//
+// Registering a uniquely named class is process-wide and costs one lookup.
+BOOL fbpClaimProcessOnce(const char *name) {
+	if (objc_getClass(name)) {
+		return NO;
+	}
+	Class claimed = objc_allocateClassPair([NSObject class], name, 0);
+	if (!claimed) {
+		return NO;
+	}
+	objc_registerClassPair(claimed);
+	return YES;
+}
+
 // True in an app extension (the appex's own Info.plist carries NSExtension),
 // false in the host app. FBPNotifyBridge.dylib uses this to stay completely
 // inert in the main app: zsign's -P injects it into the main binary as well as

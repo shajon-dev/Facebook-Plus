@@ -50,6 +50,7 @@ extern NSString *bundleId;
 
 extern void rebindSecFuncs();
 
+extern BOOL fbpClaimProcessOnce(const char *name);
 extern BOOL fbpIsAppExtensionProcess(void);
 extern BOOL createDirectoryIfNotExists(NSString *path);
 extern BOOL prepareDefaultsContainer(NSURL *container);

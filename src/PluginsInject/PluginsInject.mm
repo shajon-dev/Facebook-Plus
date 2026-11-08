@@ -80,12 +80,10 @@ __attribute__((constructor)) static void PluginsInjectInit() {
 	// adds another. dyld honours both, so every rebind and redirect was
 	// installed twice in a process with a ~24 MB budget. Idempotent is cheaper
 	// than hunting down whichever path added the second one.
-	static BOOL alreadyRan = NO;
-	if (alreadyRan) {
+	if (!fbpClaimProcessOnce("FBPPluginsInjectInstalled")) {
 		FBPDiagLog(@"PluginsInject constructor ran again — ignoring the duplicate");
 		return;
 	}
-	alreadyRan = YES;
 
 #if FBP_NOTIFY_BRIDGE
 	// Inside FBPNotifyBridge.dylib. zsign's -P injects that dylib into the main

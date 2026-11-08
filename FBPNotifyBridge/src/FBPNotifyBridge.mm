@@ -189,12 +189,10 @@ __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 	@autoreleasepool {
 		// Loaded twice in the extension — see the note in PluginsInject.mm.
 		// Exchanging the same two methods a second time would undo the first.
-		static BOOL alreadyRan = NO;
-		if (alreadyRan) {
+		if (!fbpClaimProcessOnce("FBPNotifyBridgeInstalled")) {
 			FBPDiagLog(@"notify bridge constructor ran again — ignoring the duplicate");
 			return;
 		}
-		alreadyRan = YES;
 
 		// Extensions only — see the note in PluginsInject.mm. In the main app
 		// FacebookPlus.dylib already installs every one of these redirects.

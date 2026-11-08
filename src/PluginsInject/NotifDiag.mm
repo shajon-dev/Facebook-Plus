@@ -92,6 +92,36 @@ static void fbpAddNotificationRequest(id self, SEL _cmd, UNNotificationRequest *
 	});
 }
 
+// os_log drops a long message, and an NSDictionary description spans lines,
+// which any line-based log filter then loses. So: one line, JSON where possible,
+// split into chunks small enough to survive.
+static void logPayload(NSDictionary *userInfo) {
+	if (!userInfo) {
+		FBPDiagLog(@"didReceiveRemoteNotification payload: (nil)");
+		return;
+	}
+
+	NSString *text = nil;
+	if ([NSJSONSerialization isValidJSONObject:userInfo]) {
+		NSData *json = [NSJSONSerialization dataWithJSONObject:userInfo options:0 error:nil];
+		if (json) {
+			text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+		}
+	}
+	if (!text) {
+		text = [[userInfo.description componentsSeparatedByCharactersInSet:
+		            NSCharacterSet.newlineCharacterSet] componentsJoinedByString:@" "];
+	}
+
+	const NSUInteger chunk = 700;
+	NSUInteger total = (text.length + chunk - 1) / chunk;
+	for (NSUInteger i = 0; i < total; i++) {
+		NSRange range = NSMakeRange(i * chunk, MIN(chunk, text.length - i * chunk));
+		FBPDiagLog(@"payload [%lu/%lu] %@", (unsigned long)(i + 1), (unsigned long)total,
+		           [text substringWithRange:range]);
+	}
+}
+
 // The payload of a push that arrives with no alert. If it carries the text (or
 // an id the app could resolve), the tweak could post the notification itself —
 // which is the whole point of looking.
@@ -116,7 +146,7 @@ static void hookRemoteNotificationDelivery(void) {
 	__block IMP original = NULL;
 	IMP replacement = imp_implementationWithBlock(^(id receiver, UIApplication *application,
 	                                                NSDictionary *userInfo, id handler) {
-		FBPDiagLog(@"didReceiveRemoteNotification payload: %@", userInfo ?: @"(nil)");
+		logPayload(userInfo);
 		if (original) {
 			((void (*)(id, SEL, UIApplication *, NSDictionary *, id))original)(
 				receiver, selector, application, userInfo, handler);
