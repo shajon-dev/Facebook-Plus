@@ -37,6 +37,7 @@
 // and nothing else.
 
 #import <objc/runtime.h>
+#import <UIKit/UIKit.h>
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -53,6 +54,7 @@
 @interface FBPClientSyncManager: NSObject
 - (instancetype)initWithNetworker:(id)networker;
 - (void)runWithTrigger:(id)trigger;
+- (void)addListener:(id)listener;
 @end
 
 @interface FBPUserSessionProbe: NSObject
@@ -93,6 +95,55 @@ static id fbpIvarValue(id object, const char *name) {
 	return ivar ? object_getIvar(object, ivar) : nil;
 }
 
+// A push-woken process is suspended within a couple of seconds, and the sync is
+// a network round trip, so without an assertion it is cut off before anything
+// can be posted. Ended from the listener below, or by the expiry handler.
+static UIBackgroundTaskIdentifier gBackgroundTask = UIBackgroundTaskInvalid;
+
+static void fbpEndBackgroundTask(void) {
+	if (gBackgroundTask == UIBackgroundTaskInvalid) return;
+	UIBackgroundTaskIdentifier task = gBackgroundTask;
+	gBackgroundTask = UIBackgroundTaskInvalid;
+	[UIApplication.sharedApplication endBackgroundTask:task];
+}
+
+static void fbpBeginBackgroundTask(void) {
+	if (gBackgroundTask != UIBackgroundTaskInvalid) return;
+	gBackgroundTask = [UIApplication.sharedApplication
+	    beginBackgroundTaskWithName:@"FBPlusNotificationSync"
+	              expirationHandler:^{
+		FBPDiagLog(@"client sync: background time expired");
+		fbpEndBackgroundTask();
+	}];
+	FBPDiagLog(@"client sync: holding background task %lu (remaining %.1fs)",
+	           (unsigned long)gBackgroundTask,
+	           UIApplication.sharedApplication.backgroundTimeRemaining);
+}
+
+// Facebook reports the outcome to whatever it was given through -addListener:.
+// Duck typing is enough here — the two selectors are the whole protocol as far
+// as this use goes.
+@interface FBPClientSyncListener: NSObject
+@end
+
+@implementation FBPClientSyncListener
+
+- (void)pushNotifClientSyncManagerSucceeded {
+	FBPDiagLog(@"client sync: SUCCEEDED");
+	fbpEndBackgroundTask();
+	gInFlightManager = nil;
+}
+
+- (void)pushNotifClientSyncManagerFailedWithError:(NSError *)error {
+	FBPDiagLog(@"client sync: FAILED — %@", error.localizedDescription ?: error);
+	fbpEndBackgroundTask();
+	gInFlightManager = nil;
+}
+
+@end
+
+static FBPClientSyncListener *gListener;
+
 static void fbpRunClientSync(id observer) {
 	FBPDiagLog(@"client sync: background fetch observed");
 
@@ -132,7 +183,13 @@ static void fbpRunClientSync(id observer) {
 			[[triggerClass alloc] initWithName:@"FBPlusBadgeUpdate" withDelay:0 andExtra:nil];
 		if (!trigger) return;
 
+		if (!gListener) gListener = [[FBPClientSyncListener alloc] init];
+		if ([manager respondsToSelector:@selector(addListener:)]) {
+			[manager addListener:gListener];
+		}
+
 		gInFlightManager = manager;
+		fbpBeginBackgroundTask();
 		FBPDiagLog(@"client sync: running");
 		[manager runWithTrigger:trigger];
 		FBPDiagLog(@"client sync: runWithTrigger returned");
@@ -194,6 +251,16 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 	if (!fbpIsBadgeUpdatePush(userInfo)) return;
 	FBPDiagLog(@"client sync: badge-update push delivered to the app delegate");
 	fbpRunClientSync(nil);
+}
+
+%end
+
+// Why a fetched notification was not shown.
+%hook FBPushNotifClientSyncLocalFilterResult
+
+- (id)dropWithReason:(id)reason {
+	FBPDiagLog(@"client sync: dropped — %@", reason);
+	return %orig;
 }
 
 %end
