@@ -53,6 +53,12 @@
 	}
 
 	if (NSURL *customContainerURL = [appGroupURL URLByAppendingPathComponent:suiteName]) {
+		// Without Library/Preferences underneath it the suite reads empty and
+		// never persists — see prepareDefaultsContainer in Paths.mm.
+		if (!prepareDefaultsContainer(customContainerURL)) {
+			PILog(@"could not prepare '%@' for defaults, defaulting to original container", suiteName);
+			return %orig(suiteName, container);
+		}
 		PILog(@"using custom container URL: %@", customContainerURL);
 		return %orig(suiteName, customContainerURL);
 	}

@@ -60,6 +60,7 @@ FacebookPlus_FILES = \
 	src/PluginsInject/Paths.mm \
 	src/PluginsInject/SecRebinds.xm \
 	src/PluginsInject/SideloadFix.xm \
+	src/PluginsInject/NotifDiag.mm \
 	fishhook/fishhook.c
 
 # The tweak's own version, read from control, exposed to the code as FBP_VERSION
@@ -85,7 +86,7 @@ ifeq ($(FBP_DIAG),1)
 FacebookPlus_CFLAGS += -DFBP_DIAG=1
 endif
 
-FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia CoreVideo VideoToolbox Security PushKit CallKit
+FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia CoreVideo VideoToolbox Security PushKit CallKit UserNotifications
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

@@ -36,7 +36,9 @@ FBPNotifyBridge_FILES = \
 	../../src/PluginsInject/SecRebinds.xm \
 	../../fishhook/fishhook.c
 
-FBPNotifyBridge_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I../../src/PluginsInject
+# FBP_NOTIFY_BRIDGE tells the shared src/PluginsInject sources they are being
+# compiled into this dylib, so they can stay inert outside an app extension.
+FBPNotifyBridge_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I../../src/PluginsInject -DFBP_NOTIFY_BRIDGE=1
 FBPNotifyBridge_FRAMEWORKS = Foundation Security MobileCoreServices
 # Diagnostic build — see the root Makefile. In the extension this is the only
 # way to see anything at all, so it also traces the notification request and the

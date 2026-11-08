@@ -74,6 +74,17 @@ NSString *fbpAccessGroupFromEntitlements(void) {
 }
 
 __attribute__((constructor)) static void PluginsInjectInit() {
+#if FBP_NOTIFY_BRIDGE
+	// Inside FBPNotifyBridge.dylib. zsign's -P injects that dylib into the main
+	// binary as well as the appex, where the full tweak already installs all of
+	// this — so a second copy would rebind SecItem* on top of the first and
+	// swizzle the container redirects twice. Device logs on 2026-11-08 showed
+	// exactly that happening. The bridge exists for extensions only.
+	if (!fbpIsAppExtensionProcess()) {
+		return;
+	}
+#endif
+
 	bundleId = [[NSBundle mainBundle] bundleIdentifier];
 
 	// Must come first: the access-group probe calls the *original* SecItem*

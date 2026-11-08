@@ -50,7 +50,9 @@ extern NSString *bundleId;
 
 extern void rebindSecFuncs();
 
+extern BOOL fbpIsAppExtensionProcess(void);
 extern BOOL createDirectoryIfNotExists(NSString *path);
+extern BOOL prepareDefaultsContainer(NSURL *container);
 extern NSURL *getAppGroupPathIfExists();
 
 @interface LSBundleProxy: NSObject

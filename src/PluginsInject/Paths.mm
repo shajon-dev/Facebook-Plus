@@ -27,6 +27,38 @@ BOOL createDirectoryIfNotExists(NSString *path) {
 	return YES;
 }
 
+// True in an app extension (the appex's own Info.plist carries NSExtension),
+// false in the host app. FBPNotifyBridge.dylib uses this to stay completely
+// inert in the main app: zsign's -P injects it into the main binary as well as
+// the appex, and the main app already has the full tweak, so without this gate
+// every redirect and every SecItem rebind is installed twice there.
+BOOL fbpIsAppExtensionProcess(void) {
+	static BOOL isExtension = NO;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		isExtension = NSBundle.mainBundle.infoDictionary[@"NSExtension"] != nil;
+	});
+	return isExtension;
+}
+
+// NSUserDefaults writes a suite to <container>/Library/Preferences/<suite>.plist
+// and does NOT create those intermediate directories itself. Hand it a
+// redirected container that lacks them and the suite silently reads back empty
+// and loses every write — which, for the group suites Facebook keeps session
+// and account state in, looks exactly like being logged out, in the app and in
+// the notification extension alike. So create them before handing the
+// container over. (The same point is made in sparkle-ig's SPKSideloadFix,
+// which is the other living descendant of zxPluginsInject.)
+BOOL prepareDefaultsContainer(NSURL *container) {
+	if (!container) {
+		return NO;
+	}
+
+	NSURL *preferences = [[container URLByAppendingPathComponent:@"Library" isDirectory:YES]
+	    URLByAppendingPathComponent:@"Preferences" isDirectory:YES];
+	return createDirectoryIfNotExists(preferences.path);
+}
+
 // Resolved on demand and **cached only on success**. This used to be a
 // dispatch_once, which cached a *failure* just as permanently: in the
 // notification extension LSBundleProxy is not always usable at the moment of

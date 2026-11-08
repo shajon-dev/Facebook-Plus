@@ -110,7 +110,15 @@
 	}
 
 	if (NSURL *customContainerURL = [appGroupURL URLByAppendingPathComponent:suiteName]) {
+		// Without Library/Preferences underneath it the suite reads empty and
+		// never persists — see prepareDefaultsContainer in Paths.mm.
+		if (!prepareDefaultsContainer(customContainerURL)) {
+			PILog(@"could not prepare '%@' for defaults, defaulting to original container", suiteName);
+			FBPDiagLog(@"could not prepare defaults container for suite %@", suiteName);
+			return [self initFBPWithSuiteName:suiteName container:container];
+		}
 		PILog(@"using custom container URL: %@", customContainerURL);
+		FBPDiagLog(@"defaults suite %@ -> %@", suiteName, customContainerURL.path);
 		return [self initFBPWithSuiteName:suiteName container:customContainerURL];
 	}
 
@@ -179,6 +187,12 @@ static BOOL fbpExchange(Class cls, SEL original, SEL replacement) {
 
 __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 	@autoreleasepool {
+		// Extensions only — see the note in PluginsInject.mm. In the main app
+		// FacebookPlus.dylib already installs every one of these redirects.
+		if (!fbpIsAppExtensionProcess()) {
+			return;
+		}
+
 		// The exchanges must always run — only the log is debug-gated, so the
 		// results are unused in the release build (PILog compiles to a no-op).
 		__attribute__((unused)) BOOL container =
