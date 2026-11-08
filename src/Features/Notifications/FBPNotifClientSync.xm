@@ -55,6 +55,11 @@
 - (void)runWithTrigger:(id)trigger;
 @end
 
+@interface FBPUserSessionProbe: NSObject
+- (BOOL)isValid;
+- (BOOL)hasUser;
+@end
+
 // The manager runs its fetch asynchronously on its own queue, so it has to
 // outlive this method. One live run at a time is enough — the pnid cursor is
 // server-side and Facebook's own rate limiter sits behind it.
@@ -66,8 +71,19 @@ static id gInFlightManager;
 // and a push-woken launch constructs at least one of them before any fetch.
 static id gSession;
 
+// Prefer a session that is actually usable, and let a later valid one replace an
+// earlier placeholder: the first FBUserSession a process builds is not always
+// the logged-in one.
+static BOOL fbpSessionIsUsable(id session) {
+	if (!session) return NO;
+	if ([session respondsToSelector:@selector(isValid)] && ![session isValid]) return NO;
+	if ([session respondsToSelector:@selector(hasUser)] && ![session hasUser]) return NO;
+	return YES;
+}
+
 static void fbpRememberSession(id session) {
-	if (!session || gSession) return;
+	if (!fbpSessionIsUsable(session)) return;
+	if (gSession == session) return;
 	gSession = session;
 	FBPDiagLog(@"client sync: captured session %@", NSStringFromClass([session class]));
 }
@@ -137,6 +153,8 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 	return [type isKindOfClass:NSString.class] && [type isEqualToString:@"badge_update"];
 }
 
+%group FBPClientSync
+
 %hook FBNotificationsPushNotifClientSyncBackgroundFetchObserver
 
 - (instancetype)initWithSession:(id)session {
@@ -180,6 +198,31 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 
 %end
 
+%end  // group FBPClientSync
+
+// Widest net for the session: every FBUserSession the process builds passes
+// through here. The push-woken launch constructs one before the delegate is
+// handed the payload, which the narrower initWithSession: hooks missed.
+%group FBPSessionCapture
+
+%hook FBUserSession
+
+- (instancetype)init {
+	id session = %orig;
+	fbpRememberSession(session);
+	return session;
+}
+
+- (instancetype)initWithApiSessionStore:(id)store {
+	id session = %orig;
+	fbpRememberSession(session);
+	return session;
+}
+
+%end
+
+%end  // group FBPSessionCapture
+
 %ctor {
 	// House rule: verify the class and the selector before installing, so a
 	// Facebook that renames either costs this feature and nothing else.
@@ -196,5 +239,12 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 		return;
 	}
 	FBPDiagLog(@"client sync: hook installed");
-	%init;
+	%init(FBPClientSync);
+
+	Class userSession = objc_getClass("FBUserSession");
+	if (userSession && class_getInstanceMethod(userSession, @selector(init))) {
+		%init(FBPSessionCapture);
+	} else {
+		FBPDiagLog(@"client sync: no FBUserSession class — session capture off");
+	}
 }
