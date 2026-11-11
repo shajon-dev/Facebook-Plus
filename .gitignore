@@ -51,6 +51,11 @@ test/*.py
 # ---------------------------------------------------------------------------
 test/*
 !test/README.md
+# The other scripts in test/ drive *this* phone and stay machine-local. The
+# project test suite is not one of them: it reads the tree and shells out to the
+# toolchain, so it belongs to the project. Run it with
+# `python3 test/test-projects.py`.
+!test/test-projects.py
 
 # ---------------------------------------------------------------------------
 # IPA files, anywhere in the tree

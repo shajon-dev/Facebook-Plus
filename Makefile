@@ -68,14 +68,36 @@ FacebookPlus_FILES = \
 # (an NSString literal) so the update checker can compare against GitHub releases.
 FBP_VERSION := $(shell awk -F': ' '/^Version:/{print $$2; exit}' control)
 
+# Every directory a source may #import a sibling header from. One list, used by
+# the compiler below, by the .clangd the compile-commands target writes, and by
+# scripts/check.py — so the editor and the typechecker cannot drift from the
+# build the way they silently did when each kept its own copy.
+FBP_INCLUDE_DIRS = \
+	src/Core \
+	src/UI \
+	src/UI/Toast \
+	src/UI/Sheet \
+	src/Settings \
+	src/Features \
+	src/Features/AppChrome \
+	src/Features/AppIcons \
+	src/Features/Calls \
+	src/Features/Downloads \
+	src/Features/Feed \
+	src/Features/Fonts \
+	src/Features/Language \
+	src/Features/LikeConfirmation \
+	src/Features/Links \
+	src/Features/Notifications \
+	src/Features/OLED \
+	src/Features/Onboarding \
+	src/Features/Stories \
+	src/Features/Update \
+	src/PluginsInject
+
 FacebookPlus_CFLAGS  = -fobjc-arc -Wno-deprecated-declarations \
 	-DFBP_VERSION='@"$(FBP_VERSION)"' \
-	-Isrc/Core -Isrc/UI -Isrc/UI/Toast -Isrc/UI/Sheet -Isrc/Settings \
-	-Isrc/Features -Isrc/Features/AppChrome -Isrc/Features/AppIcons \
-	-Isrc/Features/Calls -Isrc/Features/Downloads -Isrc/Features/Feed \
-	-Isrc/Features/Fonts -Isrc/Features/Language -Isrc/Features/LikeConfirmation \
-	-Isrc/Features/Links -Isrc/Features/Notifications -Isrc/Features/OLED -Isrc/Features/Onboarding \
-	-Isrc/Features/Stories -Isrc/Features/Update -Isrc/PluginsInject
+	$(addprefix -I,$(FBP_INCLUDE_DIRS))
 # VideoToolbox and CoreVideo are for FBPMediaConverter: the AV1-decoder
 # capability probe calls VTDecompressionSessionCreate directly, and the decode
 # side hands back CVPixelBuffers.
@@ -134,42 +156,40 @@ compile-commands:
 		echo "    - -I$(THEOS)/include/_fallback"; \
 		echo "    - -F$$sdk/System/Library/Frameworks"; \
 		echo "    - -F$$sdk/System/Library/PrivateFrameworks"; \
-		echo "    - -Isrc/Core"; \
-		echo "    - -Isrc/UI"; \
-		echo "    - -Isrc/UI/Toast"; \
-		echo "    - -Isrc/UI/Sheet"; \
-		echo "    - -Isrc/Settings"; \
-		echo "    - -Isrc/Features"; \
-		echo "    - -Isrc/Features/AppChrome"; \
-		echo "    - -Isrc/Features/AppIcons"; \
-		echo "    - -Isrc/Features/Calls"; \
-		echo "    - -Isrc/Features/Downloads"; \
-		echo "    - -Isrc/Features/Feed"; \
-		echo "    - -Isrc/Features/Language"; \
-		echo "    - -Isrc/Features/LikeConfirmation"; \
-		echo "    - -Isrc/Features/Links"; \
-		echo "    - -Isrc/Features/OLED"; \
-		echo "    - -Isrc/Features/Onboarding"; \
-		echo "    - -Isrc/Features/Stories"; \
-		echo "    - -Isrc/Features/Update"; \
-		echo "    - -Isrc/PluginsInject"; \
+		echo "    - -F$(THEOS)/vendor/lib"; \
+		for d in $(FBP_INCLUDE_DIRS); do echo "    - -I$$(pwd)/$$d"; done; \
 		echo "    - -DTARGET_IPHONE=1"; \
 		echo "    - -DDEBUG"; \
+		echo "    - -DFBP_VERSION=@\"$(FBP_VERSION)\""; \
 		echo "    - -fobjc-arc"; \
 		echo "    - -Wno-deprecated-declarations"; \
+		echo "    - -ferror-limit=0"; \
 		echo ""; \
 		echo "Diagnostics:"; \
 		echo "  Suppress:"; \
 		echo "    - unknown_type_name"; \
 		echo "    - undeclared_var_use"; \
+		echo "    - undeclared_var_use_suggest"; \
 		echo "    - duplicate_decl_context"; \
 		echo "    - expected_unqualified_id"; \
 		echo "    - err_expected_unqualified"; \
 		echo "    - expected_either"; \
+		echo "    - expected_expression"; \
 		echo "    - missing_method_context"; \
+		echo "    - invalid_token_after_toplevel_declarator"; \
+		echo "    - fatal_too_many_errors"; \
 	} > .clangd
 	@echo "==> Recording compile commands with bear…"
 	@$(MAKE) clean >/dev/null
 	@$(MAKE) -n | sed -E 's/.*set -o pipefail; \(//; s/\)[[:space:]]*$$//' \
 		| bear parse-sh -o compile_commands.json 2>/dev/null
-	@echo "==> Wrote compile_commands.json"
+	@echo "==> Mapping src/ and .xm files into compile_commands.json…"
+	@python3 scripts/fix-compile-commands.py
+	@echo "==> Wrote compile_commands.json and .clangd"
+
+# Typecheck every source without building: fast, parallel, and across all four
+# shipped configurations (tweak and bridge, each with and without FBP_DIAG).
+# See scripts/check.py.
+.PHONY: check
+check:
+	@python3 scripts/check.py

@@ -34,7 +34,15 @@
 #define FBPDiagLog(fmt, ...) FBPDiagLogv(fmt, ##__VA_ARGS__)
 extern void FBPDiagLogv(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 #else
-#define FBPDiagLog(fmt, ...) do {} while (0)
+// Compiles to nothing, but still *mentions* its arguments, inside a branch the
+// optimiser drops. Expanding to a bare `do {} while (0)` discards them instead,
+// and then a variable built only for a trace reads as "set but not used" —
+// which is -Werror under theos, so the non-diagnostic build fails while the
+// diagnostic one passes. This keeps the two in step and keeps the format string
+// checked in both. Nothing is called: the function has an empty body and is
+// static inline, so it needs no symbol at link time.
+NS_FORMAT_FUNCTION(1, 2) NS_INLINE void FBPDiagLogSink(NSString *format, ...) {}
+#define FBPDiagLog(fmt, ...) do { if (0) FBPDiagLogSink(fmt, ##__VA_ARGS__); } while (0)
 #endif
 
 // The keychain access group every SecItem* call a re-signed build makes should
