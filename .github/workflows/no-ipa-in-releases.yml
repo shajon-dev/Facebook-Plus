@@ -1,0 +1,72 @@
+name: No .ipa in published releases
+
+# Enforces .github/RELEASE-POLICY.md: no *published* release may carry an .ipa
+# asset. An injected IPA contains Facebook's own application, which is not ours
+# to distribute, and publishing one is what gets these repositories taken down.
+#
+# Draft releases are deliberately left alone. The Build Facebook Plus (.ipa)
+# workflow writes its output to a draft release on whoever's fork ran it, which
+# only that person can see; that is how someone gets their own build back. This
+# guard exists for the step after it, the one nobody should ever take.
+#
+# It runs when a release is published or edited, once a day, and on demand. It
+# deletes any .ipa asset on a published release and then fails, so the deletion
+# is visible rather than silent.
+
+on:
+  release:
+    types: [published, released, prereleased, edited]
+  schedule:
+    # 04:17 UTC daily, to catch an asset attached outside a release event.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  strip:
+    name: Delete any .ipa asset on a published release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan published releases and delete .ipa assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          deleted=0
+          checked=0
+
+          # --paginate so a repository with many releases is fully covered.
+          # select(.draft == false) is the whole point: a draft is private to the
+          # person whose fork built it and is left exactly as it is.
+          releases=$(gh api --paginate "repos/$REPO/releases" \
+            --jq '.[] | select(.draft == false) | "\(.id)\t\(.tag_name)"')
+
+          if [ -z "$releases" ]; then
+            echo "No published releases in this repository. Nothing to check."
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r id tag; do
+            [ -n "${id:-}" ] || continue
+            checked=$((checked + 1))
+            assets=$(gh api --paginate "repos/$REPO/releases/$id/assets" \
+              --jq '.[] | select((.name | ascii_downcase | endswith(".ipa"))) | "\(.id)\t\(.name)"')
+            [ -n "$assets" ] || continue
+            while IFS=$'\t' read -r asset_id name; do
+              [ -n "${asset_id:-}" ] || continue
+              echo "::warning title=Deleting forbidden asset::$name on published release $tag"
+              gh api -X DELETE "repos/$REPO/releases/assets/$asset_id"
+              deleted=$((deleted + 1))
+            done <<< "$assets"
+          done <<< "$releases"
+
+          if [ "$deleted" -gt 0 ]; then
+            echo "::error title=.ipa on a published release::Deleted $deleted .ipa asset(s). A published release must never carry an .ipa; see .github/RELEASE-POLICY.md. Ship the .deb packages and let people build their own IPA with the build-ipa workflow, which keeps it in a draft."
+            exit 1
+          fi
+
+          echo "Checked $checked published release(s). No .ipa assets. OK."

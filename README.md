@@ -71,13 +71,30 @@
 
 ## 🚀 Installation
 
-Download the pre-built `.ipa` file from the **[Releases](../../releases)** section and install it on your device using **Feather**, **Ksing**, **AltStore**, **TrollStore**, or any other sideloading tool of your choice.
+> [!IMPORTANT]
+> **This repository publishes no `.ipa`.** An injected IPA contains Facebook's own
+> application, which is not ours to distribute. Our releases carry only the `.deb`
+> packages, which hold nothing but this project's own code. See
+> [RELEASE-POLICY.md](.github/RELEASE-POLICY.md).
+
+Pick whichever matches your device:
+
+- **Jailbroken, or TrollStore** — install the `.deb` for your packaging scheme
+  (`rootless` or `rootfull`) from the **[Releases](../../releases)** section with
+  Sileo, Zebra or `dpkg -i`. Nothing else is needed.
+- **Sideloading (Feather, Ksing, AltStore, SideStore, …)** — you need an injected
+  IPA, so build one from **your own** copy of Facebook with the GitHub Actions
+  workflow below. It takes about fifteen minutes and needs no Mac.
+- **On a Mac, from source** — see [Building from Source](#️-building-from-source--automated-injection).
+  `./build.sh` writes the injected IPA straight to `packages/`.
 
 ## ⚡ Build your own IPA with GitHub Actions
 
 No Mac required. The **Build Facebook Plus (.ipa)** workflow builds the tweak from
 source and injects it into a decrypted Facebook IPA that **you** provide, then
-publishes the result as a draft release on your fork.
+publishes the result as a **draft** release on your fork. A draft is visible only
+to you, which is the point: the IPA it holds is your own copy of Facebook, so keep
+it that way and do not publish it.
 
 > [!IMPORTANT]
 > You must supply your own **decrypted** Facebook `.ipa`. We cannot distribute one
@@ -105,8 +122,10 @@ publishes the result as a draft release on your fork.
      change needed.
 5. Click **Run workflow** and wait for it to finish (≈10–15 min).
 6. Download the IPA from your fork's **Releases** section. The release is created as
-   a **draft** — open it, review, and publish. (If you don't see Releases, append
-   `/releases` to your fork's URL, e.g. `github.com/<you>/Facebook-Plus/releases`.)
+   a **draft**, so only you can see it — open it and download the assets. (If you
+   don't see Releases, append `/releases` to your fork's URL, e.g.
+   `github.com/<you>/Facebook-Plus/releases`.) Leave it as a draft; publishing an
+   IPA is what this project does not do, and why.
 
 The workflow reuses [`build.sh`](build.sh), so your IPA gets the exact same
 injection as a local build — the tweak, the custom app-icons, and the bundled

@@ -52,6 +52,14 @@ test/*.py
 test/*
 !test/README.md
 
+# ---------------------------------------------------------------------------
+# IPA files, anywhere in the tree
+#   An injected IPA carries Facebook's own application, which is not ours to
+#   distribute. It must never be committed and must never reach a release.
+#   See .github/RELEASE-POLICY.md.
+# ---------------------------------------------------------------------------
+*.ipa
+
 
 # ---------------------------------------------------------------------------
 # Local-only dev files
