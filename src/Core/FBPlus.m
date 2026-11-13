@@ -55,6 +55,7 @@ NSString *const FBPKeyAutoClearCache   = @"autoClearCache";
 NSString *const FBPKeyLanguage         = @"uiLanguage";
 NSString *const FBPKeyIntroduced       = @"introduced";
 NSString *const FBPKeyLastNotifiedVersion = @"lastNotifiedVersion";
+NSString *const FBPKeyResolvedGitHubOwner = @"resolvedGitHubOwner";
 NSString *const FBPAXFeedLikeButton    = @"cell-ufi-like-button";
 NSString *const FBPAXReelsLikeButton   = @"shorts-like-top-button";
 NSString *const FBPAXNavSettingsButton = @"nav-settings-button";

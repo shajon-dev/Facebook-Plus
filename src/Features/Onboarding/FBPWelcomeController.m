@@ -3,12 +3,12 @@
 // button that dismisses. Shown once on launch and again on demand from Settings.
 
 #import "FBPWelcomeController.h"
+#import "FBPUpdateChecker.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
 #import "FBPSheet.h"
 
 static NSString *const kTelegramURL = @"https://t.me/ReFacebookPlus";
-static NSString *const kGitHubURL   = @"https://github.com/SHAJON-404";
 
 static const CGFloat kLogoSize      = 46.0;
 static const CGFloat kGlyphColumn   = 52.0;
@@ -408,7 +408,7 @@ static const CGFloat kButtonHeight  = 54.0;
 }
 
 - (void)openTelegram { [self openURLString:kTelegramURL]; }
-- (void)openGitHub   { [self openURLString:kGitHubURL]; }
+- (void)openGitHub   { [self openURLString:[FBPUpdateChecker githubProfileURL]]; }
 
 - (void)openURLString:(NSString *)string {
     NSURL *url = [NSURL URLWithString:string];

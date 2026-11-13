@@ -3,13 +3,14 @@
 // and the actions are two download buttons.
 
 #import "FBPUpdateController.h"
+#import "FBPUpdateChecker.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
 #import "FBPSheet.h"
 
+// The .deb lives on GitHub Releases; the patched .ipa lives on Telegram. The
+// GitHub URL is resolved at tap time to whichever owner is live.
 static NSString *const kTelegramURL = @"https://t.me/ReFacebookPlus";
-static NSString *const kGitHubURL =
-    @"https://github.com/SHAJON-404/Facebook-Plus/releases/latest/";
 
 static const CGFloat kLogoSize     = 46.0;
 static const CGFloat kSideMargin   = 24.0;
@@ -274,7 +275,7 @@ static const CGFloat kButtonHeight = 54.0;
 #pragma mark - Actions
 
 - (void)openTelegram { [self openURLString:kTelegramURL]; }
-- (void)openGitHub   { [self openURLString:kGitHubURL]; }
+- (void)openGitHub   { [self openURLString:[FBPUpdateChecker githubReleasesURL]]; }
 - (void)dismissTapped { [self dismissViewControllerAnimated:YES completion:nil]; }
 
 - (void)openURLString:(NSString *)string {

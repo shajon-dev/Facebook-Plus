@@ -120,6 +120,7 @@ extern NSString *const FBPKeyLanguage;          // In-tweak UI language ("" = En
 // Internal
 extern NSString *const FBPKeyIntroduced;        // Onboarding has been shown
 extern NSString *const FBPKeyLastNotifiedVersion; // Latest release the user was told about
+extern NSString *const FBPKeyResolvedGitHubOwner; // GitHub owner last found live (primary or mirror)
 
 #pragma mark - Confirmations
 

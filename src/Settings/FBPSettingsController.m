@@ -64,7 +64,6 @@ static NSString *const kActionResetPush  = @"resetPushKeys";
 
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
-static NSString *const kGitHubURL      = @"https://github.com/SHAJON-404/Facebook-Plus";
 
 static const CGFloat kContentInset = 16.0;
 
@@ -756,7 +755,8 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
         ],
         @[
             FBPInfoRow(FBPL(@"info.developer"), @"S. SHAJON", @"people", nil),
-            FBPInfoRow(FBPL(@"info.github"), @"SHAJON-404", @"github", kGitHubURL),
+            FBPInfoRow(FBPL(@"info.github"), [FBPUpdateChecker activeGitHubOwner], @"github",
+                       [FBPUpdateChecker githubRepoURL]),
             FBPInfoRow(FBPL(@"info.telegram"), @"@ReFacebookPlus", @"telegram", kTelegramURL),
         ],
         // Several options only take effect on a fresh launch, so this sits right
