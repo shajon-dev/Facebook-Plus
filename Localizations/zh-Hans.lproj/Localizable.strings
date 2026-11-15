@@ -85,13 +85,9 @@
 "download.story.saved" = "已保存到照片";
 "download.story.a11y" = "下载快拍";
 "download.reel.a11y" = "下载 Reel";
-"download.reel.progress" = "正在下载 Reel…";
-"download.reel.saving" = "下载完成，正在保存…";
-"download.reel.saved" = "Reel 已保存到照片";
 "download.reel.failed" = "Reel 下载失败。";
 "download.reel.failedDetail" = "Reel 下载失败。\n%@";
 "download.reel.saveFailed" = "无法保存到照片。\n%@";
-"download.reel.inProgress" = "已有一个 Reel 正在下载。";
 "download.reel.httpError" = "Facebook CDN 返回了 HTTP %ld。";
 "download.reel.tmpFailed" = "无法创建临时视频文件。";
 "download.reel.noLink" = "无法获取此视频的链接。";

@@ -85,13 +85,9 @@
 "download.story.saved" = "已儲存至「照片」";
 "download.story.a11y" = "下載限時動態";
 "download.reel.a11y" = "下載 Reels";
-"download.reel.progress" = "正在下載 Reels⋯";
-"download.reel.saving" = "下載完成，正在儲存⋯";
-"download.reel.saved" = "已將 Reels 儲存至「照片」";
 "download.reel.failed" = "Reels 下載失敗。";
 "download.reel.failedDetail" = "Reels 下載失敗。\n%@";
 "download.reel.saveFailed" = "無法儲存至「照片」。\n%@";
-"download.reel.inProgress" = "已有一則 Reels 正在下載中。";
 "download.reel.httpError" = "Facebook CDN 傳回 HTTP %ld。";
 "download.reel.tmpFailed" = "無法建立影片暫存檔。";
 "download.reel.noLink" = "無法取得此影片的連結。";

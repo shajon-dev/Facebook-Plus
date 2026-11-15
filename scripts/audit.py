@@ -55,6 +55,13 @@ def _min_ios():
 
 MIN_IOS = _min_ios()
 
+# Apple framework classes the tweak hooks on purpose (CloudKit, in SideloadFix).
+# They live in the dyld shared cache at runtime, never in the app binary, so the
+# class index cannot see them — treat them as unverifiable, not a missing app
+# class. The "CK" prefix otherwise reads as app-owned because ComponentKit ships
+# hundreds of CK* classes.
+SYSTEM_CLASSES = frozenset({"CKContainer", "CKEntitlements"})
+
 # Keys the settings never offer: launch state, or values the app writes itself.
 INTERNAL_KEYS = {
     "FBPKeyIntroduced",
@@ -241,6 +248,8 @@ class HostApp:
     def has_class(self, cls):
         """'defined', 'linked', 'missing', or 'unknown' — a framework class
         resolved at runtime, which this index cannot see."""
+        if cls in SYSTEM_CLASSES:
+            return "unknown"
         rec = self.classes.get(cls)
         if rec and rec["own"]:
             return "defined"

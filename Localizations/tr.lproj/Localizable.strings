@@ -85,13 +85,9 @@
 "download.story.saved" = "Fotoğraflar'a kaydedildi";
 "download.story.a11y" = "Hikayeyi İndir";
 "download.reel.a11y" = "Reel'i İndir";
-"download.reel.progress" = "Reel indiriliyor…";
-"download.reel.saving" = "İndirme tamamlandı, kaydediliyor…";
-"download.reel.saved" = "Reel Fotoğraflar'a kaydedildi";
 "download.reel.failed" = "Reel indirilemedi.";
 "download.reel.failedDetail" = "Reel indirilemedi.\n%@";
 "download.reel.saveFailed" = "Fotoğraflar'a kaydedilemedi.\n%@";
-"download.reel.inProgress" = "Bir Reel zaten indiriliyor.";
 "download.reel.httpError" = "Facebook CDN HTTP %ld döndürdü.";
 "download.reel.tmpFailed" = "Geçici video dosyası oluşturulamadı.";
 "download.reel.noLink" = "Bu videonun bağlantısı alınamadı.";

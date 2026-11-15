@@ -85,13 +85,9 @@
 "download.story.saved" = "사진에 저장됨";
 "download.story.a11y" = "스토리 다운로드";
 "download.reel.a11y" = "릴스 다운로드";
-"download.reel.progress" = "릴스 다운로드 중…";
-"download.reel.saving" = "다운로드 완료, 저장 중…";
-"download.reel.saved" = "릴스를 사진에 저장함";
 "download.reel.failed" = "릴스 다운로드에 실패했습니다.";
 "download.reel.failedDetail" = "릴스 다운로드에 실패했습니다.\n%@";
 "download.reel.saveFailed" = "사진에 저장하지 못했습니다.\n%@";
-"download.reel.inProgress" = "이미 릴스를 다운로드하는 중입니다.";
 "download.reel.httpError" = "Facebook CDN이 HTTP %ld을(를) 반환했습니다.";
 "download.reel.tmpFailed" = "임시 동영상 파일을 만들지 못했습니다.";
 "download.reel.noLink" = "이 동영상의 링크를 가져오지 못했습니다.";

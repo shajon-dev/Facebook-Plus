@@ -85,13 +85,9 @@
 "download.story.saved" = "Enregistré dans Photos";
 "download.story.a11y" = "Télécharger la story";
 "download.reel.a11y" = "Télécharger le Reel";
-"download.reel.progress" = "Téléchargement du Reel…";
-"download.reel.saving" = "Téléchargement terminé, enregistrement…";
-"download.reel.saved" = "Reel enregistré dans Photos";
 "download.reel.failed" = "Échec du téléchargement du Reel.";
 "download.reel.failedDetail" = "Échec du téléchargement du Reel.\n%@";
 "download.reel.saveFailed" = "Impossible d'enregistrer dans Photos.\n%@";
-"download.reel.inProgress" = "Un Reel est déjà en cours de téléchargement.";
 "download.reel.httpError" = "Facebook CDN a renvoyé HTTP %ld.";
 "download.reel.tmpFailed" = "Impossible de créer le fichier vidéo temporaire.";
 "download.reel.noLink" = "Impossible d'obtenir le lien de cette vidéo.";

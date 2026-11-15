@@ -392,6 +392,7 @@ static BOOL FBPShouldFilterModel(id model) {
 
 %hook FBMemModelObject
 
+// fbp:legacy initWithFBPandoTree:
 - (id)initWithFBTree:(void *)tree {
     id model = %orig;
     return FBPShouldFilterModel(model) ? nil : model;

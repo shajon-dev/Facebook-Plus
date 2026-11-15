@@ -85,13 +85,9 @@
 "download.story.saved" = "Zapisano w Zdjęciach";
 "download.story.a11y" = "Pobierz relację";
 "download.reel.a11y" = "Pobierz rolkę";
-"download.reel.progress" = "Pobieranie rolki…";
-"download.reel.saving" = "Pobieranie zakończone, zapisywanie…";
-"download.reel.saved" = "Rolka została zapisana w Zdjęciach";
 "download.reel.failed" = "Nie udało się pobrać rolki.";
 "download.reel.failedDetail" = "Nie udało się pobrać rolki.\n%@";
 "download.reel.saveFailed" = "Nie udało się zapisać w Zdjęciach.\n%@";
-"download.reel.inProgress" = "Inna rolka jest już pobierana.";
 "download.reel.httpError" = "Sieć CDN Facebooka zwróciła kod HTTP %ld.";
 "download.reel.tmpFailed" = "Nie udało się utworzyć tymczasowego pliku wideo.";
 "download.reel.noLink" = "Nie udało się uzyskać łącza do tego filmu.";

@@ -172,7 +172,6 @@ extern BOOL FBPModelIsBlockedAd(id model);
 extern NSString *const FBPAXFeedLikeButton;     // cell-ufi-like-button
 extern NSString *const FBPAXReelsLikeButton;    // shorts-like-top-button
 extern NSString *const FBPAXNavSettingsButton;  // nav-settings-button
-extern NSString *const FBPAXStoryHeaderView;    // story-header-view
 
 #pragma mark - View tags
 //

@@ -483,7 +483,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             FBPSection(FBPL(@"footer.resetpushkeys"), @[
                 FBPSwitchRow(FBPKeyKeychainRebind, FBPL(@"row.keychainrebind.title"), FBPL(@"row.keychainrebind.desc"), @"key.fill"),
                 FBPSwitchRow(FBPKeyNotifClientSync, FBPL(@"row.notifclientsync.title"),
-                             FBPL(@"row.notifclientsync.desc"), @"bell.and.waves.left.and.right.fill"),
+                             FBPL(@"row.notifclientsync.desc"), @"bell.badge.fill"),
                 FBPActionRow(kActionResetPush, FBPL(@"row.resetpushkeys.title"),
                              FBPL(@"row.resetpushkeys.desc"), @"bell.badge.fill", YES),
             ]),

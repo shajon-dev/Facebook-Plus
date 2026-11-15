@@ -85,13 +85,9 @@
 "download.story.saved" = "Photos में सहेजा गया";
 "download.story.a11y" = "Story डाउनलोड करें";
 "download.reel.a11y" = "Reel डाउनलोड करें";
-"download.reel.progress" = "Reel डाउनलोड हो रहा है…";
-"download.reel.saving" = "डाउनलोड पूरा, सहेजा जा रहा है…";
-"download.reel.saved" = "Reel Photos में सहेजा गया";
 "download.reel.failed" = "Reel डाउनलोड विफल रहा।";
 "download.reel.failedDetail" = "Reel डाउनलोड विफल रहा।\n%@";
 "download.reel.saveFailed" = "Photos में सहेजा नहीं जा सका।\n%@";
-"download.reel.inProgress" = "एक Reel पहले से डाउनलोड हो रहा है।";
 "download.reel.httpError" = "Facebook CDN ने HTTP %ld लौटाया।";
 "download.reel.tmpFailed" = "अस्थायी वीडियो फ़ाइल नहीं बनाई जा सकी।";
 "download.reel.noLink" = "इस वीडियो का लिंक नहीं मिल सका।";
