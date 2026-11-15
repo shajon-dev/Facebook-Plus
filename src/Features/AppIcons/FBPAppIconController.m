@@ -100,7 +100,7 @@ static NSString *const kCell = @"fbp.appicon.row";
             @{ kName : @"AltAppIconVaporwave", kTitle : @"Vaporwave", kImage : @"AltAppIconVaporwave@2x" },
         ] mutableCopy];
 
-        // Custom logos injected by build.sh (its cyan step) show up as extra
+        // Custom logos injected by build.py (its cyan step) show up as extra
         // "fbplus_" entries in the app's own CFBundleAlternateIcons; discover them
         // at runtime so they only appear when actually present in the bundle.
         [icons addObjectsFromArray:[self customIconEntries]];

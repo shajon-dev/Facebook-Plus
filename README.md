@@ -86,7 +86,7 @@ Pick whichever matches your device:
   IPA, so build one from **your own** copy of Facebook with the GitHub Actions
   workflow below. It takes about fifteen minutes and needs no Mac.
 - **On a Mac, from source** — see [Building from Source](#️-building-from-source--automated-injection).
-  `./build.sh` writes the injected IPA straight to `packages/`.
+  `python3 build.py` writes the injected IPA straight to `packages/`.
 
 ## ⚡ Build your own IPA with GitHub Actions
 
@@ -127,7 +127,7 @@ it that way and do not publish it.
    `github.com/<you>/Facebook-Plus/releases`.) Leave it as a draft; publishing an
    IPA is what this project does not do, and why.
 
-The workflow reuses [`build.sh`](build.sh), so your IPA gets the exact same
+The workflow reuses [`build.py`](build.py), so your IPA gets the exact same
 injection as a local build — the tweak, the custom app-icons, and the bundled
 **Open in Facebook** Safari extension, all fakesigned for sideloading.
 
@@ -147,13 +147,14 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
    python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip && pipx inject --force cyan lief
    ```
 
-3. **Automated Pipeline (`build.sh`)**:
-   - Run `./build.sh` to build **every packaging scheme**, or narrow it with the
-     `SCHEMES` variable (e.g. `SCHEMES="rootless rootfull" ./build.sh`).
+3. **Automated Pipeline (`build.py`)**:
+   - Run `python3 build.py` to build **every packaging scheme**, or narrow it
+     with `--rootless` / `--rootfull`. See `python3 build.py --help` for the full
+     set of flags (`--ipa`, `--install`, `--ssh`, `--clean`, …).
    - To also produce an injected `.ipa`, place a decrypted Facebook `.ipa` at
      `test/com.facebook.Facebook.ipa` before running.
 
-   **What `build.sh` does:**
+   **What `build.py` does:**
    - Builds one versioned `.deb` per scheme into `packages/`:
 
      | Scheme | Output |
@@ -167,13 +168,12 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
      - builds every Safari web extension under `OpenInFacebookSafariExtension/`
        from source and injects the resulting `.appex` into the app's `PlugIns/`;
      - merges any custom app icons (`fbplus_*.png` in `resources/logo/`) into
-     `CFBundleAlternateIcons` via `scripts/icon_plist.py`, preserving
-     Facebook's native icons;
+     `CFBundleAlternateIcons`, preserving Facebook's native icons;
      - fakesigns every injected binary for sideloading;
      - builds `FBPNotifyBridge/src` and adds the resulting dylib to the app's
        `NotificationServiceExtension.appex` (see
        [below](#-notifications-on-sideloaded-builds));
-       skip it with `NSE_BRIDGE=0 ./build.sh`.
+       skip it with `NSE_BRIDGE=0 python3 build.py`.
 
 
 <details>
@@ -238,7 +238,7 @@ What this means for you:
 ├── resources           # Assets (App icons, SVGs, and asset bundles)
 │   ├── bundle          # Compiled UI images and tweak resources
 │   ├── fonts           # Bundled custom fonts offered by the Fonts picker
-│   ├── logo            # Custom app-icons drop folder for build.sh injection
+│   ├── logo            # Custom app-icons drop folder for build.py injection
 │   └── svg             # Source vector graphics
 ├── scripts             # Python utility scripts (e.g., icon merging, svg rendering)
 ├── src                 # Tweak source code

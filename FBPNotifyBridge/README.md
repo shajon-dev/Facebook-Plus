@@ -35,7 +35,7 @@ Substrate build to `com.facebook.Facebook`).
 
 ## What this is
 
-`FBPNotifyBridge.dylib` — a second, deliberately tiny dylib that `build.sh`
+`FBPNotifyBridge.dylib` — a second, deliberately tiny dylib that `build.py`
 injects into `NotificationServiceExtension.appex`, so the extension applies the
 *same* redirects the app already does.
 
@@ -173,7 +173,7 @@ make -C FBPNotifyBridge/src FINALPACKAGE=1
 # -> FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib
 ```
 
-`build.sh` copies that to **`packages/FBPNotifyBridge.dylib`** and injects from
+`build.py` copies that to **`packages/FBPNotifyBridge.dylib`** and injects from
 there, so every build product sits in `packages/` together. That directory is
 git-ignored, so the compiled dylib is never committed — the repository carries
 only the sources in this folder and each build compiles them again.
@@ -183,17 +183,18 @@ would be packaged into the `.deb`, and `cyan` would then inject this dylib into
 the *main* binary as well — installing the `NSFileManager` / `NSUserDefaults`
 redirects twice.
 
-`build.sh` builds it, and after the `cyan` run unpacks the output IPA, copies the
+`build.py` builds it, and after the `cyan` run unpacks the output IPA, copies the
 dylib into the appex, adds a weak load command with `cyan`'s own bundled
 `insert_dylib` (resolved at runtime from the `cyan` entry point — it is not on
 `PATH`) at `@executable_path/FBPNotifyBridge.dylib`, re-fakesigns the appex binary
 with `ldid` **preserving its original entitlements** (TrollStore depends on them)
 plus the dylib, and repacks. Every failure in that step is a warning: the IPA is
 left as `cyan` produced it rather than failing the build. Skip the whole step
-with `NSE_BRIDGE=0 ./build.sh`.
+with `NSE_BRIDGE=0 python3 build.py`.
 
-`test/sign-and-install.py` additionally passes `-l … -w -P` to `zsign`, so the
-local device test exercises the extension-injection path too.
+`build.py`'s signer (`python3 build.py --install`) additionally passes
+`-l … -w -P` to `zsign`, so the local device test exercises the
+extension-injection path too.
 
 ## Explicit App IDs and whether the NSE launches — settled
 
@@ -235,7 +236,7 @@ every `SecItem*` call with its requested group, the decision taken and the
 ```bash
 make FBP_DIAG=1
 make -C FBPNotifyBridge/src FBP_DIAG=1 FINALPACKAGE=1
-./build.sh && ./test/sign-and-install.py
+FBP_DIAG=1 python3 build.py --install
 idevicesyslog | grep FBPDIAG     # or Console.app, subsystem com.shajon.fbplus
 ```
 

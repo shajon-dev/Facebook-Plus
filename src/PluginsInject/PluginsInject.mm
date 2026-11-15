@@ -74,8 +74,8 @@ NSString *fbpAccessGroupFromEntitlements(void) {
 
 __attribute__((constructor)) static void PluginsInjectInit() {
 	// Device logs on 2026-11-08 show this constructor running TWICE inside the
-	// notification extension: build.sh's insert_dylib adds a load command for
-	// the bridge, and test/sign-and-install.py then passes zsign -l … -P, which
+	// notification extension: build.py's insert_dylib adds a load command for
+	// the bridge, and build.py's signer then passes zsign -l … -P, which
 	// adds another. dyld honours both, so every rebind and redirect was
 	// installed twice in a process with a ~24 MB budget. Idempotent is cheaper
 	// than hunting down whichever path added the second one.

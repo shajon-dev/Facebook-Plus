@@ -1,11 +1,12 @@
 name: Build Tweak (.deb)
 
 # Verify the tweak compiles on every pull request and push to main by running
-# the project's own build.sh.
+# the project's own build.py.
 #
-# CI ships no decrypted Facebook IPA (it cannot, for legal reasons), so build.sh
-# builds the .deb and skips the cyan injection step. The check therefore verifies
-# that the package compiles cleanly; injection tooling (cyan) is not needed here.
+# CI ships no decrypted Facebook IPA (it cannot, for legal reasons), so build.py
+# is run with --no-ipa: it builds the .deb and skips the cyan injection step. The
+# check therefore verifies that the package compiles cleanly; injection tooling
+# (cyan) is not needed here.
 
 on:
   pull_request:
@@ -49,7 +50,7 @@ jobs:
         run: git clone --quiet --recursive https://github.com/theos/theos.git "$THEOS"
 
       - name: Build
-        run: ./build.sh
+        run: python3 build.py --no-ipa
 
 
       - name: Upload built packages

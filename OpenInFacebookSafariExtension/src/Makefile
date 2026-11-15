@@ -2,7 +2,7 @@
 #
 # The web-extension resources (manifest.json, content.js, google.js, popup.*,
 # _locales/, images/) and the bundle Info.plist live in Resources/ and are copied
-# to the .appex root by theos. build.sh injects the result into the app's PlugIns.
+# to the .appex root by theos. build.py injects the result into the app's PlugIns.
 
 TARGET := iphone:clang:latest:15.1
 ARCHS = arm64

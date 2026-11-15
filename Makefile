@@ -70,7 +70,7 @@ FBP_VERSION := $(shell awk -F': ' '/^Version:/{print $$2; exit}' control)
 
 # Every directory a source may #import a sibling header from. One list, used by
 # the compiler below, by the .clangd the compile-commands target writes, and by
-# scripts/check.py — so the editor and the typechecker cannot drift from the
+# scripts/verify.py — so the editor and the typechecker cannot drift from the
 # build the way they silently did when each kept its own copy.
 FBP_INCLUDE_DIRS = \
 	src/Core \
@@ -183,13 +183,11 @@ compile-commands:
 	@$(MAKE) clean >/dev/null
 	@$(MAKE) -n | sed -E 's/.*set -o pipefail; \(//; s/\)[[:space:]]*$$//' \
 		| bear parse-sh -o compile_commands.json 2>/dev/null
-	@echo "==> Mapping src/ and .xm files into compile_commands.json…"
-	@python3 scripts/fix-compile-commands.py
 	@echo "==> Wrote compile_commands.json and .clangd"
 
 # Typecheck every source without building: fast, parallel, and across all four
 # shipped configurations (tweak and bridge, each with and without FBP_DIAG).
-# See scripts/check.py.
+# See scripts/verify.py.
 .PHONY: check
 check:
-	@python3 scripts/check.py
+	@python3 scripts/verify.py check

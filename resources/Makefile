@@ -11,7 +11,7 @@ FacebookPlus_RESOURCE_FILES = bundle/Info.plist $(wildcard bundle/*.png)
 # RESOURCE_DIRS copies each folder's *contents* into the bundle root.
 #   ../Localizations -> Base.lproj/ fr.lproj/ … (loaded by FBPLocalizedString)
 #   ../resources/logo -> fbplus_* custom app-icon logos. These ship inside
-#     FacebookPlus.bundle so they travel with the tweak; build.sh's cyan step then
+#     FacebookPlus.bundle so they travel with the tweak; build.py's cyan step then
 #     drops them at the app root and registers them in the app's Info.plist.
 #   ../resources/fonts -> custom .ttf/.otf the Fonts picker offers. Copied via cp
 #     (space-safe), registered with Core Text at launch and listed by family name.

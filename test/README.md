@@ -1,6 +1,6 @@
 # Test & Injection
 
-`build.sh` injects the tweak into a decrypted Facebook IPA placed here. The file
+`build.py` injects the tweak into a decrypted Facebook IPA placed here. The file
 must be named exactly:
 
 ```text

@@ -29,7 +29,7 @@ BOOL createDirectoryIfNotExists(NSString *path) {
 
 // A once-guard that holds across SEPARATE COPIES of this dylib in one process.
 // A plain `static BOOL` cannot: the notification extension ends up with two
-// images of FBPNotifyBridge.dylib (build.sh inserts a load command and zsign -P
+// images of FBPNotifyBridge.dylib (build.py inserts a load command and zsign -P
 // inserts another), and each image gets its own statics, so each ran the
 // constructor again. For method_exchangeImplementations that is worse than
 // wasteful — exchanging the same pair twice puts the originals back, silently

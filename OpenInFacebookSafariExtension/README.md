@@ -1,7 +1,7 @@
 # Safari Web Extensions
 
 Each subdirectory here is a theos project that builds a Safari web extension
-(`.appex`). `build.sh` builds every `OpenInFacebookSafariExtension/*/Makefile`, then injects the
+(`.appex`). `build.py` builds every `OpenInFacebookSafariExtension/*/Makefile`, then injects the
 resulting bundle into the app's `PlugIns/` (via `cyan -f`) and fakesigns it, so
 the extension ships inside the produced IPA. Nothing prebuilt is committed — the
 `.appex` is compiled from source on each build.

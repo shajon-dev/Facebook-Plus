@@ -11,8 +11,8 @@ packages/
 FBPNotifyBridge/src/src/
 
 # ---------------------------------------------------------------------------
-# Packaging artifacts (build.sh)
-#   - Facebook-Plus.deb : the renamed package build.sh produces
+# Packaging artifacts (build.py)
+#   - Facebook-Plus.deb : the renamed package build.py produces
 #   - package/          : legacy output directory name, kept ignored for safety
 # ---------------------------------------------------------------------------
 Facebook-Plus.deb
@@ -31,8 +31,8 @@ compile_commands.json
 .clangd
 
 # ---------------------------------------------------------------------------
-# Python tooling (scripts/ and test/ helpers: svg2png.py, etc.)
-#   venv/         : virtualenv cairosvg renders from
+# Python tooling and caches
+#   venv/         : local virtualenv, if any
 #   pyrefly.toml  : per-user type-checker config
 # ---------------------------------------------------------------------------
 venv/
@@ -50,11 +50,9 @@ test/*.py
 # ---------------------------------------------------------------------------
 test/*
 !test/README.md
-# The other scripts in test/ drive *this* phone and stay machine-local. The
-# project test suite is not one of them: it reads the tree and shells out to the
-# toolchain, so it belongs to the project. Run it with
-# `python3 test/test-projects.py`.
-!test/test-projects.py
+# The scripts in test/ drive *this* phone and stay machine-local. The project's
+# build and verify tooling lives in build.py and scripts/ instead; run the test
+# suite with `python3 scripts/verify.py test`.
 
 # ---------------------------------------------------------------------------
 # IPA files, anywhere in the tree

@@ -1,10 +1,10 @@
-# Builds FBPNotifyBridge.dylib — the slim sideload-compat shim that build.sh
+# Builds FBPNotifyBridge.dylib — the slim sideload-compat shim that build.py
 # injects into Facebook's NotificationServiceExtension.appex.
 #
 # Deliberately NOT a target of the root Makefile: a second target there would be
 # packaged into the .deb, and cyan would then inject this dylib into the main
 # binary as well, installing the NSFileManager / NSUserDefaults redirects twice.
-# build.sh builds it on its own with `make -C`, the same way the Safari web
+# build.py builds it on its own with `make -C`, the same way the Safari web
 # extension under OpenInFacebookSafariExtension/*/Makefile is built.
 #
 # It links Foundation, Security and MobileCoreServices only — no UIKit, no

@@ -17,9 +17,9 @@ no source for it, so it is vendored as a prebuilt binary and injected into the
 
 ## Scope
 
-- Injected into the Telegram IPA by `build.sh` (an extra `cyan -f`), inside the
-  `if [ -f "$IPA_IN" ]` block, so the `.deb` (jailbreak / TrollStore) never
-  carries it — those installs keep their entitlements and do not have the
+- Injected into the patched IPA by `build.py` (an extra `cyan -f`), only when a
+  Facebook IPA is present to inject into, so the `.deb` (jailbreak / TrollStore)
+  never carries it — those installs keep their entitlements and do not have the
   logout problem.
 - Because it owns the main app's keychain access-group rewrite, the tweak's own
   `SecRebinds.xm` is left **off by default in the main app**
