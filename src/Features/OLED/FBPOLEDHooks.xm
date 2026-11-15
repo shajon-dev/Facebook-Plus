@@ -1,16 +1,19 @@
-// OLED Dark Mode: turn Facebook's whole UI true-black.
+// OLED Dark Mode: deepen Facebook's dark theme to true-black.
 //
-// When the toggle is on, every app window is forced to the dark interface style
-// (so the user does not have to enable Facebook's own dark mode), and every dark
-// surface in the view tree is repainted pure black. Because the app is forced
-// dark, the repaint runs unconditionally while the toggle is on — there is no
-// separate "is the app dark" check that could go stale and leave some surfaces
-// grey while others turn black.
+// An enhancement of dark mode, not a light→dark forcer. OLED follows the iOS
+// system appearance: while the toggle is on it engages when iOS is in Dark Mode
+// and disengages in Light Mode. In light mode it is inert and leaves every
+// surface alone. Earlier builds forced every window dark whenever the toggle was
+// on, blackening a light-mode user's whole app — reported as "OLED stays enabled
+// even in light mode". The gate is now FBPOLEDActive(): the toggle AND the iOS
+// system appearance (FBPSystemIsDark, read from the screen's trait collection).
+// The per-colour darkness tests still run, so even in Dark Mode only genuinely
+// dark surfaces are blackened.
 //
-// Facebook paints backgrounds at many levels, and the two surfaces that used to
-// stay grey — the top app header and the profile's "Add to story / Edit profile"
-// panel — are painted by mechanisms a plain -setBackgroundColor: hook never sees.
-// A radare2/r2pipe walk of FBSharedFramework showed why:
+// The two surfaces that used to stay grey — the top app header and the profile's
+// "Add to story / Edit profile" panel — are painted by mechanisms a plain
+// -setBackgroundColor: hook never sees. Disassembly of FBSharedFramework showed
+// why:
 //
 //   * FBMovableNavigationBarView (the app header) sets nothing on its own view.
 //     Its grey lives on child views (_fakeNavigationBar, _replacementNavigationBar
@@ -24,13 +27,12 @@
 //     a CAGradientLayer / CAShapeLayer / plain CALayer added as a *sublayer*, not
 //     onto the view's -backgroundColor, so -setBackgroundColor: never fires.
 //
-// So in addition to the -backgroundColor path, the tweak (1) resolves dynamic
-// colours against a forced-dark trait collection before judging darkness —
-// removing the timing dependence — (2) sweeps each view's own sublayers
-// (gradient/shape/plain) and blackens the dark ones, and (3) hooks
-// FBMovableNavigationBarView directly to blacken its header sub-tree (blur,
-// UINavigationBar, gradients) while leaving genuinely coloured accents and photos
-// alone.
+// Beyond the -backgroundColor path: (1) resolve dynamic colours against a
+// forced-dark trait collection before judging darkness, removing the timing
+// dependence; (2) sweep each view's own sublayers (gradient/shape/plain) and
+// blacken the dark ones; (3) hook FBMovableNavigationBarView directly to blacken
+// its header sub-tree (blur, UINavigationBar, gradients) while leaving genuinely
+// coloured accents and photos alone.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -44,6 +46,26 @@
 static BOOL gOLEDEnabled = NO;
 
 static void FBPRefreshOLED(void) { gOLEDEnabled = FBPEnabled(FBPKeyOLED); }
+
+/// YES when iOS itself is set to Dark Mode. Read from the screen's trait
+/// collection, which reflects the *system* appearance and is not affected by any
+/// per-window override, so it is the true "is iOS in Dark Mode" signal.
+static BOOL FBPSystemIsDark(void) {
+    if (@available(iOS 13.0, *)) {
+        return UIScreen.mainScreen.traitCollection.userInterfaceStyle ==
+               UIUserInterfaceStyleDark;
+    }
+    return NO;
+}
+
+/// OLED follows the iOS system appearance: engaged only when the toggle is on AND
+/// iOS is in Dark Mode, disengaged the moment iOS switches to Light. Keying on the
+/// system appearance (not one view's trait) is what makes "iOS Light → OLED off,
+/// iOS Dark → OLED on" hold. The downstream FBPColorIsDark checks still mean only
+/// genuinely dark surfaces are blackened.
+static BOOL FBPOLEDActive(void) {
+    return gOLEDEnabled && FBPSystemIsDark();
+}
 
 #pragma mark - Colour judgement
 
@@ -82,10 +104,10 @@ static UIColor *FBPResolve(UIColor *color) {
 /// should go true-black. Facebook's dark palette (FDSColor / FBColorPaletteConfig
 /// -greyColorWithShade:) paints every surface from a small ladder of near-neutral
 /// greys that tops out around #3A3B3C (base #18191A, card #242526, elevated
-/// #3A3B3C). We match exactly that band — near-neutral and no lighter than
-/// ~#3A3B3C — instead of a loose "is it darkish" luma test.
+/// #3A3B3C). Matches exactly that band — near-neutral and no lighter than
+/// ~#3A3B3C — rather than a loose "is it darkish" luma test.
 ///
-/// This is deliberately tight: the old test blackened anything up to a mid-grey
+/// Deliberately tight: the old test blackened anything up to a mid-grey
 /// (luma < 0.48), which also caught dividers, pressed/hover states, elevated
 /// chips and placeholders and painted them as solid black rectangles — the
 /// "square box" artefacts. Lighter greys, tinted surfaces, accents and photos are
@@ -143,8 +165,8 @@ static CGColorRef FBPBlackCGKeepingAlpha(CGColorRef cg) {
 // Pure black merges Facebook's cards into their background, so the hairline
 // separators between posts, list rows and sections vanish. Facebook draws them
 // with FBLineComponentInternalView (and plain ~1–2pt hairline views); in OLED
-// mode we paint those a faint white instead of black, so the structure the
-// native dark theme has stays readable — a true-black look that still has lines.
+// mode those are painted a faint white instead of black, keeping the structure
+// of the native dark theme readable — a true-black look that still has lines.
 static const CGFloat kFBPDividerAlpha = 0.22;   // faint white on black
 
 static UIColor *FBPDividerColor(void) {
@@ -154,7 +176,7 @@ static UIColor *FBPDividerColor(void) {
     return color;
 }
 
-/// YES for a separator line we should lighten rather than blacken: Facebook's
+/// YES for a separator line to lighten rather than blacken: Facebook's
 /// FBLineComponentInternalView, or a thin (≤2pt) neutral/near-black hairline. A
 /// *coloured* thin bar — a selected-tab underline, a progress bar — is not a
 /// divider (its colour isn't dark), so it is left alone.
@@ -363,69 +385,14 @@ static void FBPBlackenHeaderTree(UIView *view, int depth) {
     }
 }
 
-#pragma mark - Forced dark appearance
-
-/// Forces every app window to the dark interface style while OLED is on.
-/// When OLED is off, we only reset windows that we previously forced dark,
-/// so we never override or destroy Facebook's own native dark mode.
-/// Applied only on discrete events (never during layout) to avoid flicker.
-static void FBPApplyForcedAppearance(void) {
-    if (@available(iOS 13.0, *)) {
-        static BOOL didForceDark = NO;
-        if (gOLEDEnabled) {
-            didForceDark = YES;
-            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
-                if (![scene isKindOfClass:UIWindowScene.class]) continue;
-                for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-                    if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
-                    if (window.overrideUserInterfaceStyle != UIUserInterfaceStyleDark) {
-                        window.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-                    }
-
-                    UIViewController *root = window.rootViewController;
-                    if (root) [root setNeedsStatusBarAppearanceUpdate];
-                }
-            }
-        } else if (didForceDark) {
-            // Only release the override if OLED was previously active in this session
-            didForceDark = NO;
-            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
-                if (![scene isKindOfClass:UIWindowScene.class]) continue;
-                for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-                    if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
-                    if (window.overrideUserInterfaceStyle == UIUserInterfaceStyleDark) {
-                        window.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
-                    }
-
-                    UIViewController *root = window.rootViewController;
-                    if (root) [root setNeedsStatusBarAppearanceUpdate];
-                }
-            }
-        }
-    }
-}
-
 #pragma mark - Hooks
 
 %group FBPOLEDGlobal
 
-// Force new/key windows dark while OLED is on.
-%hook UIWindow
-- (void)becomeKeyWindow {
-    %orig;
-    if (@available(iOS 13.0, *)) {
-        if (gOLEDEnabled && ![NSStringFromClass(self.class) hasPrefix:@"FBP"] &&
-            self.overrideUserInterfaceStyle != UIUserInterfaceStyleDark) {
-            self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-        }
-    }
-}
-%end
-
 %hook UIView
 
 - (void)setBackgroundColor:(UIColor *)color {
-    if (gOLEDEnabled && !FBPOLEDSkip(self)) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self)) {
         // A separator line keeps a faint white instead of vanishing into black.
         if ([NSStringFromClass(self.class) containsString:@"LineComponent"]) {
             %orig(FBPDividerColor());
@@ -441,7 +408,7 @@ static void FBPApplyForcedAppearance(void) {
 
 - (void)layoutSubviews {
     %orig;
-    if (!gOLEDEnabled || FBPOLEDSkip(self)) return;
+    if (!FBPOLEDActive() || FBPOLEDSkip(self)) return;
 
     // Dividers are lightened, not blackened, so posts/rows stay visually separated.
     if (FBPViewLooksLikeDivider(self)) {
@@ -478,7 +445,7 @@ static void FBPApplyForcedAppearance(void) {
 
 %hook UITableView
 - (void)setBackgroundColor:(UIColor *)color {
-    if (gOLEDEnabled && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
         %orig(FBPBlackKeepingAlpha(color));
         return;
     }
@@ -488,7 +455,7 @@ static void FBPApplyForcedAppearance(void) {
 
 %hook UITableViewCell
 - (void)setBackgroundColor:(UIColor *)color {
-    if (gOLEDEnabled && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
         %orig(FBPBlackKeepingAlpha(color));
         return;
     }
@@ -498,7 +465,7 @@ static void FBPApplyForcedAppearance(void) {
 
 %hook UICollectionView
 - (void)setBackgroundColor:(UIColor *)color {
-    if (gOLEDEnabled && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
         %orig(FBPBlackKeepingAlpha(color));
         return;
     }
@@ -513,7 +480,7 @@ static void FBPApplyForcedAppearance(void) {
 %hook FBMovableNavigationBarView
 - (void)layoutSubviews {
     %orig;
-    if (!gOLEDEnabled) return;
+    if (!FBPOLEDActive()) return;
     if (FBPColorIsDark(FBPResolve(self.backgroundColor))) {
         self.backgroundColor = FBPBlackKeepingAlpha(self.backgroundColor);
     }
@@ -531,35 +498,50 @@ static void FBPApplyForcedAppearance(void) {
 // vanish. Force light content (white glyphs) while OLED is on.
 %hook FBMovableNavigationBarViewController
 - (UIStatusBarStyle)preferredStatusBarStyle {
-    if (gOLEDEnabled) return UIStatusBarStyleLightContent;
+    if (FBPOLEDActive()) return UIStatusBarStyleLightContent;
     return %orig;
 }
 %end
 
 %end // FBPOLEDGlobal
 
+/// Nudges the app's windows to relayout so the layout hooks re-run and
+/// blacken/revert for the current state right away, instead of waiting for the
+/// next natural layout pass.
+static void FBPNudgeOLEDRelayout(void) {
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) continue;
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+            [window setNeedsLayout];
+        }
+    }
+}
+
 void FBPInitOLEDHooks(void) {
     FBPRefreshOLED();
 
-    // Toggling OLED in settings immediately forces (or releases) the dark
-    // appearance; the layout hooks then repaint on the next pass.
+    // Keep the cached toggle in sync when settings change, then nudge a relayout
+    // so turning OLED on/off takes effect promptly. OLED no longer forces any
+    // appearance; it follows the iOS Light/Dark setting (FBPOLEDActive).
     [NSNotificationCenter.defaultCenter
         addObserverForName:FBPSettingsDidChangeNotification
                     object:nil
                      queue:NSOperationQueue.mainQueue
                 usingBlock:^(NSNotification *note) {
         FBPRefreshOLED();
-        FBPApplyForcedAppearance();
+        FBPNudgeOLEDRelayout();
     }];
 
-    // Re-assert the forced appearance on foreground and shortly after launch.
+    // An iOS Light↔Dark switch while the app is foregrounded already relayouts
+    // Facebook's views (trait change), so OLED follows live. Returning from the
+    // background is the one case that can miss, so re-apply for the current
+    // system appearance on foreground.
     [NSNotificationCenter.defaultCenter
         addObserverForName:UIApplicationDidBecomeActiveNotification
                     object:nil
                      queue:NSOperationQueue.mainQueue
-                usingBlock:^(NSNotification *note) { FBPApplyForcedAppearance(); }];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{ FBPApplyForcedAppearance(); });
+                usingBlock:^(NSNotification *note) { FBPNudgeOLEDRelayout(); }];
 
     FBP_ONCE(gOLED) { %init(FBPOLEDGlobal); }
 }

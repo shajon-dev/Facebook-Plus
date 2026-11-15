@@ -50,7 +50,7 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyAnonymousStories : @YES,
         FBPKeyNoAutoNext       : @YES,
         FBPKeyFeedLike         : @YES,
-        FBPKeyOLED             : @YES,
+        FBPKeyOLED             : @NO,
         FBPKeyLinksInSafari    : @YES,
         // Diagnostics are off by default: the maintainer turns one on only to
         // capture the live feed-unit token set, or the quality ladder Facebook
