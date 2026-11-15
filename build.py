@@ -781,10 +781,12 @@ class DeviceInstaller:
         return "4016" in output or "usage assertion" in output.lower()
 
     def install(self, ipa_path, udid):
+        # Returns True only when the app actually installed, so the caller can
+        # clean up the one-device signed IPA afterward.
         Log.section()
         if not ipa_path or not Path(ipa_path).is_file():
             Log.info("No IPA to install — skipping install.")
-            return
+            return False
         if not udid:
             udid = self.select_udid("")
         Log.info("Target device UDID: " + udid)
@@ -798,14 +800,14 @@ class DeviceInstaller:
         if not transports:
             Log.error("No installer available — install Xcode for 'xcrun devicectl', or 'brew install ideviceinstaller'.")
             print("    The IPA is ready at " + rel(ipa_path) + " — install it yourself.")
-            return
+            return False
 
         last = ""
         for index, (name, run) in enumerate(transports):
             succeeded, out = run(udid, target)
             if succeeded:
                 Log.info("Installed with " + name + ". Unlock the iPhone and launch the app.")
-                return
+                return True
             last = out
             if name == "devicectl" and self._unreachable_by_devicectl(out):
                 Log.warn("devicectl cannot reach this device (CoreDeviceError 4016): either the iOS is older than it speaks to, or the phone is not plugged in.")
@@ -815,6 +817,7 @@ class DeviceInstaller:
         if self._unreachable_by_devicectl(last):
             print("    devicectl answered 4016 — the device may be on an iOS older than 17; install ideviceinstaller to reach it.")
         print("    The IPA is kept at " + rel(ipa_path))
+        return False
 
 
 class SSHInstaller:
@@ -1097,9 +1100,22 @@ class FacebookPlus:
                 udid = installer.select_udid(device_sel)
                 self._purge_signed()
                 signed = Signer(self.paths).sign(injected, udid, drop_nse=drop_nse)
-                installer.install(signed or injected, udid)
+                if installer.install(signed or injected, udid) and signed:
+                    self._delete_signed(signed)
 
         return 0
+
+    @staticmethod
+    def _delete_signed(signed):
+        # A signed IPA is bound to one device and large; once it is installed it
+        # is spent, so it is removed. The unsigned injected IPA stays in packages/.
+        try:
+            path = Path(signed)
+            if path.is_file():
+                path.unlink()
+                Log.info("Removed the signed IPA after install: " + str(path))
+        except OSError as exc:
+            Log.warn("Could not remove the signed IPA: " + str(exc))
 
     def _packages_ipa(self):
         # Prefer the unsigned injected build: a signed IPA is bound to one device,
@@ -1159,7 +1175,8 @@ class FacebookPlus:
         if not signed:
             Log.error("Could not sign for device " + udid + " — not installing.")
             return 1
-        installer.install(signed, udid)
+        if installer.install(signed, udid):
+            self._delete_signed(signed)
         return 0
 
 
