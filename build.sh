@@ -50,6 +50,12 @@ SCHEMES="${SCHEMES:-rootless rootfull}"
 
 IPA_IN="test/com.facebook.Facebook.ipa"
 
+# Prebuilt, closed-source keychain access-group patch injected into the IPA only
+# (never the .deb) to keep a sideloaded session from being dropped after a few
+# hours — GitHub issue #2. See vendor/blatantsPatch/README.md. Override with
+# BLATANTS_DYLIB="" to build the IPA without it.
+BLATANTS_DYLIB="${BLATANTS_DYLIB-vendor/blatantsPatch/blatantsPatch.dylib}"
+
 mkdir -p packages
 
 # Every run starts from an empty packages/: the previous .deb, .dylib and .ipa
@@ -280,6 +286,19 @@ if [ -f "$IPA_IN" ]; then
 	RENAME_ARGS=()
 	if [ -n "${BUNDLE_ID:-}" ]; then RENAME_ARGS+=(-b "$BUNDLE_ID"); fi
 
+	# The prebuilt keychain patch (issue #2). Injected with its own -f so cyan
+	# rewrites its load path and signs it like any other injected dylib. Missing
+	# or cleared BLATANTS_DYLIB just builds the IPA without it, with a warning.
+	BLATANTS_ARGS=()
+	if [ -n "$BLATANTS_DYLIB" ]; then
+		if [ -f "$BLATANTS_DYLIB" ]; then
+			BLATANTS_ARGS+=(-f "$BLATANTS_DYLIB")
+		else
+			echo "warning: $BLATANTS_DYLIB not found — building the IPA without the" >&2
+			echo "         keychain patch; sideloaded sessions may be dropped (issue #2)." >&2
+		fi
+	fi
+
 	# Safari web extensions bundled into the app's PlugIns (e.g. "Open in
 	# Facebook", which reopens facebook.com links from Safari in the app). Each
 	# is built from source under OpenInFacebookSafariExtension/*/Makefile; cyan
@@ -339,6 +358,7 @@ if [ -f "$IPA_IN" ]; then
 	# instead of tripping `set -u` on bash < 4.4 (the macOS runner's bash), where a
 	# plain "${arr[@]}" on an empty array is treated as an unbound variable.
 	cyan -i "$IPA_IN" -o "$IPA_OUT" -f "$DEB_INJECT" \
+		"${BLATANTS_ARGS[@]+"${BLATANTS_ARGS[@]}"}" \
 		"${LOGOS[@]+"${LOGOS[@]}"}" \
 		"${PLUGINS[@]+"${PLUGINS[@]}"}" \
 		"${MERGE_ARGS[@]+"${MERGE_ARGS[@]}"}" \

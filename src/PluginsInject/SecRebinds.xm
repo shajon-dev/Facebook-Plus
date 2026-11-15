@@ -1,18 +1,17 @@
 // Rebinds the SecItem* keychain functions (via fishhook) so a re-signed app's
 // own keychain I/O lands in an access group it actually holds.
 //
-// The rule, in one sentence: **never leave a query asking for an access group
-// this process cannot possibly hold, and never move a query that already asks
-// for one it can.**
+// The rule: never leave a query asking for an access group this process cannot
+// hold, and never move a query that already asks for one it can.
 //
-// That matters because fishhook rebinds the symbol process-wide, so these shims
-// see the keychain traffic of the system and auth frameworks running inside
-// Facebook (Accounts, AuthKit, SafariServices, the Messenger hand-off) as well.
-// Those callers ask for groups they are entitled to, and moving the group turns
-// a hit into errSecItemNotFound or -34018 errSecMissingEntitlement — Facebook's
-// own code logs that and degrades, a system caller is free to treat it as fatal,
-// which is the suspected cause of GitHub issue #13 (tapping Message on a
-// profile killed the app). Hence the three outcomes below.
+// fishhook rebinds the symbol process-wide, so these shims also see the keychain
+// traffic of the system and auth frameworks running inside Facebook (Accounts,
+// AuthKit, SafariServices, the Messenger hand-off). Those callers ask for groups
+// they are entitled to, and moving the group turns a hit into errSecItemNotFound
+// or -34018 errSecMissingEntitlement — Facebook's own code logs that and
+// degrades, and a system caller may treat it as fatal (the suspected cause of
+// GitHub issue #13, where tapping Message on a profile killed the app). Hence
+// the three outcomes below.
 //
 // WHAT HAPPENS TO A QUERY
 //
@@ -27,7 +26,7 @@
 //   * it names a com.apple.* group — system owned (com.apple.token,
 //     com.apple.accounts.*.defaultaccess, …). Left exactly as it is: that is a
 //     system or auth framework asking on its own behalf, and the issue-#13 fix.
-//   * it names the group we resolved — left alone, the rewrite was a no-op.
+//   * it names the resolved group — left alone, the rewrite was a no-op.
 //   * it names NO group — pinned to the resolved group, so everything a
 //     re-signed app writes and reads back lands in one group it holds instead
 //     of whichever group the keychain picks by default. This is the case the
@@ -41,7 +40,7 @@
 // It used to. Passing those queries through untouched was added with the
 // issue-#13 narrowing, on the reasoning that they are caller-owned items a
 // rewrite can only break. In the notification extension that reasoning is
-// exactly backwards: disassembling NotificationServiceExtension (Facebook
+// backwards: disassembling NotificationServiceExtension (Facebook
 // 586.0.0) shows kSecUseDataProtectionKeychain is loaded in the *same*
 // dictionary build as kSecAttrAccessGroup, four instructions apart, and the
 // only code that does it is Meta's own Swift keychain stores — the push-notif
@@ -59,11 +58,10 @@
 //
 // It used to be resolved once, eagerly, in the constructor, and a failure there
 // was cached for the life of the process. An extension woken by a push on a
-// locked device cannot read or add a keychain item, so it failed there and then
+// locked device cannot read or add a keychain item, so it failed there and
 // never had a group at all. Resolution now happens on first use, under a lock,
-// and is cached only on success — the same shape zxPluginsInject-derived
-// libraries settled on. The probe calls the *original* SecItem* functions so
-// running it from inside a shim does not recurse.
+// and is cached only on success. The probe calls the *original* SecItem*
+// functions so running it from inside a shim does not recurse.
 //
 // WHY A FAILED LOOKUP STRIPS THE GROUP RATHER THAN PASSING IT THROUGH
 //
@@ -86,10 +84,11 @@
 // below mirror kSuiteName in src/Core/FBPPrefs.m and FBPKeyKeychainRebind /
 // FBPSettingsDidChangeNotification in src/Core/FBPlus.m. In the extension that
 // read finds nothing (an appex has its own preferences domain) and so falls
-// back to on, which is what keeps turning the switch off in the app from
-// disabling the extension's session lookup.
+// back to on, so turning the switch off in the app does not disable the
+// extension's session lookup.
 
 #import <Security/Security.h>
+#import <mach-o/dyld.h>
 
 #import "Header.h"
 #import "../../fishhook/fishhook.h"
@@ -141,12 +140,12 @@ static void primeKeychainRebindPref() {
 // routinely happens with the device locked — a WhenUnlocked probe item is
 // unreadable there, the probe fails, and the extension loses the access group
 // it needs. The account name carries ".afu" so an item left behind by an
-// earlier (WhenUnlocked) build is not what we read back.
+// earlier (WhenUnlocked) build is not read back instead.
 static NSString *const kProbeAccount = @"com.shajon.fbplus.accessGroupProbe.afu";
 
-// Ask the keychain where an item with no explicit access group actually lands.
-// This is ground truth — whatever the entitlements say, this is the group the
-// app's own untagged keychain traffic ends up in.
+// Ask the keychain where an item with no explicit access group lands. This is
+// ground truth — whatever the entitlements say, this is the group the app's own
+// untagged keychain traffic ends up in.
 //
 // It calls the ORIGINAL SecItem* functions, not the rebound ones, because this
 // runs from inside the shims: going through the shims would recurse.
@@ -255,7 +254,7 @@ static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query, BOOL 
 
 	id group = query[(__bridge NSString *)kSecAttrAccessGroup];
 
-	// Present but not a group name we can reason about: leave it exactly as it
+	// Present but not a usable group name: leave it as it
 	// is rather than pinning over it.
 	if (group && (![group isKindOfClass:NSString.class] || ((NSString *)group).length == 0)) {
 		return FBPAccessGroupLeave;
@@ -269,7 +268,7 @@ static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query, BOOL 
 
 		NSString *ours = fbpResolvedAccessGroup();
 
-		// Already where we would put it.
+		// Already the resolved group.
 		if (ours.length > 0 && [requested isEqualToString:ours]) {
 			return FBPAccessGroupLeave;
 		}
@@ -305,8 +304,8 @@ static NSDictionary *effectiveDictionary(CFDictionaryRef query, BOOL injectWhenM
 		}
 		case FBPAccessGroupStrip: {
 			NSMutableDictionary *rewritten = [incoming mutableCopy];
-			// Assigning nil through the subscript removes the key, which is
-			// what makes the keychain search every entitled group.
+			// Assigning nil through the subscript removes the key, so the
+			// keychain searches every entitled group.
 			rewritten[(__bridge NSString *)kSecAttrAccessGroup] = nil;
 			return rewritten;
 		}
@@ -392,7 +391,34 @@ static OSStatus fbpSecItemDelete(CFDictionaryRef query) {
 	}
 }
 
+// YES if the vendored keychain patch blatantsPatch is in the image list. The
+// patched IPA injects blatantsPatch.dylib (vendor/blatantsPatch/) into the MAIN
+// app to keep a sideloaded session from being dropped (issue #2); it rebinds the
+// same SecItem* functions. Two rebinders fighting over one symbol is
+// unpredictable, so when it is present this rebind stands down and lets it own
+// the main app's keychain. All images are mapped before any initializer runs, so
+// the constructor sees it even if blatantsPatch's own initializer has not run
+// yet. The notification extension is a separate process this dylib is NOT
+// injected into, so there this returns NO and the rebind installs as usual —
+// issue #12 notifications keep working.
+static BOOL blatantsPatchPresent(void) {
+	uint32_t count = _dyld_image_count();
+	for (uint32_t i = 0; i < count; i++) {
+		const char *name = _dyld_get_image_name(i);
+		if (name && strstr(name, "blatantsPatch")) return YES;
+	}
+	return NO;
+}
+
 void rebindSecFuncs() {
+	// Defer to the injected third-party patch when present rather than rebinding
+	// the same functions twice (see blatantsPatchPresent).
+	if (blatantsPatchPresent()) {
+		PILog(@"blatantsPatch present — leaving the keychain rebind to it");
+		FBPDiagLog(@"blatantsPatch present — SecItem rebind not installed by us");
+		return;
+	}
+
 	// Warmed here, before the shims can be reached, so the preference read never
 	// runs inside a keychain call.
 	primeKeychainRebindPref();
