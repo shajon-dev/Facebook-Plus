@@ -274,9 +274,10 @@ What this means for you:
 
 ## 🗺️ Roadmap & Credits
 
-Planned features and fixes, together with the project's provenance, third-party
-attributions, and credits, are documented in **[ROADMAP_AND_CREDITS.md](ROADMAP_AND_CREDITS.md)**.
-Contributions and suggestions are welcome — open an issue or a pull request.
+Planned features and fixes are tracked in **[TODO.md](TODO.md)**. The project's
+provenance, third-party attributions, and credits are documented in
+**[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Contributions and
+suggestions are welcome — open an issue or a pull request.
 
 ## 🔒 Security & Disclaimer
 
