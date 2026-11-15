@@ -7,9 +7,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// A single HUD pill.
 ///
-/// Three shapes: a plain message, a message with a success/failure glyph, and
-/// an indeterminate-or-determinate progress row with an optional stop button.
-@interface FBPToastView : UIVisualEffectView
+/// Three shapes: a plain message, a message with the app logo (or a failure
+/// glyph), and an indeterminate-or-determinate progress row with an optional
+/// stop button.
+@interface FBPToastView : UIView
 
 @property (nonatomic, copy, nullable) NSString *title;
 @property (nonatomic, readonly) BOOL isProcessing;
