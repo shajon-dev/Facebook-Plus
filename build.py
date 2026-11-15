@@ -468,11 +468,18 @@ class IpaInjector:
 
         bundle_id = os.environ.get("BUNDLE_ID")
 
-        cmd = [cyan, "-i", str(self.paths.ipa_in), "-o", str(ipa_out), "-f", str(rootless_deb)]
+        # Every injectable goes under ONE -f. cyan's -f replaces on repeat rather
+        # than appending, so a second -f would silently drop the first — which is
+        # exactly how the tweak .deb went missing once the keychain patch was
+        # added as its own -f. Order: tweak .deb, keychain patch, app-icon PNGs,
+        # Safari extension(s).
+        inject = [str(rootless_deb)]
         if blatants:
-            cmd += ["-f", str(blatants)]
-        cmd += [str(logo) for logo in logos]
-        cmd += [str(appex) for appex in plugins]
+            inject.append(str(blatants))
+        inject += [str(logo) for logo in logos]
+        inject += [str(appex) for appex in plugins]
+
+        cmd = [cyan, "-i", str(self.paths.ipa_in), "-o", str(ipa_out), "-f", *inject]
         if icon_merge:
             cmd += ["-l", str(icon_merge)]
         if bundle_id:
@@ -553,13 +560,6 @@ class Signer:
             return None
         return {"p12": p12, "profile": profile, "password": password}
 
-    def _bridge(self):
-        # The build publishes it here; theos's own output is the fallback so a bare
-        # `make -C FBPNotifyBridge/src` is enough on its own.
-        bridge = self.paths.bridge_dylib
-        if not bridge.is_file():
-            bridge = self.paths.bridge_built
-        return bridge if bridge.is_file() else None
 
     def drop_nse(self, ipa):
         # A copy without the notification service extension, for a certificate
@@ -606,22 +606,15 @@ class Signer:
         if out.exists():
             out.unlink()
 
-        # NSE session bridge. The released IPA already carries the bridge inside
-        # the appex; -P tells zsign to inject the -l dylibs into app extensions as
-        # well as the main binary. Harmless when the load command is already there.
-        bridge_args = []
-        bridge = self._bridge()
-        if bridge:
-            bridge_args = ["-l", str(bridge), "-w", "-P"]
-            Log.info("Bridge: " + str(bridge) + " (injected into app extensions)")
-        else:
-            Log.warn("NSE session bridge not built — signing without it.")
-
+        # The IPA already carries the NSE session bridge, injected once at build
+        # time (NSEBridge.inject). Signing only re-signs it — it never re-injects,
+        # so install is install. (drop_nse above removes the appex entirely for a
+        # certificate without the App Group entitlement.)
         Log.section()
         Log.info("Signing " + source + " for device " + (udid or "(sole certificate)"))
         Log.info("Certificate: " + creds["p12"].name)
         cmd = [zsign, "-f", "-k", str(creds["p12"]), "-p", creds["password"], "-m", str(creds["profile"]),
-               *bridge_args, "-o", str(out), source]
+               "-o", str(out), source]
         subprocess.run(cmd, cwd=str(self.paths.root), check=True)
         if in_place:
             out.replace(signed)
