@@ -199,3 +199,14 @@
 "toast.pushKeysReset" = "Push keys cleared (%lu) — reopen Facebook";
 "row.notifclientsync.title" = "Fetch Missing Notifications";
 "row.notifclientsync.desc" = "When only the badge moves, pull the notification and show it";
+
+/* About card + Logs (added) */
+"info.iosVersion" = "iOS Version";
+"info.deviceName" = "Device";
+"footer.logs" = "Export the tweak's diagnostic log to attach to a bug report, or clear it.";
+"row.logexport.title" = "Export Logs";
+"row.logexport.desc" = "Share the diagnostic log as a text file.";
+"row.logclear.title" = "Clear Logs";
+"row.logclear.desc" = "Empty the recorded diagnostic log.";
+"toast.logCleared" = "Logs cleared.";
+"toast.logEmpty" = "No logs recorded yet.";

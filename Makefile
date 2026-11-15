@@ -19,6 +19,7 @@ FacebookPlus_FILES = \
 	src/Core/FBPlus.m \
 	src/Core/FBPPrefs.m \
 	src/Core/FBPResources.m \
+	src/Core/FBPTrace.m \
 	src/Core/FBPEntry.xm \
 	src/UI/Toast/FBPToastWindow.m \
 	src/UI/Toast/FBPToastView.m \

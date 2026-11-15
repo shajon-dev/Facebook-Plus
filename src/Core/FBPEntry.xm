@@ -73,6 +73,11 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
         // Registers defaults before any hook can read a preference.
         (void)FBPPrefs.shared;
 
+        // Prime the local device-name lookup and open the diagnostic log.
+        FBPResolveDeviceName();
+        FBPTraceLine(@"launch · on %@ into %@", FBPDeviceDisplayName(),
+                     NSBundle.mainBundle.bundleIdentifier);
+
         // Installs what is available now, and again as each framework arrives.
         FBPInstallHooks();
         _dyld_register_func_for_add_image(&FBPImageDidLoad);

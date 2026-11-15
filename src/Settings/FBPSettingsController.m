@@ -20,6 +20,7 @@
 #import "FBPLanguageController.h"
 #import "FBPWelcomeController.h"
 #import "FBPUpdateChecker.h"
+#import "FBPTrace.h"
 
 #import <objc/runtime.h>
 #import <Security/Security.h>
@@ -60,6 +61,8 @@ static NSString *const kActionLanguage    = @"language";
 static NSString *const kActionCheckUpdate = @"checkUpdate";
 static NSString *const kActionDownloads   = @"downloads";
 static NSString *const kActionResetPush  = @"resetPushKeys";
+static NSString *const kActionLogExport  = @"logExport";
+static NSString *const kActionLogClear   = @"logClear";
 
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
@@ -480,6 +483,12 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                              FBPL(@"row.logdownloadqualities.title"),
                              FBPL(@"row.logdownloadqualities.desc"), @"ladybug.fill"),
             ]),
+            FBPSection(FBPL(@"footer.logs"), @[
+                FBPActionRow(kActionLogExport, FBPL(@"row.logexport.title"),
+                             FBPL(@"row.logexport.desc"), @"square.and.arrow.up", NO),
+                FBPActionRow(kActionLogClear, FBPL(@"row.logclear.title"),
+                             FBPL(@"row.logclear.desc"), @"trash.fill", NO),
+            ]),
             FBPSection(FBPL(@"footer.resetpushkeys"), @[
                 FBPSwitchRow(FBPKeyKeychainRebind, FBPL(@"row.keychainrebind.title"), FBPL(@"row.keychainrebind.desc"), @"key.fill"),
                 FBPSwitchRow(FBPKeyNotifClientSync, FBPL(@"row.notifclientsync.title"),
@@ -638,6 +647,11 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
         [self confirmResetPushKeys];
     } else if ([action isEqualToString:kActionReset]) {
         [self confirmReset];
+    } else if ([action isEqualToString:kActionLogExport]) {
+        [self exportLogs];
+    } else if ([action isEqualToString:kActionLogClear]) {
+        FBPLogClear();
+        [FBPToastManager.shared showMessage:FBPL(@"toast.logCleared") success:YES];
     }
 }
 
@@ -657,6 +671,26 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
 }
 
 #pragma mark Actions
+
+// Write the in-memory diagnostic log to a text file and hand it to the share
+// sheet, so a bug report can carry it.
+- (void)exportLogs {
+    if (FBPLogLineCount() == 0) {
+        [FBPToastManager.shared showMessage:FBPL(@"toast.logEmpty") success:NO];
+        return;
+    }
+    NSURL *file = FBPLogWriteExportFile();
+    if (!file) {
+        [FBPToastManager.shared showMessage:FBPL(@"toast.logEmpty") success:NO];
+        return;
+    }
+    UIActivityViewController *share =
+        [[UIActivityViewController alloc] initWithActivityItems:@[file] applicationActivities:nil];
+    share.popoverPresentationController.sourceView = self.view;
+    share.popoverPresentationController.sourceRect =
+        CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 0, 0);
+    [self presentViewController:share animated:YES completion:nil];
+}
 
 - (void)confirmReset {
     UIAlertController *alert =
@@ -743,18 +777,23 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
         ?: [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"]
         ?: @"—";
     NSString *plusVersion = FBP_VERSION;
+    NSString *osVersion = [NSString stringWithFormat:@"%@ %@",
+                           UIDevice.currentDevice.systemName,
+                           UIDevice.currentDevice.systemVersion];
 
     _sections = @[
         categoryRows,
-        @[
-            FBPInfoRow(FBPL(@"info.fbVersion"), fbVersion, @"facebook", nil),
-            FBPInfoRow(FBPL(@"info.fbPlusVersion"), plusVersion, @"logo", nil),
-        ],
+        // One about card: who made it, where to reach it, and the versions and
+        // device a bug report needs.
         @[
             FBPInfoRow(FBPL(@"info.developer"), @"S. SHAJON", @"people", nil),
             FBPInfoRow(FBPL(@"info.github"), [FBPUpdateChecker activeGitHubOwner], @"github",
                        [FBPUpdateChecker githubRepoURL]),
             FBPInfoRow(FBPL(@"info.telegram"), @"@ReFacebookPlus", @"telegram", kTelegramURL),
+            FBPInfoRow(FBPL(@"info.fbPlusVersion"), plusVersion, @"logo", nil),
+            FBPInfoRow(FBPL(@"info.fbVersion"), fbVersion, @"facebook", nil),
+            FBPInfoRow(FBPL(@"info.iosVersion"), osVersion, @"gear", nil),
+            FBPInfoRow(FBPL(@"info.deviceName"), FBPDeviceDisplayName(), @"iphone", nil),
         ],
         // Several options only take effect on a fresh launch, so this sits right
         // under the info cards as the one-tap way to force-close the app.

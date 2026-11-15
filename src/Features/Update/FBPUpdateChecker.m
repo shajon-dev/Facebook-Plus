@@ -180,9 +180,12 @@ static NSInteger FBPVersionCompare(NSString *a, NSString *b) {
 + (void)checkManuallyFromViewController:(UIViewController *)controller {
     [self fetchLatest:^(NSString *version, NSString *changelog, NSError *error) {
         if (error || !version) {
+            FBPDiagFail(@"update", @"manual check failed: %@",
+                        error.localizedDescription ?: @"no version in response");
             [FBPToastManager.shared showMessage:FBPL(@"update.failed") success:NO];
             return;
         }
+        FBPDiag(@"update", @"latest %@, current %@", version, FBP_VERSION);
         if (FBPVersionCompare(version, FBP_VERSION) > 0) {
             [self presentUpdateForVersion:version changelog:changelog];
         } else {

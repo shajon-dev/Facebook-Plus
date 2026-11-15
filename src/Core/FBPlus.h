@@ -4,15 +4,23 @@
 
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
+#import "FBPTrace.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Logging
 
+// Every FBPLog line is recorded to the exportable diagnostic log (FBPTrace), in
+// release as well as debug, so a bug report can carry it; debug builds also
+// print to the console.
 #ifdef DEBUG
-#define FBPLog(fmt, ...) NSLog(@"[Facebook Plus] " fmt, ##__VA_ARGS__)
+#define FBPLog(fmt, ...)                                                       \
+    do {                                                                       \
+        NSLog(@"[Facebook Plus] " fmt, ##__VA_ARGS__);                          \
+        FBPTraceEmit([NSString stringWithFormat:(fmt), ##__VA_ARGS__]);         \
+    } while (0)
 #else
-#define FBPLog(fmt, ...) do {} while (0)
+#define FBPLog(fmt, ...) FBPTraceEmit([NSString stringWithFormat:(fmt), ##__VA_ARGS__])
 #endif
 
 #pragma mark - Deferred hook installation
