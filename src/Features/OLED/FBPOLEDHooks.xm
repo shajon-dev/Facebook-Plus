@@ -3,12 +3,23 @@
 // An enhancement of dark mode, not a light→dark forcer. OLED follows the iOS
 // system appearance: while the toggle is on it engages when iOS is in Dark Mode
 // and disengages in Light Mode. In light mode it is inert and leaves every
-// surface alone. Earlier builds forced every window dark whenever the toggle was
-// on, blackening a light-mode user's whole app — reported as "OLED stays enabled
-// even in light mode". The gate is now FBPOLEDActive(): the toggle AND the iOS
-// system appearance (FBPSystemIsDark, read from the screen's trait collection).
-// The per-colour darkness tests still run, so even in Dark Mode only genuinely
-// dark surfaces are blackened.
+// surface alone. The gate is FBPOLEDActive(): the toggle AND the iOS system
+// appearance (FBPSystemIsDark, read from the screen's trait collection). The
+// per-colour darkness tests still run, so even in Dark Mode only genuinely dark
+// surfaces are blackened.
+//
+// Reverting cleanly is as important as blackening. Facebook does not repaint
+// several of the surfaces OLED touches — a view's own layer colour, a
+// sublayer's gradient/shape/plain colour, and above all the top header's
+// navigation-bar appearance (which replaces appearance objects outright and
+// persists until something sets them again). So each surface's original value
+// is stashed in an associated object the first time it is darkened and put back
+// the moment OLED disengages — turning the toggle off, or switching iOS to Light.
+// Facebook's own colours are dynamic and are saved unresolved, so a restored
+// colour tracks the live appearance by itself. Without this the header (and any
+// still-mounted card) stayed black after switching to Light, which read as "OLED
+// won't turn off". A trait-change hook re-runs the layout logic on a live
+// Light↔Dark switch, and a relayout nudge does the same when the toggle changes.
 //
 // The two surfaces that used to stay grey — the top app header and the profile's
 // "Add to story / Edit profile" panel — are painted by mechanisms a plain
@@ -144,7 +155,7 @@ static BOOL FBPOLEDSkip(UIView *view) {
     return [NSStringFromClass([view class]) hasPrefix:@"FBP"];
 }
 
-#pragma mark - Layer sweeping
+#pragma mark - Black that keeps alpha
 
 /// Black that keeps the source colour's alpha. A translucent scrim — an alert's
 /// dimming view, a bottom-sheet backdrop — must stay translucent; forcing it to
@@ -158,6 +169,127 @@ static UIColor *FBPBlackKeepingAlpha(UIColor *color) {
 static CGColorRef FBPBlackCGKeepingAlpha(CGColorRef cg) {
     CGFloat alpha = cg ? CGColorGetAlpha(cg) : 1.0;
     return [UIColor colorWithWhite:0.0 alpha:alpha].CGColor;
+}
+
+#pragma mark - Save / restore
+
+// OLED paints surfaces Facebook will not repaint on its own, so each is stashed
+// before it is darkened and put back when OLED disengages. A view is flagged as
+// "touched" so a relayout while OLED is off can skip the vast majority of views
+// that were never modified.
+static const void *kFBPTouched     = &kFBPTouched;     // UIView: OLED modified it
+static const void *kFBPSavedViewBG = &kFBPSavedViewBG; // UIView: original backgroundColor
+static const void *kFBPSavedLayerBG = &kFBPSavedLayerBG;// CALayer: original backgroundColor
+static const void *kFBPSavedColors = &kFBPSavedColors; // CAGradientLayer: original colors
+static const void *kFBPSavedFill   = &kFBPSavedFill;   // CAShapeLayer: original fillColor
+static const void *kFBPSavedNav    = &kFBPSavedNav;    // UINavigationBar: original appearance
+
+static void FBPMarkTouched(UIView *view) {
+    objc_setAssociatedObject(view, kFBPTouched, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static BOOL FBPWasTouched(UIView *view) {
+    return objc_getAssociatedObject(view, kFBPTouched) != nil;
+}
+static void FBPClearTouched(UIView *view) {
+    objc_setAssociatedObject(view, kFBPTouched, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+// -- view background (Facebook's dynamic colour, saved unresolved) --
+static void FBPSaveViewBG(UIView *view, UIColor *orig) {
+    if (!objc_getAssociatedObject(view, kFBPSavedViewBG)) {
+        objc_setAssociatedObject(view, kFBPSavedViewBG, orig ?: (id)NSNull.null,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+static void FBPForgetViewBG(UIView *view) {
+    objc_setAssociatedObject(view, kFBPSavedViewBG, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static BOOL FBPRestoreViewBG(UIView *view) {
+    id saved = objc_getAssociatedObject(view, kFBPSavedViewBG);
+    if (!saved) return NO;
+    view.backgroundColor = (saved == NSNull.null) ? nil : saved;
+    FBPForgetViewBG(view);
+    return YES;
+}
+
+// -- layer background (concrete CGColor, boxed as UIColor) --
+static void FBPSaveLayerBG(CALayer *layer) {
+    if (objc_getAssociatedObject(layer, kFBPSavedLayerBG)) return;
+    id box = layer.backgroundColor ? (id)[UIColor colorWithCGColor:layer.backgroundColor]
+                                   : (id)NSNull.null;
+    objc_setAssociatedObject(layer, kFBPSavedLayerBG, box, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static void FBPRestoreLayerBG(CALayer *layer) {
+    id saved = objc_getAssociatedObject(layer, kFBPSavedLayerBG);
+    if (!saved) return;
+    layer.backgroundColor = (saved == NSNull.null) ? NULL : ((UIColor *)saved).CGColor;
+    objc_setAssociatedObject(layer, kFBPSavedLayerBG, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+// -- gradient colours --
+static void FBPSaveGradient(CAGradientLayer *g) {
+    if (objc_getAssociatedObject(g, kFBPSavedColors)) return;
+    NSMutableArray *orig = [NSMutableArray arrayWithCapacity:g.colors.count];
+    for (id entry in g.colors) {
+        [orig addObject:[UIColor colorWithCGColor:(__bridge CGColorRef)entry]];
+    }
+    objc_setAssociatedObject(g, kFBPSavedColors, orig, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static void FBPRestoreGradient(CAGradientLayer *g) {
+    NSArray<UIColor *> *saved = objc_getAssociatedObject(g, kFBPSavedColors);
+    if (!saved) return;
+    NSMutableArray *cg = [NSMutableArray arrayWithCapacity:saved.count];
+    for (UIColor *c in saved) [cg addObject:(__bridge id)c.CGColor];
+    g.colors = cg;
+    objc_setAssociatedObject(g, kFBPSavedColors, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+// -- shape fill --
+static void FBPSaveFill(CAShapeLayer *s) {
+    if (objc_getAssociatedObject(s, kFBPSavedFill)) return;
+    id box = s.fillColor ? (id)[UIColor colorWithCGColor:s.fillColor] : (id)NSNull.null;
+    objc_setAssociatedObject(s, kFBPSavedFill, box, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static void FBPRestoreFill(CAShapeLayer *s) {
+    id saved = objc_getAssociatedObject(s, kFBPSavedFill);
+    if (!saved) return;
+    s.fillColor = (saved == NSNull.null) ? NULL : ((UIColor *)saved).CGColor;
+    objc_setAssociatedObject(s, kFBPSavedFill, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+// -- navigation bar appearance (dynamic colours, restored by reference) --
+static void FBPSaveNavBar(UINavigationBar *bar) {
+    if (objc_getAssociatedObject(bar, kFBPSavedNav)) return;
+    NSMutableDictionary *s = [NSMutableDictionary dictionary];
+    s[@"translucent"] = @(bar.translucent);
+    s[@"barTint"]     = bar.barTintColor ?: NSNull.null;
+    s[@"bg"]          = bar.backgroundColor ?: NSNull.null;
+    if (@available(iOS 13.0, *)) {
+        s[@"standard"] = bar.standardAppearance ?: NSNull.null;
+        s[@"compact"]  = bar.compactAppearance ?: NSNull.null;
+        s[@"scroll"]   = bar.scrollEdgeAppearance ?: NSNull.null;
+        if (@available(iOS 15.0, *)) {
+            s[@"compactScroll"] = bar.compactScrollEdgeAppearance ?: NSNull.null;
+        }
+    }
+    objc_setAssociatedObject(bar, kFBPSavedNav, s, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static void FBPRestoreNavBar(UINavigationBar *bar) {
+    NSDictionary *s = objc_getAssociatedObject(bar, kFBPSavedNav);
+    if (!s) return;
+    bar.translucent  = [s[@"translucent"] boolValue];
+    bar.barTintColor = s[@"barTint"] == NSNull.null ? nil : s[@"barTint"];
+    bar.backgroundColor = s[@"bg"] == NSNull.null ? nil : s[@"bg"];
+    if (@available(iOS 13.0, *)) {
+        bar.standardAppearance = s[@"standard"] == NSNull.null ? nil : s[@"standard"];
+        bar.compactAppearance  = s[@"compact"] == NSNull.null ? nil : s[@"compact"];
+        bar.scrollEdgeAppearance = s[@"scroll"] == NSNull.null ? nil : s[@"scroll"];
+        if (@available(iOS 15.0, *)) {
+            bar.compactScrollEdgeAppearance =
+                s[@"compactScroll"] == NSNull.null ? nil : s[@"compactScroll"];
+        }
+    }
+    objc_setAssociatedObject(bar, kFBPSavedNav, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 #pragma mark - Dividers
@@ -193,18 +325,24 @@ static BOOL FBPViewLooksLikeDivider(UIView *view) {
 }
 
 /// Paints a divider faint-white across the ways Facebook draws its line — the
-/// view's background, its own layer, and any line-drawing sublayer.
+/// view's background, its own layer, and any line-drawing sublayer — saving the
+/// original of each so it is restored when OLED turns off.
 static void FBPLightenDivider(UIView *view) {
     UIColor *light = FBPDividerColor();
+    FBPSaveViewBG(view, view.backgroundColor);
+    FBPSaveLayerBG(view.layer);
     view.backgroundColor = light;
     view.layer.backgroundColor = light.CGColor;
     for (CALayer *sub in [view.layer.sublayers copy]) {
         if ([sub.delegate isKindOfClass:UIView.class]) continue;
         if ([sub isKindOfClass:CAShapeLayer.class]) {
+            FBPSaveFill((CAShapeLayer *)sub);
             ((CAShapeLayer *)sub).fillColor = light.CGColor;
         }
+        FBPSaveLayerBG(sub);
         sub.backgroundColor = light.CGColor;
     }
+    FBPMarkTouched(view);
 }
 
 #pragma mark - Profile avatars
@@ -212,7 +350,9 @@ static void FBPLightenDivider(UIView *view) {
 // A profile avatar stacks an unmasked square image — a low-res placeholder /
 // backing — behind the circular photo. On Facebook's grey cards its grey corners
 // blend in, but on the OLED-black background they poke past the circle as a
-// visible grey "box".
+// visible grey "box". Clipping it to the circle is harmless in Light mode (the
+// photo is circular either way), so this is applied while OLED is active and not
+// reverted.
 //
 // Facebook builds avatars several different ways, but the box always comes from
 // a square image that isn't being clipped to the avatar circle. Two shapes cover
@@ -275,43 +415,75 @@ static void FBPFixAvatarBox(UIView *container) {
     }
 }
 
-/// Blackens the dark colours a view paints *directly onto its own layer's
-/// sublayers* — the gradient/shape/plain CALayers ComponentKit uses for rounded
-/// card backgrounds and Facebook uses for the header fade and status-bar strip.
-/// Layers that merely back a subview are skipped: that subview repaints itself.
-static void FBPBlackenSublayers(CALayer *layer) {
+#pragma mark - Sublayer sweep
+
+/// Blackens (active) or restores (inactive) the colours a view paints *directly
+/// onto its own layer's sublayers* — the gradient/shape/plain CALayers ComponentKit
+/// uses for rounded card backgrounds and Facebook uses for the header fade and
+/// status-bar strip. Layers that merely back a subview are skipped: that subview
+/// repaints itself. On active it flags the owning view touched so a later relayout
+/// while OLED is off knows to visit it.
+static void FBPApplySublayers(CALayer *layer, BOOL active) {
     NSArray<CALayer *> *sublayers = layer.sublayers;
     if (sublayers.count == 0) return;
+    BOOL changed = NO;
     for (CALayer *sub in [sublayers copy]) {
         if ([sub.delegate isKindOfClass:UIView.class]) continue;   // subview's own layer
 
         if ([sub isKindOfClass:CAGradientLayer.class]) {
             CAGradientLayer *gradient = (CAGradientLayer *)sub;
-            NSArray *colors = gradient.colors;
-            BOOL anyDark = NO;
-            for (id entry in colors) {
-                if (FBPCGColorIsDark((__bridge CGColorRef)entry)) { anyDark = YES; break; }
-            }
-            if (anyDark && colors.count) {
-                NSMutableArray *black = [NSMutableArray arrayWithCapacity:colors.count];
+            if (active) {
+                NSArray *colors = gradient.colors;
+                BOOL anyDark = NO;
                 for (id entry in colors) {
-                    [black addObject:(__bridge id)FBPBlackCGKeepingAlpha(
-                                         (__bridge CGColorRef)entry)];
+                    if (FBPCGColorIsDark((__bridge CGColorRef)entry)) { anyDark = YES; break; }
                 }
-                gradient.colors = black;
+                if (anyDark && colors.count) {
+                    FBPSaveGradient(gradient);
+                    NSMutableArray *black = [NSMutableArray arrayWithCapacity:colors.count];
+                    for (id entry in colors) {
+                        [black addObject:(__bridge id)FBPBlackCGKeepingAlpha(
+                                             (__bridge CGColorRef)entry)];
+                    }
+                    gradient.colors = black;
+                    changed = YES;
+                }
+            } else {
+                FBPRestoreGradient(gradient);
             }
             continue;
         }
         if ([sub isKindOfClass:CAShapeLayer.class]) {
             CAShapeLayer *shape = (CAShapeLayer *)sub;
-            if (FBPCGColorIsDark(shape.fillColor))
-                shape.fillColor = FBPBlackCGKeepingAlpha(shape.fillColor);
-            if (FBPCGColorIsDark(shape.backgroundColor))
-                shape.backgroundColor = FBPBlackCGKeepingAlpha(shape.backgroundColor);
+            if (active) {
+                if (FBPCGColorIsDark(shape.fillColor)) {
+                    FBPSaveFill(shape);
+                    shape.fillColor = FBPBlackCGKeepingAlpha(shape.fillColor);
+                    changed = YES;
+                }
+                if (FBPCGColorIsDark(shape.backgroundColor)) {
+                    FBPSaveLayerBG(shape);
+                    shape.backgroundColor = FBPBlackCGKeepingAlpha(shape.backgroundColor);
+                    changed = YES;
+                }
+            } else {
+                FBPRestoreFill(shape);
+                FBPRestoreLayerBG(shape);
+            }
             continue;
         }
-        if (FBPCGColorIsDark(sub.backgroundColor))
-            sub.backgroundColor = FBPBlackCGKeepingAlpha(sub.backgroundColor);
+        if (active) {
+            if (FBPCGColorIsDark(sub.backgroundColor)) {
+                FBPSaveLayerBG(sub);
+                sub.backgroundColor = FBPBlackCGKeepingAlpha(sub.backgroundColor);
+                changed = YES;
+            }
+        } else {
+            FBPRestoreLayerBG(sub);
+        }
+    }
+    if (active && changed && [layer.delegate isKindOfClass:UIView.class]) {
+        FBPMarkTouched((UIView *)layer.delegate);
     }
 }
 
@@ -320,9 +492,12 @@ static void FBPBlackenSublayers(CALayer *layer) {
 /// Opaque black appearance for the real UINavigationBar the header hosts
 /// (_replacementNavigationBar). Its background is drawn through
 /// UINavigationBarAppearance / _UIBarBackground (a blur), not -backgroundColor,
-/// so the appearance objects must be reconfigured and the blur flattened.
+/// so the appearance objects must be reconfigured and the blur flattened. The
+/// original appearance and the blur colours are saved first so FBPRestoreNavBar
+/// (and the header restore walk) can put the live-appearance header back.
 static void FBPBlackNavigationBar(UINavigationBar *bar) {
     if (!bar) return;
+    FBPSaveNavBar(bar);
     bar.translucent = NO;
     bar.barTintColor = UIColor.blackColor;
     bar.backgroundColor = UIColor.blackColor;
@@ -341,48 +516,151 @@ static void FBPBlackNavigationBar(UINavigationBar *bar) {
     // Flatten the _UIBarBackground blur that sits behind the bar's content.
     for (UIView *sub in bar.subviews) {
         if ([NSStringFromClass(sub.class) containsString:@"BarBackground"]) {
+            FBPSaveViewBG(sub, sub.backgroundColor);
+            FBPMarkTouched(sub);
             sub.backgroundColor = UIColor.blackColor;
             for (UIView *inner in sub.subviews) {
+                FBPSaveViewBG(inner, inner.backgroundColor);
+                FBPMarkTouched(inner);
                 inner.backgroundColor = UIColor.blackColor;
                 if ([inner isKindOfClass:UIVisualEffectView.class]) {
-                    ((UIVisualEffectView *)inner).contentView.backgroundColor =
-                        UIColor.blackColor;
+                    UIView *content = ((UIVisualEffectView *)inner).contentView;
+                    FBPSaveViewBG(content, content.backgroundColor);
+                    FBPMarkTouched(content);
+                    content.backgroundColor = UIColor.blackColor;
                 }
             }
         }
     }
 }
 
-/// Walks the header's sub-tree and blackens every grey surface it finds — dark
-/// view backgrounds, dark layer/gradient/shape colours, the hosted UINavigationBar
-/// and any blur — while leaving photos (nil/clear backgrounds) and coloured
-/// accents untouched, so the profile cover and the blue "Add to story" button
-/// keep their look.
-static void FBPBlackenHeaderTree(UIView *view, int depth) {
+/// Walks the header's sub-tree and blackens (active) or restores (inactive) every
+/// grey surface — dark view backgrounds, dark layer/gradient/shape colours, the
+/// hosted UINavigationBar and any blur — while leaving photos (nil/clear
+/// backgrounds) and coloured accents untouched, so the profile cover and the blue
+/// "Add to story" button keep their look. The restore pass runs regardless of the
+/// per-view touched flag because the header itself is a single, long-lived view
+/// whose children must be put back the moment OLED turns off.
+static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
     if (!view || depth > 12) return;
     for (UIView *sub in [view.subviews copy]) {
         if (FBPOLEDSkip(sub)) continue;
 
         if ([sub isKindOfClass:UINavigationBar.class]) {
-            FBPBlackNavigationBar((UINavigationBar *)sub);
+            if (active) FBPBlackNavigationBar((UINavigationBar *)sub);
+            else        FBPRestoreNavBar((UINavigationBar *)sub);
         } else if ([sub isKindOfClass:UIVisualEffectView.class]) {
-            // A blur in the header reads as grey; cover it flat black.
-            sub.backgroundColor = UIColor.blackColor;
-            ((UIVisualEffectView *)sub).contentView.backgroundColor = UIColor.blackColor;
-            FBPBlackenSublayers(sub.layer);
+            UIView *content = ((UIVisualEffectView *)sub).contentView;
+            if (active) {
+                // A blur in the header reads as grey; cover it flat black.
+                FBPSaveViewBG(sub, sub.backgroundColor);
+                FBPSaveViewBG(content, content.backgroundColor);
+                FBPMarkTouched(sub);
+                sub.backgroundColor = UIColor.blackColor;
+                content.backgroundColor = UIColor.blackColor;
+                FBPApplySublayers(sub.layer, YES);
+            } else {
+                FBPRestoreViewBG(sub);
+                FBPRestoreViewBG(content);
+                FBPApplySublayers(sub.layer, NO);
+            }
             continue;   // don't recurse into the effect view's content
         } else {
-            if (FBPColorIsDark(FBPResolve(sub.backgroundColor))) {
-                sub.backgroundColor = FBPBlackKeepingAlpha(sub.backgroundColor);
-            }
-            if (FBPCGColorIsDark(sub.layer.backgroundColor)) {
-                sub.layer.backgroundColor =
-                    FBPBlackCGKeepingAlpha(sub.layer.backgroundColor);
+            if (active) {
+                if (FBPColorIsDark(FBPResolve(sub.backgroundColor))) {
+                    FBPSaveViewBG(sub, sub.backgroundColor);
+                    FBPMarkTouched(sub);
+                    sub.backgroundColor = FBPBlackKeepingAlpha(sub.backgroundColor);
+                }
+                if (FBPCGColorIsDark(sub.layer.backgroundColor)) {
+                    FBPSaveLayerBG(sub.layer);
+                    FBPMarkTouched(sub);
+                    sub.layer.backgroundColor =
+                        FBPBlackCGKeepingAlpha(sub.layer.backgroundColor);
+                }
+            } else {
+                FBPRestoreViewBG(sub);
+                FBPRestoreLayerBG(sub.layer);
             }
         }
-        FBPBlackenSublayers(sub.layer);
-        FBPBlackenHeaderTree(sub, depth + 1);
+        FBPApplySublayers(sub.layer, active);
+        FBPApplyHeaderTree(sub, depth + 1, active);
     }
+}
+
+#pragma mark - Per-view apply
+
+/// The body of UIView -layoutSubviews under OLED. Active: blacken this view's
+/// background / layer / sublayers and (for avatars) clip the placeholder box.
+/// Inactive: put back everything OLED saved, then drop the touched flag. Views
+/// OLED never modified short-circuit immediately, so an off/Light relayout stays
+/// cheap across the whole hierarchy.
+static void FBPApplyView(UIView *view, BOOL active) {
+    if (FBPOLEDSkip(view)) return;
+
+    if (!active) {
+        if (!FBPWasTouched(view)) return;
+        FBPRestoreViewBG(view);
+        FBPRestoreLayerBG(view.layer);
+        FBPApplySublayers(view.layer, NO);
+        FBPClearTouched(view);
+        return;
+    }
+
+    // Dividers are lightened, not blackened, so posts/rows stay visually separated.
+    if (FBPViewLooksLikeDivider(view)) {
+        FBPLightenDivider(view);
+        return;
+    }
+
+    // Round the square placeholder stacked behind a circular profile avatar, so
+    // its grey corners don't show as a box against the OLED-black background.
+    // Trigger both when the avatar container lays out and, more reliably, when
+    // the masked image component itself mounts (then fix its siblings).
+    FBPFixAvatarBox(view);
+    if ([NSStringFromClass(view.class) containsString:@"MRCImageComponent"] &&
+        view.layer.masksToBounds) {
+        FBPFixAvatarBox(view.superview);
+    }
+
+    UIColor *bg = view.backgroundColor;
+    if (bg) {
+        // Views that paint through -backgroundColor (dynamic colours resolved).
+        if (FBPColorIsDark(FBPResolve(bg))) {
+            FBPSaveViewBG(view, bg);
+            FBPMarkTouched(view);
+            view.backgroundColor = FBPBlackKeepingAlpha(bg);
+        }
+    } else if (FBPCGColorIsDark(view.layer.backgroundColor)) {
+        // ComponentKit cards that paint straight onto their own layer.
+        FBPSaveLayerBG(view.layer);
+        FBPMarkTouched(view);
+        view.layer.backgroundColor = FBPBlackCGKeepingAlpha(view.layer.backgroundColor);
+    }
+
+    // Cards / fades that paint onto a sublayer (gradient, shape or plain CALayer)
+    // rather than the view or its own layer background — the profile panel and the
+    // header fade. Cheap: most views have no sublayers.
+    FBPApplySublayers(view.layer, YES);
+}
+
+/// The value to hand the original -setBackgroundColor:, saving/forgetting state so
+/// OLED reverts cleanly. Active + dark → black (original stashed). Inactive → the
+/// app's own colour passes through and any stash is dropped, so a later relayout
+/// does not put the black-era colour back over a freshly repainted view.
+static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self)) {
+        if (FBPColorIsDark(FBPResolve(color))) {
+            FBPSaveViewBG(self, color);
+            FBPMarkTouched(self);
+            return FBPBlackKeepingAlpha(color);
+        }
+        return color;
+    }
+    if (!FBPOLEDSkip(self) && objc_getAssociatedObject(self, kFBPSavedViewBG)) {
+        FBPForgetViewBG(self);
+    }
+    return color;
 }
 
 #pragma mark - Hooks
@@ -392,103 +670,82 @@ static void FBPBlackenHeaderTree(UIView *view, int depth) {
 %hook UIView
 
 - (void)setBackgroundColor:(UIColor *)color {
-    if (FBPOLEDActive() && !FBPOLEDSkip(self)) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self) &&
+        [NSStringFromClass(self.class) containsString:@"LineComponent"]) {
         // A separator line keeps a faint white instead of vanishing into black.
-        if ([NSStringFromClass(self.class) containsString:@"LineComponent"]) {
-            %orig(FBPDividerColor());
-            return;
-        }
-        if (FBPColorIsDark(FBPResolve(color))) {
-            %orig(FBPBlackKeepingAlpha(color));
-            return;
-        }
+        FBPSaveViewBG(self, color);
+        FBPMarkTouched(self);
+        %orig(FBPDividerColor());
+        return;
     }
-    %orig(color);
+    UIColor *resolved = FBPBGForSet(self, color);
+    %orig(resolved);
 }
 
 - (void)layoutSubviews {
     %orig;
-    if (!FBPOLEDActive() || FBPOLEDSkip(self)) return;
+    FBPApplyView(self, FBPOLEDActive());
+}
 
-    // Dividers are lightened, not blackened, so posts/rows stay visually separated.
-    if (FBPViewLooksLikeDivider(self)) {
-        FBPLightenDivider(self);
-        return;
+- (void)traitCollectionDidChange:(UITraitCollection *)previous {
+    %orig;
+    if (@available(iOS 13.0, *)) {
+        if (previous &&
+            previous.userInterfaceStyle != self.traitCollection.userInterfaceStyle) {
+            // iOS switched Light↔Dark: re-run the layout logic so OLED engages for
+            // Dark and fully reverts for Light on this view.
+            [self setNeedsLayout];
+        }
     }
-
-    // Round the square placeholder stacked behind a circular profile avatar, so
-    // its grey corners don't show as a box against the OLED-black background.
-    // Trigger both when the avatar container lays out and, more reliably, when
-    // the masked image component itself mounts (then fix its siblings).
-    FBPFixAvatarBox(self);
-    if ([NSStringFromClass(self.class) containsString:@"MRCImageComponent"] &&
-        self.layer.masksToBounds) {
-        FBPFixAvatarBox(self.superview);
-    }
-
-    UIColor *bg = self.backgroundColor;
-    if (bg) {
-        // Views that paint through -backgroundColor (dynamic colours resolved).
-        if (FBPColorIsDark(FBPResolve(bg))) self.backgroundColor = FBPBlackKeepingAlpha(bg);
-    } else if (FBPCGColorIsDark(self.layer.backgroundColor)) {
-        // ComponentKit cards that paint straight onto their own layer.
-        self.layer.backgroundColor = FBPBlackCGKeepingAlpha(self.layer.backgroundColor);
-    }
-
-    // Cards / fades that paint onto a sublayer (gradient, shape or plain CALayer)
-    // rather than the view or its own layer background — the profile panel and the
-    // header fade. Cheap: most views have no sublayers.
-    FBPBlackenSublayers(self.layer);
 }
 
 %end
 
 %hook UITableView
 - (void)setBackgroundColor:(UIColor *)color {
-    if (FBPOLEDActive() && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
-        %orig(FBPBlackKeepingAlpha(color));
-        return;
-    }
-    %orig(color);
+    UIColor *resolved = FBPBGForSet(self, color);
+    %orig(resolved);
 }
 %end
 
 %hook UITableViewCell
 - (void)setBackgroundColor:(UIColor *)color {
-    if (FBPOLEDActive() && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
-        %orig(FBPBlackKeepingAlpha(color));
-        return;
-    }
-    %orig(color);
+    UIColor *resolved = FBPBGForSet(self, color);
+    %orig(resolved);
 }
 %end
 
 %hook UICollectionView
 - (void)setBackgroundColor:(UIColor *)color {
-    if (FBPOLEDActive() && !FBPOLEDSkip(self) && FBPColorIsDark(FBPResolve(color))) {
-        %orig(FBPBlackKeepingAlpha(color));
-        return;
-    }
-    %orig(color);
+    UIColor *resolved = FBPBGForSet(self, color);
+    %orig(resolved);
 }
 %end
 
 // The app header. It paints nothing on its own view; the grey lives on child
 // views, a hosted UINavigationBar, a blur and gradients — so blacken the sub-tree
-// on every layout pass while OLED is on. This is what stops the header flickering
-// between grey and black.
+// on every layout pass while OLED is on, and restore it when OLED is off. This is
+// what stops the header flickering between grey and black, and what makes the
+// header follow iOS back to Light instead of staying black.
 %hook FBMovableNavigationBarView
 - (void)layoutSubviews {
     %orig;
-    if (!FBPOLEDActive()) return;
-    if (FBPColorIsDark(FBPResolve(self.backgroundColor))) {
-        self.backgroundColor = FBPBlackKeepingAlpha(self.backgroundColor);
+    BOOL active = FBPOLEDActive();
+    if (active) {
+        if (FBPColorIsDark(FBPResolve(self.backgroundColor))) {
+            FBPSaveViewBG(self, self.backgroundColor);
+            self.backgroundColor = FBPBlackKeepingAlpha(self.backgroundColor);
+        }
+        if (FBPCGColorIsDark(self.layer.backgroundColor)) {
+            FBPSaveLayerBG(self.layer);
+            self.layer.backgroundColor = FBPBlackCGKeepingAlpha(self.layer.backgroundColor);
+        }
+    } else {
+        FBPRestoreViewBG(self);
+        FBPRestoreLayerBG(self.layer);
     }
-    if (FBPCGColorIsDark(self.layer.backgroundColor)) {
-        self.layer.backgroundColor = FBPBlackCGKeepingAlpha(self.layer.backgroundColor);
-    }
-    FBPBlackenSublayers(self.layer);
-    FBPBlackenHeaderTree(self, 0);
+    FBPApplySublayers(self.layer, active);
+    FBPApplyHeaderTree(self, 0, active);
 }
 %end
 
@@ -505,15 +762,21 @@ static void FBPBlackenHeaderTree(UIView *view, int depth) {
 
 %end // FBPOLEDGlobal
 
-/// Nudges the app's windows to relayout so the layout hooks re-run and
-/// blacken/revert for the current state right away, instead of waiting for the
-/// next natural layout pass.
+/// Marks the whole FB window tree for relayout so the layout hooks re-run and
+/// blacken/revert for the current state right away — used when the toggle changes
+/// (no trait change fires then) and on returning from the background.
+static void FBPNudgeLayout(UIView *view, int depth) {
+    if (!view || depth > 40) return;
+    [view setNeedsLayout];
+    for (UIView *sub in [view.subviews copy]) FBPNudgeLayout(sub, depth + 1);
+}
+
 static void FBPNudgeOLEDRelayout(void) {
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
             if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
-            [window setNeedsLayout];
+            FBPNudgeLayout(window, 0);
         }
     }
 }
@@ -533,10 +796,9 @@ void FBPInitOLEDHooks(void) {
         FBPNudgeOLEDRelayout();
     }];
 
-    // An iOS Light↔Dark switch while the app is foregrounded already relayouts
-    // Facebook's views (trait change), so OLED follows live. Returning from the
-    // background is the one case that can miss, so re-apply for the current
-    // system appearance on foreground.
+    // A live iOS Light↔Dark switch is handled per-view by the traitCollectionDidChange
+    // hook. Returning from the background is the one case that can miss, so re-apply
+    // for the current system appearance on foreground.
     [NSNotificationCenter.defaultCenter
         addObserverForName:UIApplicationDidBecomeActiveNotification
                     object:nil
