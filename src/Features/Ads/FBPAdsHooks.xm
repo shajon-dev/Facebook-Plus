@@ -99,29 +99,34 @@ BOOL FBPModelIsBlockedAd(id model) {
 // -[RCTNetworking handlerForRequest:] is hooked to do two things while Remove Ads
 // is on:
 //
-//   1. Dedicated ads queries (MarketplaceHomeFeedAdsQueryRendererQuery,
-//      MarketplacePDPPersonalizedAdsQuery, …) are handed a handler that fails the
-//      request immediately, so their QueryRenderers get a network error and render
-//      nothing. Real listings come from separate queries and are untouched.
-//   2. Feed / search queries blend ad stories into the normal listing edges, so
-//      the real handler is wrapped, the response buffered, and any item whose
-//      __typename is an ad type (MarketplaceAdStory, …CarouselAdStory, Sponsored…)
-//      dropped.
+//   1. Dedicated ad / sponsored-feed queries (MarketplaceHomeFeedAdsQueryRendererQuery,
+//      MarketplacePDPPersonalizedAdsQuery, MarketplaceContextualSponsoredFeedSurfaceQuery,
+//      …) are handed a handler that fails the request immediately, so their
+//      QueryRenderers render nothing. Organic listings come from other queries.
+//   2. Every other Marketplace query may blend ad / boosted-listing items into its
+//      listing edges, so the real handler is wrapped, the response buffered, and any
+//      item dropped whose __typename is an ad type (…AdStory, …AdsStory, Sponsored…)
+//      or that carries a sponsored/boosted marker field. This is deliberately not
+//      limited to "…Feed…" names: the home-pagination, search and category grids
+//      (MarketplaceSearchAppQuery, MarketplaceCategoryViewRootQuery,
+//      MarketplaceHomePaginationQuery, MarketplacePlainHomeAppQuery) carry blended
+//      ads too and have no "Feed" in their name.
 //
 // The core GraphQL-layer logic is adapted from a third-party source; see
 // THIRD_PARTY_NOTICES.md. Restyled here as a toggle-gated port in the tweak's own
 // conventions.
 
-// The friendly names of the dedicated Marketplace ads queries. The explicit set
-// documents the common ones; the regular expression then catches any other
-// "…Ads…Query" sibling (Themed, Pagination, PDP, TopPicks, InstantIntent, …).
-// "Ads" must be followed by an uppercase letter so Address/Adsomething never
-// match, and only queries are touched — mutations are left alone.
+// A dedicated ad surface to fail outright. Two families: "…Ads…Query" (Home/Local/
+// PDP/InstantIntent/Themed/Pagination/BoostedListing…) and the pure
+// "…SponsoredFeed…Query" surfaces, which carry only ads. "Ads" needs an uppercase
+// letter or the end after it so Address/Adsomething never match; only queries are
+// failed, never mutations.
 static BOOL FBPMarketplaceIsAdQuery(NSString *name) {
     if (name.length == 0) return NO;
 
     static NSSet<NSString *> *names;
-    static NSRegularExpression *re;
+    static NSRegularExpression *adsRe;
+    static NSRegularExpression *sponsoredRe;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         names = [NSSet setWithArray:@[
@@ -129,20 +134,30 @@ static BOOL FBPMarketplaceIsAdQuery(NSString *name) {
             @"MarketplaceHomeFeedAdsPaginationQuery",
             @"MarketplaceHomeFeedBoostedListingAdsQuery",
             @"MarketplaceHomeFeedBoostedListingAdsPaginationQuery",
+            @"MarketplaceContextualSponsoredFeedSurfaceQuery",
+            @"MarketplacePersonalizedSponsoredFeedQuery",
         ]];
-        re = [NSRegularExpression
+        adsRe = [NSRegularExpression
             regularExpressionWithPattern:@"^Marketplace\\w*Ads(?:[A-Z]\\w*)?Query$"
+                                 options:0
+                                   error:nil];
+        sponsoredRe = [NSRegularExpression
+            regularExpressionWithPattern:@"^Marketplace\\w*SponsoredFeed\\w*Query$"
                                  options:0
                                    error:nil];
     });
 
     if ([names containsObject:name]) return YES;
-    return [re firstMatchInString:name options:0 range:NSMakeRange(0, name.length)] != nil;
+    NSRange full = NSMakeRange(0, name.length);
+    return [adsRe firstMatchInString:name options:0 range:full] != nil ||
+           [sponsoredRe firstMatchInString:name options:0 range:full] != nil;
 }
 
-// Marketplace feed / search queries whose responses may carry blended ad stories.
-static BOOL FBPMarketplaceIsFeedQuery(NSString *name) {
-    return [name hasPrefix:@"Marketplace"] && [name containsString:@"Feed"];
+// Any Marketplace query that was not failed may still blend ads into its response,
+// so filter them all rather than only the "…Feed…" names. The strip no-ops when a
+// response has no ads, so wrapping a listing/PDP/mutation query is harmless.
+static BOOL FBPMarketplaceShouldFilterQuery(NSString *name) {
+    return [name hasPrefix:@"Marketplace"];
 }
 
 // An ad __typename: MarketplaceAdStory, MarketplaceSearchAdStory, …AdsBlended…,
@@ -178,7 +193,35 @@ static NSString *FBPMarketplaceFriendlyName(NSURLRequest *request) {
     return value.stringByRemovingPercentEncoding ?: value;
 }
 
-// An edge is an ad if it, its node, or the node's story is an ad type.
+// A boosted listing can reach the grid with an ordinary listing __typename and
+// only a sponsored/boosted marker field. These keys are ad-only: a truthy value
+// on an edge node means the item is paid. Organic listings leave them null/absent.
+static BOOL FBPMarketplaceDictIsSponsored(NSDictionary *dict) {
+    static NSArray<NSString *> *presenceKeys;  // present and non-null => ad
+    static NSArray<NSString *> *boolKeys;      // == YES => ad
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        presenceKeys = @[@"sponsored_data", @"sponsoredData",
+                         @"boosted_listing", @"boostedListingAdsData",
+                         @"ad_id", @"ad_client_token"];
+        boolKeys = @[@"is_sponsored", @"isSponsored"];
+    });
+    for (NSString *k in presenceKeys) {
+        id v = dict[k];
+        if (!v || v == (id)NSNull.null) continue;
+        if ([v isKindOfClass:[NSString class]] && [(NSString *)v length] == 0) continue;
+        return YES;
+    }
+    for (NSString *k in boolKeys) {
+        id v = dict[k];
+        if ([v isKindOfClass:[NSNumber class]] && [v boolValue]) return YES;
+    }
+    return NO;
+}
+
+// An edge is an ad if it, its node, or the node's story is an ad __typename, or if
+// any of those carries a sponsored/boosted marker field. Returns the matched token
+// (a __typename or a marker label) as a truthy "drop this" signal, else nil.
 static NSString *FBPMarketplaceAdTypenameOfItem(id item) {
     if (![item isKindOfClass:[NSDictionary class]]) return nil;
     NSMutableArray *candidates = [NSMutableArray arrayWithObject:item];
@@ -193,6 +236,7 @@ static NSString *FBPMarketplaceAdTypenameOfItem(id item) {
     for (NSDictionary *c in candidates) {
         id t = c[@"__typename"];
         if ([t isKindOfClass:[NSString class]] && FBPMarketplaceIsAdTypename(t)) return t;
+        if (FBPMarketplaceDictIsSponsored(c)) return @"<sponsored-marker>";
     }
     return nil;
 }
@@ -387,7 +431,7 @@ static NSMutableSet *FBPMarketplaceLiveDelegates(void) {
     }
 
     id handler = %orig;
-    if (handler && FBPMarketplaceIsFeedQuery(name)) {
+    if (handler && FBPMarketplaceShouldFilterQuery(name)) {
         FBPMarketplaceFilteringHandler *wrapper = [FBPMarketplaceFilteringHandler new];
         wrapper.inner = handler;
         wrapper.name = name;
