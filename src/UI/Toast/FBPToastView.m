@@ -1,7 +1,7 @@
 // The toast pill: a blurred capsule with a tinted status badge, a centred
 // message and (for downloads) a progress bar and stop button. It rises into
 // place with a soft spring and fades out — no corner-scale pop — so it reads as
-// a polished, deliberate HUD rather than a debug print.
+// a deliberate HUD rather than a debug print.
 
 #import "FBPToast.h"
 #import "FBPResources.h"

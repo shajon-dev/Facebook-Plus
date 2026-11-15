@@ -98,8 +98,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - ComponentKit action routing
 
-/// Every ComponentKit-built control event funnels through this one forwarder,
-/// which is what makes it a viable interception point for like confirmation.
+/// Every ComponentKit-built control event funnels through this one forwarder —
+/// the interception point for like confirmation.
 @interface CKComponentActionControlForwarder : NSObject
 - (void)handleControlEventFromSender:(id)sender withEvent:(nullable UIEvent *)event;
 @end
@@ -132,8 +132,8 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - OLED targets
 //
 // The chrome and feed container views whose background fills the screen. Forcing
-// these to pure black in dark mode is what turns the app AMOLED-black. Each is
-// hooked only when present, so a build that renames one loses only that surface.
+// these to pure black in dark mode makes the app AMOLED-black. Each is hooked
+// only when present, so a build that renames one loses only that surface.
 
 @interface FBTabBar : UIView
 @end

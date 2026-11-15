@@ -32,9 +32,8 @@ extern long long FBPConverterExpectedOutputBytes(long long sourceBitsPerSecond,
 
 // Every read below goes through one of these three. Facebook renames things
 // between releases, so the contract is: a getter that is missing, takes
-// arguments, or returns something other than what we are about to treat it as,
-// reads as "absent" — never as a crash. The worst a rename can do here is
-// collapse the picker to one option.
+// arguments, or returns the wrong type reads as "absent", never as a crash. The
+// worst a rename can do here is collapse the picker to one option.
 
 id FBPDownloadSafeObjectGetter(id object, NSString *getterName) {
     if (!object || getterName.length == 0) return nil;
@@ -137,8 +136,8 @@ static BOOL FBPDownloadScalarGetter(id object, NSString *getterName, double *out
 }
 
 /// Reads a CGSize-returning getter (-videoSize on FNFDashRepresentationMetadata).
-/// Refused unless the declared return type really is a CGSize, so we never
-/// reinterpret some other struct's bytes as one.
+/// Refused unless the declared return type really is a CGSize, so some other
+/// struct's bytes are never reinterpreted as one.
 static BOOL FBPDownloadSizeGetter(id object, NSString *getterName, CGSize *out) {
     if (!object || getterName.length == 0) return NO;
 
@@ -199,7 +198,7 @@ static NSURL *FBPDownloadURLFromObject(id object) {
         url = [NSURL URLWithString:(NSString *)object];
     }
     // The transport is a plain HTTP GET, so anything that is not an http(s) URL
-    // is not a variant we can offer.
+    // is not an offerable variant.
     if (![url.scheme.lowercaseString hasPrefix:@"http"]) return nil;
     return url;
 }
@@ -261,56 +260,34 @@ static NSString *FBPDownloadByteString(long long bytes) {
                                           countStyle:NSByteCountFormatterCountStyleFile];
 }
 
-/// The whole of a row's second line: how big the saved file will be, and nothing
-/// else.
+/// A row's second line: how big the saved file will be, and nothing else.
 ///
-/// Twice removed, and this is the third attempt — so what changed is the part
-/// worth reading.
+/// Must never state a number the result contradicts. The size column was removed
+/// once (69c4b73) because an AV1 rung's source bandwidth x duration was wrong by
+/// a large multiple once it had to be re-encoded to be saveable — a 4.55 MB rung
+/// came out of AVAssetExportSession at 88.95 MB, the same class of failure as a
+/// row labelled 1080p that downloaded 720p.
 ///
-/// It first said too much ("~24.8 MB · estimated size · needs merging", beside a
-/// title that had already said "1080p"). Then it was removed outright (69c4b73),
-/// because a row must never state a number the result contradicts and this one
-/// did: once a rung had to be re-encoded from AV1 to be saveable at all, the
-/// source's bandwidth x duration was wrong by a large multiple — a 4.55 MB AV1
-/// rung came out of AVAssetExportSession at 88.95 MB. That is the same class of
-/// failure as a row labelled 1080p that downloaded 720p, and it is the
-/// maintainer's standing objection to this picker.
+/// Safe to show again because the converter's output bitrate is now a measured
+/// multiple of the rung's own bandwidth, so the converted file's size is
+/// predictable — see FBPConverterExpectedOutputBytes, which sizes a converting
+/// row. Checked, not assumed: fourteen real rungs from five of the six captured
+/// manifests predicted against the bytes that came out at mean 3.4% off, median
+/// 2.8%, worst 8.3%, bias +2.3% (the encoder overshoots its target and the
+/// container adds overhead). A few percent, which is what the "~" promises.
 ///
-/// What makes a number safe to show again is that the converter's output bitrate
-/// is now a measured multiple of the rung's own bandwidth rather than a preset's
-/// opinion, so the converted file's size is predictable — see
-/// FBPConverterExpectedOutputBytes, which is what a converting row is sized
-/// from. Predictable was checked rather than assumed: fourteen real rungs from
-/// five of the six captured manifests were fetched and converted, and the
-/// prediction against the bytes that came out is mean 3.4% off, median 2.8%,
-/// worst 8.3%, with nothing outside 10%. The bias is a slight under-prediction
-/// (+2.3% on average): the encoder overshoots its average-bitrate target a
-/// little and the container has overhead, so the file usually lands just above
-/// the figure rather than just below. Either way it is a few percent, which is
-/// what the "~" is promising — not the multiple that got this column removed.
+/// Each row shows what that row will produce:
 ///
-/// So every row shows what *that row* will produce:
+///   * progressive — its MP4's own -atomSize, exact, no "~";
+///   * DASH copied — bandwidth x duration, an estimate, "~";
+///   * DASH converted — the post-conversion prediction, an estimate, "~". Never
+///     the source's size, which is the download cost, not what lands in Photos.
 ///
-///   * a progressive row — its MP4's own -atomSize, exact, no "~";
-///   * a DASH rung that is copied — bandwidth x duration, an estimate, "~";
-///   * a DASH rung that is converted — the *post-conversion* prediction, an
-///     estimate, "~". Never the source's size, which is what it costs to
-///     download and not what lands in Photos.
+/// Nil when there is no size — the row then shows its resolution alone.
 ///
-/// The "~" is the entire distinction between an estimate and an exact figure,
-/// said in one character, which is as subtle as it can be while still being
-/// said.
-///
-/// Nil when there is no size at all — the row then shows its resolution alone,
-/// which is honest, rather than a word standing in for a number we do not have.
-///
-/// The byte count is formatted by NSByteCountFormatter, so it follows the
-/// *system* locale rather than the tweak's own language setting — a number and a
-/// unit, which reads correctly either way, and which is why this needs no
-/// localized string. Its one decimal place is kept rather than rounded away to a
-/// coarser figure: the exact progressive rows use the same formatter, and a
-/// second convention on the estimated rows would be read as a second meaning.
-/// The "~" is what says how much to trust the last digit.
+/// NSByteCountFormatter follows the system locale, not the tweak's language
+/// setting, so this needs no localized string. Its one decimal place matches the
+/// exact progressive rows; the "~" says how much to trust the last digit.
 static NSString *FBPDownloadSizeDetail(long long byteSize, BOOL estimated) {
     NSString *size = FBPDownloadByteString(byteSize);
     if (size.length == 0) return nil;
@@ -348,12 +325,11 @@ static FBPDownloadVariant *FBPDownloadMakeVariant(id rawURL,
 /// Bytes a DASH rung is likely to cost to *download*: (video + audio) bits per
 /// second x seconds, over 8.
 ///
-/// This is the only number DASH gives us, and it is an estimate — @c bandwidth
-/// is an average over a variable-bitrate encode, so the real file routinely
-/// lands either side of it. The progressive tier's -atomSize is the MP4's true
-/// length; this is not, which is why every row built from it wears a "~". Audio
-/// is counted in because the file the user ends up with is the mux of both
-/// streams.
+/// The only number DASH provides, and an estimate — @c bandwidth is an average
+/// over a variable-bitrate encode, so the real file routinely lands either side
+/// of it. The progressive tier's -atomSize is the MP4's true length; this is
+/// not, which is why every row built from it wears a "~". Audio is counted in
+/// because the file the user ends up with is the mux of both streams.
 ///
 /// For a rung that will be *converted* this is still the right number for the
 /// download — and so for the progress weighting — but the wrong one to show: the
@@ -368,7 +344,7 @@ static long long FBPDownloadEstimatedBytes(FBPDashRepresentation *video,
     if (audio.bandwidth > 0) bitsPerSecond += (double)audio.bandwidth;
 
     double bytes = bitsPerSecond * duration / 8.0;
-    // 1 TB is not a Reel; a number that big means we misread something.
+    // 1 TB is not a Reel; a number that big means something was misread.
     if (!isfinite(bytes) || bytes <= 0 || bytes > 1e12) return 0;
     return (long long)llround(bytes);
 }
@@ -441,29 +417,26 @@ FBPDownloadMergeDashLadder(id item,
     NSMutableSet<NSString *> *covered = [NSMutableSet set];
 
     // The progressive pair — `progressive` from `flatStart` on — is deliberately
-    // not carried into the result below, and this is the one place that decision
+    // not carried into the result below. This is the one place that decision
     // lives.
     //
     // Every row in this picker is a resolution: "1080p", "720p", one rung per
     // row. A progressive row cannot be one. Facebook publishes exactly one
-    // resolution per item (-videoWidth / -videoHeight, and the
-    // -videoOriginal* pair beside them), and it describes the SOURCE UPLOAD,
-    // not the rendition behind -HDPlaybackURL — a 1440p upload's HD progressive
-    // is typically 720p. Labelling the HD row from it is how "1080p download
-    // korleo 720p download hocche" happened: the row said 1080p, covered rung
-    // 1080 so the manifest's real 1080p representation was dropped as a
-    // duplicate, and delivered the 720p file. 09c3120 stopped it claiming the
+    // resolution per item (-videoWidth / -videoHeight, and the -videoOriginal*
+    // pair beside them), describing the SOURCE UPLOAD, not the rendition behind
+    // -HDPlaybackURL — a 1440p upload's HD progressive is typically 720p.
+    // Labelling the HD row from it caused the reported "said 1080p, delivered
+    // 720p" bug: the row covered rung 1080, so the manifest's real 1080p
+    // representation was dropped as a duplicate. 09c3120 stopped it claiming the
     // rung; neither item class carries a per-rendition height to name it with
-    // instead, so there is no honest number to put on it at all.
+    // instead, so there is no honest number to put on it.
     //
-    // So when the ladder is here, the ladder is the whole picker. It covers the
-    // same ground, every rung names itself from Facebook's own FBQualityLabel,
-    // and nothing in the list can promise a resolution it will not deliver.
-    // When it is not here — no MPD, a renamed getter, audio we had to refuse,
-    // or nothing that survived the gates — `progressive` is returned untouched
-    // and those two rows carry the download under their own names (see
-    // FBPDownloadVariantsForItem), which is what keeps every Facebook build
-    // without a usable DASH ladder working exactly as it did.
+    // So when the ladder is here, the ladder is the whole picker: it covers the
+    // same ground, every rung names itself from FBQualityLabel, and nothing can
+    // promise a resolution it will not deliver. When it is not here — no MPD, a
+    // renamed getter, refused audio, or nothing that survived the gates —
+    // `progressive` is returned untouched and those two rows carry the download
+    // under their own names (see FBPDownloadVariantsForItem).
     for (FBPDashRepresentation *representation in manifest.videoRepresentations) {
         // The rung's own number: its shorter frame edge, falling back to
         // FBQualityLabel. Used for ordering and for the refresher's fallback
@@ -615,8 +588,8 @@ NSArray<FBPDownloadVariant *> *FBPDownloadVariantsForItem(id item,
 
     // 360° videos first: for those, the spherical pair *is* the content, and the
     // flat pair (when present) is a reprojection. Their byte sizes are not
-    // published anywhere we have confirmed, so they carry a plain descriptive
-    // detail rather than a size we would be guessing at.
+    // published anywhere confirmed, so they carry a plain descriptive detail
+    // rather than a guessed size.
     if (isSpherical) {
         add(FBPDownloadMakeVariant(FBPDownloadSafeObjectGetter(item, @"sphericalPlaybackHDURL"),
                                    FBPL(@"download.quality.spherical.hd"),
@@ -788,9 +761,9 @@ static FBPDownloadVariant *FBPDownloadFreshenVariant(
 /// resolution: for a 360° video those two streams are the content, and the badge
 /// beside the title says so too.
 ///
-/// A symbol the running iOS does not have resolves to nil and the row simply has
-/// no glyph, which is why none of this is gated on a version check.
-/// "video.fill" has shipped since iOS 13.
+/// A symbol the running iOS does not have resolves to nil and the row has no
+/// glyph, which is why none of this is gated on a version check. "video.fill"
+/// has shipped since iOS 13.
 static NSString *FBPDownloadIconForVariant(FBPDownloadVariant *variant) {
     if (variant.tier == FBPDownloadVariantTierSpherical) return @"globe";
     return @"video.fill";
@@ -798,10 +771,10 @@ static NSString *FBPDownloadIconForVariant(FBPDownloadVariant *variant) {
 
 /// Index of the cheapest row worth pointing at, or NSNotFound.
 ///
-/// Only sizes we actually have count, and only when there is something to
-/// compare: badging the sole row that happens to publish a size as "Smallest"
-/// would be comparing it against nothing. Index 0 is excluded because it already
-/// carries "Best" — one row, one badge.
+/// Only known sizes count, and only when there is something to compare: badging
+/// the sole row that happens to publish a size as "Smallest" would be comparing
+/// it against nothing. Index 0 is excluded because it already carries "Best" —
+/// one row, one badge.
 static NSUInteger FBPDownloadSmallestIndex(NSArray<FBPDownloadVariant *> *variants) {
     NSUInteger sized = 0;
     NSUInteger best = NSNotFound;
@@ -940,21 +913,20 @@ void FBPDownloadPresentPicker(NSArray<FBPDownloadVariant *> *variants,
 
 // Why this exists.
 //
-// The picker now offers both tiers, so this is no longer deciding whether to
-// build a DASH reader — it is checking what the one we have actually saw. The
-// questions it answers on a real device, which nothing here can settle without
-// one:
+// The picker now offers both tiers, so this no longer decides whether to build a
+// DASH reader — it checks what the reader actually saw. The questions it answers
+// on a real device, which nothing here can settle without one:
 //
 //   1. Is -DashPlaylist populated on the Reels and Stories surfaces, or only on
 //      the watch tab? An empty string there means the ladder silently never
 //      appears and the picker stays at two rows.
 //   2. How many representations does a real manifest carry, and what are their
-//      FBQualityLabels? This is what tells us whether the ladder the user sees
-//      is the whole ladder Facebook sent.
+//      FBQualityLabels? Shows whether the ladder the user sees is the whole
+//      ladder Facebook sent.
 //   3. What did the reader drop, and why? FBPDashManifest collects a note per
-//      refused representation — wrong codec, no SegmentBase, encrypted — and
-//      they are printed below, so a ladder that comes out shorter than expected
-//      can be explained without another build.
+//      refused representation — wrong codec, no SegmentBase, encrypted — printed
+//      below, so a ladder that comes out shorter than expected can be explained
+//      without another build.
 //
 // Turn "Log Download Qualities" on in Settings, tap download on a Reel and on a
 // Story, then read it back in Console.app filtered on subsystem
@@ -1054,7 +1026,7 @@ static NSArray<NSString *> *FBPDownloadAttributeValues(NSString *xml,
 }
 
 /// The opening `<Representation …>` tag of each representation, capped so a
-/// malformed document cannot make us walk the whole string per element.
+/// malformed document cannot force a walk of the whole string per element.
 static NSArray<NSString *> *FBPDownloadRepresentationTags(NSString *xml) {
     NSMutableArray<NSString *> *tags = [NSMutableArray array];
     NSRange search = NSMakeRange(0, xml.length);

@@ -3,6 +3,8 @@
 // storage break. This transparently restores both, and keeps CloudKit from
 // hard-faulting on an iCloud container the re-signed build can never be granted.
 //
+// Derived from a third-party source; see THIRD_PARTY_NOTICES.md.
+//
 // PluginsInject.mm  — constructor: resolve the keychain access group, install rebinds
 // SecRebinds.xm     — steer SecItem* at that access group via fishhook
 // SideloadFix.xm    — redirect CloudKit / App-Group / group NSUserDefaults containers
@@ -18,7 +20,7 @@
 #endif
 
 // Diagnostic logging that survives a release build, for the one thing PILog
-// cannot do: tell us what the *notification extension* saw on a real device.
+// cannot do: report what the *notification extension* saw on a real device.
 // An appex is not attached to a debugger and NSLog from it is easy to lose, so
 // this goes through os_log on subsystem "com.shajon.fbplus", category
 // "FBPDIAG", and every line is prefixed [FBPDIAG] so it can be grepped out of
@@ -34,21 +36,19 @@
 #define FBPDiagLog(fmt, ...) FBPDiagLogv(fmt, ##__VA_ARGS__)
 extern void FBPDiagLogv(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
 #else
-// Compiles to nothing, but still *mentions* its arguments, inside a branch the
-// optimiser drops. Expanding to a bare `do {} while (0)` discards them instead,
-// and then a variable built only for a trace reads as "set but not used" —
-// which is -Werror under theos, so the non-diagnostic build fails while the
-// diagnostic one passes. This keeps the two in step and keeps the format string
-// checked in both. Nothing is called: the function has an empty body and is
-// static inline, so it needs no symbol at link time.
+// Compiles to nothing but still references its arguments, inside a branch the
+// optimiser drops. A bare `do {} while (0)` would discard them, and a variable
+// built only for a trace would then read as "set but not used" — -Werror under
+// theos, failing the non-diagnostic build while the diagnostic one passes. The
+// empty static inline body needs no symbol at link time.
 NS_FORMAT_FUNCTION(1, 2) NS_INLINE void FBPDiagLogSink(NSString *format, ...) {}
 #define FBPDiagLog(fmt, ...) do { if (0) FBPDiagLogSink(fmt, ##__VA_ARGS__); } while (0)
 #endif
 
 // The keychain access group every SecItem* call a re-signed build makes should
 // end up in. Resolved lazily and **retried until it succeeds** — see
-// SecRebinds.xm. Returns nil while it is still unresolved, which is a state the
-// callers have to handle rather than a permanent answer.
+// SecRebinds.xm. Returns nil while unresolved; callers must handle that rather
+// than treat it as final.
 extern NSString *fbpResolvedAccessGroup(void);
 
 // The entitlement-derived fallback, used when the keychain cannot be reached.

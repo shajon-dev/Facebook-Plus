@@ -20,21 +20,15 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, nullable) dispatch_block_t handler;
 
 /// Short tinted capsule beside the title, e.g. "Best". Nil for no capsule.
-///
-/// Additive: a card that does not set it renders exactly as it did before this
-/// existed.
 @property (nonatomic, copy, nullable) NSString *badge;
 
 /// Put @c title on the first line and @c detail underneath, instead of the
 /// default detail-above-title order.
 ///
-/// Defaults to NO, which keeps the two labels stacked inside the card: the grey
-/// detail on its own line above the title, same fonts, colours and 2pt gap as
-/// before. Set it when the title carries the decision and the detail only
-/// qualifies it, which is what the download quality picker needs: a card there
-/// has to read "1080p" first and "~24.8 MB, estimated" second. With it set the
-/// card reads on one line — title (and badge) leading, detail trailing — which
-/// is the layout the picker was designed around.
+/// Defaults to NO: the grey detail stacks on its own line above the title. Set
+/// it when the title carries the decision and the detail only qualifies it — the
+/// card then reads on one line, title (and badge) leading, detail trailing. The
+/// download quality picker needs this: "1080p" first, "~24.8 MB" second.
 @property (nonatomic, assign) BOOL titleFirst;
 
 + (instancetype)actionWithTitle:(NSString *)title

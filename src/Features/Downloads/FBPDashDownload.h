@@ -36,7 +36,7 @@ extern NSString *const FBPDashDownloadStatusCodeKey;
 /// expired-signed-URL case, which tapping download again fixes. The underlying
 /// NSURLSession / FBPMediaMuxer error is carried in @c NSUnderlyingErrorKey.
 typedef NS_ENUM(NSInteger, FBPDashDownloadError) {
-    /// A nil URL, a non-http(s) URL, or an output path we could not prepare.
+    /// A nil URL, a non-http(s) URL, or an output path that could not be prepared.
     FBPDashDownloadErrorBadArguments = 1,
     /// The video stream answered with a non-2xx status. 403 is the expiry case.
     FBPDashDownloadErrorVideoHTTP,
@@ -48,7 +48,7 @@ typedef NS_ENUM(NSInteger, FBPDashDownloadError) {
     /// Same, for the audio stream.
     FBPDashDownloadErrorAudioTransport,
     /// A downloaded stream could not be moved out of NSURLSession's scratch
-    /// location into our own temporary directory.
+    /// location into the flow's own temporary directory.
     FBPDashDownloadErrorTemporaryFile,
     /// Both streams arrived but FBPMediaMuxer refused them. The muxer's own
     /// error — which distinguishes an unreadable input from a missing track —

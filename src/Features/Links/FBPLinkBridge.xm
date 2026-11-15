@@ -6,8 +6,8 @@
 // to the News Feed. Three outside sources matter, and all three end up as one of
 // two shapes the app mishandles on these builds:
 //
-//   1. Our "Open in Facebook" Safari extension, which hands us the clean HTTPS
-//      URL through our own registered route:  fb://fbplusbridge?url=<https url>
+//   1. The "Open in Facebook" Safari extension, which hands over the clean HTTPS
+//      URL through a registered route:  fb://fbplusbridge?url=<https url>
 //
 //   2. Messenger (and other Meta apps), which resolve a shared link through an
 //      app-link / FaceWeb step and open the app with either
@@ -24,8 +24,8 @@
 // routing): those already resolve correctly and are passed straight through.
 //
 // Installed from FBPEntry's repeated image-load pass: FBBaseAppDelegate may not
-// exist yet when the tweak first loads, so the installer simply no-ops until the
-// class is present and then latches with FBP_ONCE.
+// exist yet when the tweak first loads, so the installer no-ops until the class
+// is present and then latches with FBP_ONCE.
 
 #import "FBPlus.h"
 
@@ -33,9 +33,9 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 
-/// Our own bridge route. Reached as fb://fbplusbridge?url=… — the fb scheme is
-/// already registered by the app, so no extra Info.plist entry is needed; we
-/// only own the "fbplusbridge" host.
+/// The bridge route, reached as fb://fbplusbridge?url=… . The fb scheme is
+/// already registered by the app, so no extra Info.plist entry is needed; only
+/// the "fbplusbridge" host is claimed.
 static NSString *const kFBPBridgeScheme = @"fb";
 static NSString *const kFBPBridgeHost   = @"fbplusbridge";
 
@@ -107,15 +107,15 @@ static NSURL *FBPHrefFromFaceWeb(NSURL *url) {
     return nil;
 }
 
-/// Resolve an incoming URL to the canonical Facebook destination we should route,
-/// or nil to leave the URL for the app's original handler.
+/// Resolve an incoming URL to the canonical Facebook destination to route, or nil
+/// to leave the URL for the app's original handler.
 static NSURL *FBPBridgeTargetURL(NSURL *incomingURL) {
     if (![incomingURL isKindOfClass:NSURL.class]) return nil;
 
     NSString *scheme = incomingURL.scheme.lowercaseString ?: @"";
     NSString *host = incomingURL.host.lowercaseString ?: @"";
 
-    // 1. Our own Safari-extension route.
+    // 1. The Safari-extension route.
     if ([scheme isEqualToString:kFBPBridgeScheme] && [host isEqualToString:kFBPBridgeHost]) {
         NSString *target = FBPQueryValue(incomingURL, @[ @"url" ]);
         return target.length ? FBPCanonicalFacebookURL([NSURL URLWithString:target]) : nil;

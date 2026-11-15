@@ -6,10 +6,9 @@
 
 #pragma mark - Metrics
 
-// The approved "flat card" treatment: every action is its own rounded card with
-// real air between the cards, no hairline dividers and no grouped-list
-// background. The numbers below are the ones that were signed off in the
-// preview, so changing one changes the design.
+// Flat-card treatment: every action is its own rounded card with air between
+// them, no hairline dividers and no grouped-list background. The constants
+// below define that layout; changing one changes the design.
 static const CGFloat kSideInset       = 16.0;  // card edge → sheet edge
 static const CGFloat kTopInset        = 18.0;  // sheet top → title, clears the grabber
 static const CGFloat kTitleGap        = 16.0;  // title → first card
@@ -69,11 +68,9 @@ static UIColor *FBPSheetCardPressedColor(void) {
 
 /// Badge text colour.
 ///
-/// FBPTintColor() is #B5DAFC — a dark-mode tint. On the white card of light
-/// appearance it is pale blue on near-white and the badge stops being readable
-/// (the preview made that plain). Light appearance therefore gets a darkened
-/// version of the same hue: still recognisably the tweak's blue, but it passes
-/// as text.
+/// FBPTintColor() is #B5DAFC, a dark-mode tint: pale blue on the white card of
+/// light appearance, where the badge stops being readable. Light therefore gets
+/// a darkened version of the same hue — still the tweak's blue, but legible.
 static UIColor *FBPSheetAccentColor(void) {
     static UIColor *color;
     static dispatch_once_t onceToken;
@@ -105,10 +102,9 @@ static UIColor *FBPSheetAccentFillColor(void) {
 /// Cancel's fill. Deliberately *not* the card fill, and deliberately on the
 /// other side of the backdrop from it.
 ///
-/// The backdrop these sit on is systemThinMaterial, which settles at rgb(43,43,43)
-/// in dark and rgb(203,203,203) in light (both measured on the simulator, not
-/// guessed — an earlier pass picked a plausible-looking #2C2C2E and it came out
-/// the same colour as the panel behind it, invisible).
+/// The backdrop these sit on is systemThinMaterial, which settles at
+/// rgb(43,43,43) in dark and rgb(203,203,203) in light (both measured on the
+/// simulator).
 ///
 /// The cards sit below the backdrop in dark (#1C1C1E reads as a cut-out) and
 /// above it in light (white). Cancel goes the other way in each — lighter than
@@ -140,10 +136,9 @@ static UIColor *FBPSheetCancelPressedColor(void) {
     return color;
 }
 
-/// The sheet's typeface: the plain system face, as it has always used (the
-/// settings pages use FBPFont's rounded design; the sheet never has). Scaled so
-/// Dynamic Type moves it, and capped so the largest sizes cannot push the
-/// detent past the screen.
+/// The sheet's typeface: the plain system face, not FBPFont's rounded design
+/// used by the settings pages. Scaled so Dynamic Type moves it, and capped so
+/// the largest sizes cannot push the detent past the screen.
 static UIFont *FBPSheetFont(CGFloat size, UIFontWeight weight, UIFontTextStyle style) {
     UIFont *base = [UIFont systemFontOfSize:size weight:weight];
     return [[UIFontMetrics metricsForTextStyle:style] scaledFontForFont:base
@@ -252,8 +247,8 @@ static UIView *FBPSheetSpacer(void) {
         [content addArrangedSubview:glyph];
 
         if (action.titleFirst) {
-            // The approved layout: glyph, title (+ badge), then the detail
-            // trailing on the same line. One line, one decision per card.
+            // Glyph, title (+ badge), then the detail trailing on the same
+            // line. One line, one decision per card.
             [content addArrangedSubview:titleRow];
             [content addArrangedSubview:FBPSheetSpacer()];
             if (detail.text.length) [content addArrangedSubview:detail];
@@ -455,9 +450,8 @@ static UIView *FBPSheetSpacer(void) {
 /// What a UISheetPresentationController custom detent has to be told.
 ///
 /// A custom detent's value is not the height of the sheet — UIKit grows the
-/// sheet past it. Handing it -preferredSheetHeight left exactly one home
-/// indicator of dead grey under Cancel, which is the gap the maintainer asked
-/// to have removed; the difference comes off here.
+/// sheet past it. Handing it -preferredSheetHeight left one home indicator of
+/// dead grey under Cancel; the difference comes off here.
 ///
 /// -preferredSheetHeight stays the whole height, because a presentation that
 /// sets the frame itself — FBPDetentPresentationController — needs that one.

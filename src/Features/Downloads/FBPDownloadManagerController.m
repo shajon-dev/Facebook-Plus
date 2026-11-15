@@ -20,9 +20,9 @@ static const CGFloat kInset = 16.0;
 
 /// Small in-memory cache of the poster frames the rows show.
 ///
-/// A thumbnail is decoration: it is fetched once per URL, never retried, never
-/// persisted, and a row without one shows a glyph. Capped by count *and* by
-/// total cost so a long session cannot turn the list into a photo album.
+/// A thumbnail is decoration: fetched once per URL, never retried, never
+/// persisted, and a row without one shows a glyph. Capped by count and total
+/// cost so a long session cannot turn the list into a photo album.
 static NSCache<NSString *, UIImage *> *FBPDownloadThumbnailCache(void) {
     static NSCache *cache;
     static dispatch_once_t once;
@@ -77,10 +77,9 @@ static void FBPDownloadLoadThumbnail(NSURL *url, void (^then)(UIImage *image)) {
 
 /// Draw a poster frame from the saved Photos asset.
 ///
-/// Best-effort in every direction: no asset identifier, an asset the user has
-/// since deleted, or a library the app may only add to and not read, all end
-/// with the row keeping its glyph rather than with an error. Cached under a
-/// key that cannot collide with a URL's.
+/// Best-effort throughout: no asset identifier, an asset since deleted, or a
+/// library the app may only add to, all end with the row keeping its glyph, not
+/// an error. Cached under a key that cannot collide with a URL's.
 static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
                                           CGSize size,
                                           void (^then)(UIImage *image)) {
@@ -116,7 +115,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
                      options:options
                resultHandler:^(UIImage *image, __unused NSDictionary *info) {
         // Opportunistic delivery calls back more than once — a thumbnail first,
-        // then the real thing. Both are welcome; only the last one is cached.
+        // then the real image. Both are shown; only the last is cached.
         dispatch_async(dispatch_get_main_queue(), ^{
             [FBPDownloadThumbnailsInFlight() removeObject:key];
             if (!image) return;
@@ -138,9 +137,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 @property (nonatomic, strong) UILabel *bytesLabel;
 @property (nonatomic, strong) UIProgressView *progressView;
 @property (nonatomic, strong) UIButton *actionButton;
-/// Identifies the job this cell was last configured for, so a thumbnail that
-/// arrives after the cell was reused is dropped instead of landing on a
-/// different download's row.
+/// The job this cell was last configured for, so a thumbnail that arrives after
+/// the cell was reused is dropped instead of landing on another download's row.
 @property (nonatomic, copy, nullable) NSString *jobIdentifier;
 @property (nonatomic, copy, nullable) void (^actionHandler)(void);
 @end
@@ -162,8 +160,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
         _thumbView.translatesAutoresizingMaskIntoConstraints = NO;
         [self.contentView addSubview:_thumbView];
 
-        // Shown inside the thumbnail slot whenever there is no poster frame, so
-        // the row never has a grey hole in it.
+        // Shown in the thumbnail slot when there is no poster frame, so the row
+        // never has a grey hole in it.
         _placeholderView = [[UIImageView alloc] init];
         _placeholderView.contentMode = UIViewContentModeScaleAspectFit;
         _placeholderView.tintColor = [UIColor colorWithWhite:1.0 alpha:0.35];
@@ -273,8 +271,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
         [[UINavigationController alloc] initWithRootViewController:manager];
     navigation.modalPresentationStyle = UIModalPresentationFullScreen;
     navigation.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-    // Paint it black up front, the same reason FBPSettingsController does: the
-    // cards otherwise arrive a frame before the background behind them.
+    // Paint it black up front, as FBPSettingsController does: the cards
+    // otherwise arrive a frame before the background behind them.
     navigation.view.backgroundColor = FBPPanelColor();
     [host presentViewController:navigation animated:YES completion:nil];
 }
@@ -301,8 +299,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
     [self.tableView registerClass:FBPDownloadJobCell.class forCellReuseIdentifier:kJobCell];
 
     // Presented on its own (from the HUD pill) there is no stack to pop back to,
-    // so it needs its own way out. Pushed from Settings the back button is
-    // already there and this stays absent.
+    // so it needs its own way out. Pushed from Settings the back button is there
+    // and this stays absent.
     if (self.navigationController.viewControllers.firstObject == self) {
         self.navigationItem.leftBarButtonItem =
             [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
@@ -352,7 +350,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 - (void)storeDidChange {
     // The store posts asynchronously on the main queue, so this is already on
-    // it; a reload here cannot land inside a progress callback.
+    // it; a reload cannot land inside a progress callback.
     [self reload];
     [self.tableView reloadData];
 }
@@ -366,7 +364,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
     }
 
     // Offered only when there is something to clear, so the button is never a
-    // no-op the user has to find out about by pressing it.
+    // no-op discovered by pressing it.
     self.navigationItem.rightBarButtonItem = anyFinished
         ? [[UIBarButtonItem alloc] initWithTitle:FBPL(@"download.manager.clear")
                                            style:UIBarButtonItemStylePlain
@@ -392,7 +390,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     // Doubles as the empty state: with no rows the footer is the only thing on
-    // screen, which is exactly where an explanation belongs.
+    // screen, where an explanation belongs.
     return _jobs.count == 0 ? FBPL(@"download.manager.empty") : nil;
 }
 
@@ -410,7 +408,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
     cell.titleLabel.text = job.title ?: job.surfaceName;
 
     // "1080p · Merging audio and video…", or just the stage when the picker was
-    // off and there was no quality to name.
+    // off and there is no quality to name.
     cell.stageLabel.text = job.quality.length
         ? [NSString stringWithFormat:@"%@ · %@", job.quality, job.stageText]
         : job.stageText;
@@ -450,17 +448,17 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
         return;
     }
 
-    // No poster URL. Most Reels have none — -firstFrameThumbnailURL is simply
-    // absent on the playback item — which is why these rows used to sit on a
-    // grey glyph for the whole session. Once the video is in Photos the asset
-    // itself can draw one, and that is a local read with no network at all.
+    // No poster URL. Most Reels have none — -firstFrameThumbnailURL is absent on
+    // the playback item — which is why these rows used to sit on a grey glyph
+    // all session. Once the video is in Photos the asset draws one, a local read
+    // with no network.
     FBPDownloadLoadAssetThumbnail(job.assetIdentifier,
                                   CGSizeMake(kThumbWidth, kThumbHeight),
                                   show);
 }
 
-/// The one button on a row, which is whatever that job's state makes useful:
-/// stop it, start it again, or go and look at what it saved.
+/// The one button on a row, whatever the job's state makes useful: stop it,
+/// start it again, or look at what it saved.
 - (void)configureActionInCell:(FBPDownloadJobCell *)cell forJob:(FBPDownloadJob *)job {
     NSString *symbol = nil;
     NSString *label = nil;
@@ -494,16 +492,16 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 #pragma mark Deleting
 
-/// The job a row stands for, or nil if the table is asking about a row the
-/// snapshot no longer has — a swipe can outlive the reload that removed it.
+/// The job a row stands for, or nil when the table asks about a row the snapshot
+/// no longer has — a swipe can outlive the reload that removed it.
 - (nullable FBPDownloadJob *)jobAtIndexPath:(NSIndexPath *)indexPath {
     if (indexPath.section != 0) return nil;
     if (indexPath.row < 0 || (NSUInteger)indexPath.row >= _jobs.count) return nil;
     return _jobs[(NSUInteger)indexPath.row];
 }
 
-/// Every row can go. A running download is stopped first, so there is no case
-/// the user has to think about before swiping.
+/// Every row can go. A running download is stopped first, so there is nothing to
+/// think about before swiping.
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
     return [self jobAtIndexPath:indexPath] != nil;
 }
@@ -513,8 +511,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
     return [self deleteConfigForIndexPath:indexPath];
 }
 
-// Either direction, the same as the imported fonts in FBPFontController — that
-// is the gesture the user already has in their hands for this.
+// Either direction, as the imported fonts in FBPFontController — the gesture the
+// user already has for this.
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView
     leadingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
     return [self deleteConfigForIndexPath:indexPath];
@@ -531,7 +529,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
                                               handler:^(UIContextualAction *action,
                                                         UIView *sourceView,
                                                         void (^completion)(BOOL)) {
-        // Hand the swipe back first, then confirm — nothing is deleted on OK alone.
+        // Hand the swipe back first, then confirm — nothing deleted on OK alone.
         completion(NO);
         [weakSelf confirmDeleteJob:job];
     }];
@@ -539,8 +537,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
     UISwipeActionsConfiguration *config =
         [UISwipeActionsConfiguration configurationWithActions:@[remove]];
-    // A video the user downloaded is not something a flick should be able to
-    // destroy, so the action has to be tapped.
+    // A downloaded video should not be destroyable by a flick, so the action
+    // must be tapped.
     config.performsFirstActionWithFullSwipe = NO;
     return config;
 }
@@ -565,10 +563,10 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 /// Remove the row and, when the video reached Photos, the video itself.
 ///
-/// Photos puts up its own confirmation for a delete — that sheet is the system's
-/// and cannot be suppressed, which is exactly right for something permanent.
-/// The row is dropped either way: the user asked for it gone from this list, and
-/// a video they chose to keep in Photos is not a reason to keep a finished job.
+/// Photos puts up its own confirmation for a delete — the system's sheet, which
+/// cannot be suppressed, right for something permanent. The row is dropped
+/// either way: the user asked for it gone from this list, and a video kept in
+/// Photos is no reason to keep a finished job.
 - (void)deleteJob:(FBPDownloadJob *)job {
     if (job.canCancel) [FBPDownloadStore.shared cancelJob:job];
 
@@ -579,7 +577,7 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
     if (assets.count == 0) {
         // Never saved, or already gone from Photos. Dropping the row is the
-        // whole of the delete.
+        // whole delete.
         [FBPDownloadStore.shared removeJob:job];
         [FBPToastManager.shared showMessage:FBPL(@"download.manager.deleted") success:YES];
         return;
@@ -600,12 +598,11 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 /// Open Photos at the saved asset.
 ///
-/// There is no public API that opens the Photos app on one asset, so this is
-/// best-effort by design: the asset is looked up first, purely to confirm it is
-/// still there, and then Photos is opened. A device where that scheme does not
-/// answer, or an asset the user has since deleted, gets a message rather than a
-/// silent dead button — the row's green "Saved to Photos" is the part that is
-/// always true.
+/// No public API opens the Photos app on one asset, so this is best-effort: the
+/// asset is looked up first to confirm it is still there, then Photos is opened.
+/// A device where that scheme does not answer, or an asset since deleted, gets a
+/// message rather than a silent dead button — the row's green "Saved to Photos"
+/// is the part that is always true.
 + (void)revealJobInPhotos:(FBPDownloadJob *)job {
     NSString *identifier = job.assetIdentifier;
 
@@ -632,24 +629,23 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 #pragma mark - Download announcements
 
-/// Says a download started, and says how it ended. Nothing in between.
+/// Says a download started, and how it ended. Nothing in between.
 ///
-/// This replaced a live progress pill. The pill was an FBPToastView parked in
-/// FBPToastWindow that followed the transfer percent by percent and opened the
-/// manager when tapped — and watching a number climb is not what the user wants
-/// from a feed: "quality select korar sathe sathe eta toast message er moddhe
-/// download hoy and toast ei download progress dekhay — jetar dorkar nai".
+/// Replaced a live progress pill — an FBPToastView parked in FBPToastWindow that
+/// followed the transfer percent by percent and opened the manager when tapped.
+/// Watching a number climb is not what the user wants from a feed: "quality
+/// select korar sathe sathe eta toast message er moddhe download hoy and toast
+/// ei download progress dekhay — jetar dorkar nai".
 ///
-/// So a tap now says "Downloading", and when the file is in Photos it says
-/// "Download Completed". The percentages, the stop button and the per-job
-/// history all still exist, in the one place that is for them: the download
-/// manager, under Settings → Downloads.
+/// So a tap now says "Downloading", and "Download Completed" once the file is in
+/// Photos. The percentages, stop button and per-job history all still exist in
+/// the one place for them: the download manager, under Settings → Downloads.
 @interface FBPDownloadActivity : NSObject
 @property (class, readonly) FBPDownloadActivity *shared;
-/// Jobs already told the user about. Two sets rather than one flag per job,
-/// because a download can be announced as started and as finished, and a fast
-/// cached one is only ever announced as finished. Both are pruned against the
-/// store on every pass, so neither can outgrow the job list.
+/// Jobs already told the user about. Two sets, not one flag per job: a download
+/// can be announced as started and as finished, and a fast cached one is only
+/// announced as finished. Both are pruned against the store on every pass, so
+/// neither outgrows the job list.
 @property (nonatomic, strong) NSMutableSet<NSString *> *started;
 @property (nonatomic, strong) NSMutableSet<NSString *> *announced;
 @end
@@ -684,8 +680,8 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
         if (job.isActive) {
             // Said once, on the first notification this job produces, and never
-            // updated — the store posts one of these per percentage point and
-            // reacting to them is the behaviour being removed.
+            // updated — the store posts one per percentage point, and reacting
+            // to them is the behaviour being removed.
             if ([self.started containsObject:job.identifier]) continue;
             [self.started addObject:job.identifier];
             [FBPToastManager.shared showMessage:FBPL(@"download.toast.started") success:YES];
@@ -695,12 +691,12 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
         if ([self.announced containsObject:job.identifier]) continue;
         [self.announced addObject:job.identifier];
         // A cached progressive file can be fetched and saved inside one turn of
-        // the run loop, so this may be the first time we have seen the job at
-        // all. Marking it started keeps the sets consistent.
+        // the run loop, so this may be the first sight of the job. Marking it
+        // started keeps the sets consistent.
         [self.started addObject:job.identifier];
 
-        // A cancellation is the user's own doing; telling them it stopped is
-        // noise, the same judgement the surfaces already made.
+        // A cancellation is the user's own doing; saying it stopped is noise,
+        // the same judgement the surfaces already made.
         if (job.stage == FBPDownloadJobStageCancelled) continue;
 
         BOOL ok = (job.stage == FBPDownloadJobStageDone);
@@ -718,6 +714,6 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 @end
 
 void FBPDownloadActivityInstall(void) {
-    // Instantiating the singleton is what registers its observer.
+    // Instantiating the singleton registers its observer.
     (void)[FBPDownloadActivity shared];
 }

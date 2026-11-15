@@ -1,6 +1,6 @@
-// Single constructor. Each hook group installs itself only after checking that
-// its target class and selector actually exist in this build of Facebook, so a
-// missing target degrades that one feature instead of taking the tweak down.
+// Single constructor. Each hook group installs only after confirming its target
+// class and selector exist in this build of Facebook, so a missing target
+// degrades that one feature instead of taking the tweak down.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -22,19 +22,17 @@ extern void FBPInitLinkHooks(void);
 extern void FBPInitLinkBridge(void);
 extern void FBPInitCallBlocker(void);
 
-/// Not a hook installer: it settles, off the main thread, whether this device
-/// can decode AV1 — which decides whether the download picker may offer AV1
-/// quality rungs at all. Declared here rather than by importing
-/// FBPMediaConverter.h, which would pull AVFoundation and VideoToolbox into this
-/// constructor for one call. Asked for now because the first caller would
-/// otherwise be the DASH reader on the main thread during a download tap, and
-/// the answer costs ~46 ms to work out once.
+/// Not a hook installer: settles off the main thread whether this device can
+/// decode AV1, which decides whether the download picker may offer AV1 quality
+/// rungs. Declared here rather than importing FBPMediaConverter.h, which would
+/// pull AVFoundation and VideoToolbox into this constructor for one call.
+/// Prewarmed so the first caller is not the DASH reader on the main thread
+/// during a download tap; the answer costs ~46 ms to compute once.
 ///
-/// `extern "C"` unlike the installers above, and that difference is the point:
-/// logos compiles this file as Objective-C++, so a bare `extern` would look for
-/// a C++-mangled symbol. The installers get away with it because every one of
-/// them is defined in another .xm and so is mangled the same way; this one lives
-/// in a plain .m and is not.
+/// `extern "C"`, unlike the installers above: logos compiles this file as
+/// Objective-C++, so a bare `extern` would look for a C++-mangled symbol. The
+/// installers are each defined in another .xm and mangled the same way; this one
+/// lives in a plain .m and is not.
 extern "C" void FBPMediaConversionPrewarm(void);
 
 /// Runs every installer. Each group latches itself with FBP_ONCE, so calling
@@ -57,22 +55,20 @@ static void FBPInstallHooks(void) {
 }
 
 /// dyld calls this for every image already loaded, then again for each new one.
-///
-/// This is why the deferred-install pattern is needed at all: Facebook links only
-/// FBSharedFramework at launch and dlopens the rest on demand, so a one-shot %ctor
-/// observes only a fraction of the app's classes.
+/// Facebook links only FBSharedFramework at launch and dlopens the rest on
+/// demand, so a one-shot %ctor would observe only a fraction of the app's
+/// classes — hence the deferred install.
 static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
     FBPInstallHooks();
 }
 
 %ctor {
     @autoreleasepool {
-        // The tweak is bound to the app it ships in, not to a fixed bundle id:
-        // the Filter plist scopes the substrate build to Facebook, and an
-        // IPA-embedded build only ever loads inside the app cyan injected it into.
-        // We therefore do not hardcode a bundle id here — that lets a re-signed
-        // IPA use a custom identifier (to run alongside the stock app) and still
-        // activate.
+        // Bound to the app it ships in, not to a fixed bundle id: the Filter
+        // plist scopes the substrate build to Facebook, and an IPA-embedded
+        // build only loads inside the app it was injected into. No bundle id is
+        // hardcoded, so a re-signed IPA can use a custom identifier (to run
+        // alongside the stock app) and still activate.
 
         // Registers defaults before any hook can read a preference.
         (void)FBPPrefs.shared;

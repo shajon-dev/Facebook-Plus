@@ -49,7 +49,7 @@ extern "C" NSString *FBPUserFontsDirectoryPath(void) {
 
 /// Registers every .ttf/.otf/.ttc under a directory with Core Text and appends
 /// their family names (de-duplicated). Re-registering an already-registered file
-/// is harmless — Core Text just reports it and we ignore the result. When
+/// is harmless — Core Text reports it and the result is ignored. When
 /// @c isUser is set, the family and its file are also recorded as deletable.
 static void FBPRegisterFontsIn(NSString *path, BOOL isUser,
                               NSMutableArray<NSString *> *families) {

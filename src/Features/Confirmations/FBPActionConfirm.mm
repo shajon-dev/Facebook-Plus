@@ -216,7 +216,7 @@ static void FBPReplace3(__unsafe_unretained id self, SEL _cmd, id arg) {
 #pragma mark - Install
 
 /// YES when @c cls itself declares @c sel (not merely inherits it), so the
-/// IMP we replace belongs to this class and not a shared ancestor.
+/// replaced IMP belongs to this class and not a shared ancestor.
 static Method FBPOwnMethod(Class cls, SEL sel) {
     unsigned int count = 0;
     Method *list = class_copyMethodList(cls, &count);

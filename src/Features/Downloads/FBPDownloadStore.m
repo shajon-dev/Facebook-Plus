@@ -4,9 +4,9 @@
 #import "FBPDownloadStore.h"
 #import "FBPDashDownload.h"
 
-// Declared rather than imported, exactly as FBPDashDownload.m does it: the
-// canonical declaration lives in FBPResources.h, which pulls in UIKit and would
-// stop this file compiling on a host machine. Keep the signature in step.
+// Declared rather than imported, as FBPDashDownload.m does: the canonical
+// declaration lives in FBPResources.h, which pulls in UIKit and would stop this
+// file compiling on a host machine. Keep the signature in step.
 extern NSString *FBPLocalizedString(NSString *key);
 
 #define FBPStoreL(key) FBPLocalizedString(key)
@@ -14,10 +14,9 @@ extern NSString *FBPLocalizedString(NSString *key);
 NSNotificationName const FBPDownloadStoreDidChangeNotification =
     @"com.shajon.fbplus.downloads.storeDidChange";
 
-// A session's worth of history, not a forever log. Finished jobs are trimmed
-// oldest-first past this; running ones are never trimmed, however many there
-// are, because dropping the record of a live download is the bug this whole
-// file exists to fix.
+// A session's history, not a forever log. Finished jobs are trimmed oldest-
+// first past this; running ones are never trimmed, however many, because
+// dropping the record of a live download is the bug this file exists to fix.
 static const NSUInteger kFBPDownloadStoreCapacity = 60;
 
 #pragma mark - Job
@@ -88,20 +87,19 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
         case FBPDownloadJobStageQueued:
             return FBPStoreL(@"download.job.stage.queued");
         case FBPDownloadJobStageFetching:
-            // The one place needsMux shows through to the user: a two-stream
-            // save is pulling picture and sound at the same time, and saying so
-            // is what makes the merge step that follows make sense.
+            // The one place needsMux shows through: a two-stream save pulls
+            // picture and sound at once, and saying so makes the merge step that
+            // follows make sense.
             return self.needsMux ? FBPStoreL(@"download.job.stage.fetchingBoth")
                                  : FBPStoreL(@"download.job.stage.fetching");
         case FBPDownloadJobStageMerging:
-            // Reuses the wording the progress card already used for this step,
-            // rather than a second key that could drift from it in translation.
+            // Reuses the progress card's wording rather than a second key that
+            // could drift from it in translation.
             return FBPStoreL(@"download.merge.progress");
         case FBPDownloadJobStageConverting:
-            // Its own key rather than the merge's: this step is minutes rather
-            // than a moment, and a row that said "Merging…" for three minutes
-            // would read as a hang. The wording names the reason, because
-            // "Converting…" on its own invites "converting to what".
+            // Its own key, not the merge's: this step is minutes, not a moment,
+            // and "Merging…" for three minutes would read as a hang. The wording
+            // names the reason, since "Converting…" invites "converting to what".
             return FBPStoreL(@"download.job.stage.converting");
         case FBPDownloadJobStageSaving:
             return FBPStoreL(@"download.job.stage.saving");
@@ -112,26 +110,26 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
         case FBPDownloadJobStageFailed:
             break;
     }
-    // A failure says what went wrong where there is room for it, and falls back
-    // to the bare word when the flow did not tell us.
+    // A failure says what went wrong where there is room, falling back to the
+    // bare word when the flow did not say.
     return self.failureMessage ?: FBPStoreL(@"download.job.stage.failed");
 }
 
 - (NSString *)failureMessage {
     if (self.stage != FBPDownloadJobStageFailed || !self.error) return nil;
 
-    // The two-stream flow already writes a finished sentence for every way it
-    // can fail, including folding a 403 on either stream into the expired-link
-    // wording, so its errors are handed straight to it.
+    // The two-stream flow writes a finished sentence for every way it can fail,
+    // including folding a 403 on either stream into the expired-link wording, so
+    // its errors go straight to it.
     if ([self.error.domain isEqualToString:FBPDashDownloadErrorDomain]) {
         NSString *message = FBPDashDownloadMessageForError(self.error);
         if (message.length) return message;
     }
 
     // Everything else — a progressive GET, Photos refusing the save — arrives
-    // already carrying the sentence the surface wanted shown, as its
-    // localizedDescription. Running those through the dash builder would wrap an
-    // explanation inside "Reel download failed." a second time.
+    // carrying the sentence the surface wanted shown, as its localizedDescription.
+    // Running those through the dash builder would wrap an explanation inside
+    // "Reel download failed." twice.
     NSString *described = self.error.localizedDescription;
     return described.length ? described : nil;
 }
@@ -141,8 +139,8 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
 
     NSByteCountFormatterCountStyle style = NSByteCountFormatterCountStyleFile;
 
-    // Nothing to compare against yet: show what has arrived on its own rather
-    // than "4.1 MB / 0 bytes".
+    // Nothing to compare against yet: show what has arrived rather than
+    // "4.1 MB / 0 bytes".
     if (self.bytesExpected <= 0) {
         return [NSByteCountFormatter stringFromByteCount:self.bytesReceived
                                               countStyle:style];
@@ -169,9 +167,9 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
 #pragma mark - Store
 
 @implementation FBPDownloadStore {
-    // Recursive because a notification listener that reads -jobs from inside the
-    // same turn (the manager reloading on the main queue while a progress
-    // callback is still unwinding) would otherwise deadlock on itself.
+    // Recursive because a notification listener that reads -jobs inside the same
+    // turn (the manager reloading on the main queue while a progress callback is
+    // still unwinding) would otherwise deadlock on itself.
     NSRecursiveLock *_lock;
     NSMutableArray<FBPDownloadJob *> *_jobs;   // newest first
 }
@@ -224,8 +222,8 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
 /// One place that announces a change, so no mutation can forget to.
 ///
 /// Always asynchronous, even when already on the main queue: a listener that
-/// rebuilt a table synchronously from inside a progress callback would be
-/// reloading while the flow that caused it is still unwinding.
+/// rebuilt a table synchronously from a progress callback would reload while the
+/// flow that caused it is still unwinding.
 - (void)postChange {
     dispatch_async(dispatch_get_main_queue(), ^{
         [NSNotificationCenter.defaultCenter
@@ -304,9 +302,8 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
     if (!job) return;
 
     [_lock lock];
-    // A terminal stage is final. A late progress callback from a flow that has
-    // already been cancelled or has already failed must not drag the job back
-    // into looking busy.
+    // A terminal stage is final. A late progress callback from a flow already
+    // cancelled or failed must not drag the job back into looking busy.
     BOOL ignore = job.isFinished;
     if (!ignore) job.stage = stage;
     [_lock unlock];
@@ -321,8 +318,8 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
     BOOL ignore = job.isFinished;
     if (!ignore) {
         job.fraction = MAX(0.0f, MIN(1.0f, fraction));
-        // The first byte is also the start of the fetch, so a caller does not
-        // have to announce the stage separately.
+        // The first byte is also the start of the fetch, so a caller need not
+        // announce the stage separately.
         if (job.stage == FBPDownloadJobStageQueued) {
             job.stage = FBPDownloadJobStageFetching;
         }
@@ -414,8 +411,8 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
 
     if (!work) {
         // Nothing to stop. A queued job that never got a flow is still the
-        // user's to abandon; one that is mid-flight with no cancel stays put,
-        // and its own completion decides the outcome.
+        // user's to abandon; one mid-flight with no cancel stays put, and its
+        // own completion decides the outcome.
         [_lock lock];
         BOOL queued = (job.stage == FBPDownloadJobStageQueued);
         [_lock unlock];
@@ -426,8 +423,8 @@ static const NSUInteger kFBPDownloadStoreCapacity = 60;
 
     [self postChange];
 
-    // Outside the lock, and on the main queue, because this reaches back into
-    // the surface that owns the transfer.
+    // Outside the lock, on the main queue, because this reaches back into the
+    // surface that owns the transfer.
     if (NSThread.isMainThread) {
         work(job);
     } else {

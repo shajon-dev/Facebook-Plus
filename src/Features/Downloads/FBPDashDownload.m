@@ -6,12 +6,10 @@
 #import <stdatomic.h>
 #import <math.h>
 
-// Two symbols from elsewhere in the tweak, declared here rather than by
-// importing FBPResources.h and FBPDownloadVariants.h — both of which pull in
-// UIKit. These two are all this file needs from them, and keeping the imports
-// out is what lets the host-side harness compile this .m against macOS
-// Foundation with nothing but a definition for each. The canonical declarations
-// live in those headers; keep the signatures in step.
+// Two symbols declared here rather than imported from FBPResources.h and
+// FBPDownloadVariants.h, both of which pull in UIKit; keeping the imports out is
+// what lets the host harness compile this .m against macOS Foundation. Canonical
+// declarations live in those headers; keep the signatures in step.
 extern NSString *FBPLocalizedString(NSString *key);
 extern BOOL FBPDownloadQualityLoggingEnabled(void);
 
@@ -133,8 +131,8 @@ static BOOL FBPDashURLIsFetchable(NSURL *url) {
     NSURLSessionDownloadTask *_videoTask;
     NSURLSessionDownloadTask *_audioTask;
 
-    /// Every decision is made here: which stream reported what, whether we are
-    /// past the point of starting a merge, and the single exit. The URL session
+    /// Every decision is made here: which stream reported what, whether the flow
+    /// is past the point of starting a merge, and the single exit. The URL session
     /// delegate queue and the muxer's main-queue completion both hop onto it, so
     /// no state below needs a lock.
     dispatch_queue_t _control;
@@ -351,9 +349,6 @@ static void FBPDashRelease(FBPDashDownload *download) {
     // Unranged, deliberately. Each representation's <BaseURL> is one complete
     // self-contained file — the manifest's SegmentBase only indexes into what is
     // already there — so there is nothing to assemble and no range to ask for.
-    // This is the same conclusion yt-dlp reaches for Facebook, where it does not
-    // implement SegmentBase and falls through to treating the BaseURL as a
-    // direct URL to unfragmented media.
     request.HTTPMethod = @"GET";
     return request;
 }
@@ -605,15 +600,15 @@ static void FBPDashRelease(FBPDashDownload *download) {
 ///
 /// Everything this flow created is gone by the time the completion runs: both
 /// downloaded streams and their scratch directory always, and the merge output
-/// too whenever we are not handing it over. A caller is never left guessing
-/// whether it owns a file.
+/// too whenever it is not handed over. A caller is never left guessing whether
+/// it owns a file.
 - (void)finishWithOutput:(NSURL *)output error:(NSError *)error {
     if (atomic_load(&_finishedFlag)) return;
     atomic_store(&_finishedFlag, true);
 
     // Cancels whatever is still running and, importantly, breaks the session's
-    // strong reference to us. Asynchronous, so the scratch directory is swept a
-    // second time once it has finished — see -URLSession:didBecomeInvalidWithError:.
+    // strong reference to this object. Asynchronous, so the scratch directory is
+    // swept again once it finishes — see -URLSession:didBecomeInvalidWithError:.
     [_session invalidateAndCancel];
     _session = nil;
 
@@ -622,8 +617,8 @@ static void FBPDashRelease(FBPDashDownload *download) {
     if (!output && _outputURL) {
         // FBPMediaMuxer already deletes its own partial output, but a cancel
         // that landed between the merge finishing and this point, or an output
-        // path we never got as far as muxing into, would otherwise leave a file
-        // behind. Idempotent, so doing it anyway costs nothing.
+        // path never muxed into, would otherwise leave a file behind.
+        // Idempotent, so doing it anyway costs nothing.
         [NSFileManager.defaultManager removeItemAtURL:_outputURL error:nil];
     }
 
@@ -796,9 +791,8 @@ didCompleteWithError:(NSError *)error {
     dispatch_async(_control, ^{
         if (atomic_load(&self->_finishedFlag)) return;
 
-        // Our own -cancel cancelled these tasks; reporting that as a transport
-        // failure would put an alert in front of a user who just asked us to
-        // stop.
+        // -cancel cancelled these tasks; reporting that as a transport failure
+        // would put an alert in front of a user who just asked it to stop.
         if (self->_cancelled || captured.code == NSURLErrorCancelled) {
             [self finishWithOutput:nil
                              error:[self errorWithCode:FBPDashDownloadErrorCancelled
@@ -825,7 +819,7 @@ didCompleteWithError:(NSError *)error {
 
 #pragma mark - Reporting
 
-/// The best sentence we have for whatever went wrong underneath — the CDN's
+/// The best sentence available for whatever went wrong underneath — the CDN's
 /// status, or the system's own description of a dropped connection.
 static NSString *FBPDashDownloadReason(NSError *error) {
     NSNumber *status = error.userInfo[FBPDashDownloadStatusCodeKey];

@@ -152,8 +152,8 @@ static void FBPInterceptSettingsButton(UIView *root) {
 
 /// The blue "facebook" wordmark in the top navigation bar. It renders as a
 /// UIImageView carrying the "…view selector" accessibility label (its normal tap
-/// opens Facebook's feed/view selector). We find it by that label rather than a
-/// class name, so an app update degrades this one entry point instead of crashing.
+/// opens Facebook's feed/view selector). Found by that label rather than a class
+/// name, so an app update degrades this one entry point instead of crashing.
 static UIImageView *FBPFindNavLogo(UIView *root) {
     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
     NSInteger visited = 0;
@@ -181,8 +181,8 @@ static UIImageView *FBPFindNavLogo(UIView *root) {
 
 - (void)layoutSubviews {
     %orig;
-    // FBNavigationBar is not declared as a UIView subclass in our headers, so
-    // cast to reach the view-tree helpers.
+    // FBNavigationBar is not declared as a UIView subclass in the tweak's
+    // headers, so cast to reach the view-tree helpers.
     UIImageView *logo = FBPFindNavLogo((UIView *)self);
     if (logo) {
         logo.userInteractionEnabled = YES;

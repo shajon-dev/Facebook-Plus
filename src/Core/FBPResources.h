@@ -6,9 +6,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Resource bundle lookup.
 ///
-/// The bundle lives outside the app, so it has to be located by absolute path;
-/// on rootless jailbreaks that path is relative to the jbroot, which is why
-/// several candidates are tried in order.
+/// The bundle lives outside the app, so it is located by absolute path; on
+/// rootless jailbreaks that path is relative to the jbroot, so several
+/// candidates are tried in order.
 @interface NSBundle (FBPlus)
 @property (class, readonly) NSBundle *fbp_resourceBundle;
 @end
@@ -29,7 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-/// Tint used across the whole UI. A pale blue applied consistently everywhere.
+/// Tint used across the whole UI; a pale blue.
 extern UIColor *FBPTintColor(void);
 
 /// Fixed dark palette for the tweak's own screens — pinned regardless of the
@@ -41,16 +41,15 @@ extern UIColor *FBPPanelColor(void);
 extern UIColor *FBPCardColor(void);
 extern UIColor *FBPIconColor(void);
 
-/// The tweak's typeface. Rounded system design throughout, which reads as
-/// deliberately not-Facebook and keeps the tweak's UI distinguishable from the
-/// host app's. Falls back to the plain system font on anything older than iOS 13.
+/// The tweak's typeface: rounded system design, distinct from Facebook's own UI.
+/// Falls back to the plain system font before iOS 13.
 extern UIFont *FBPFont(CGFloat size, UIFontWeight weight);
 
 /// Localized string for the language chosen inside the tweak (FBPKeyLanguage) —
 /// deliberately independent of the system language. Loads <lang>.lproj from the
 /// resource bundle, falls back to Base, then to the key itself. The per-language
 /// dictionaries are cached, so switching language and re-reading is cheap; a
-/// screen just needs to rebuild (reload) to pick up the new strings.
+/// screen rebuilds (reloads) to pick up the new strings.
 extern NSString *FBPLocalizedString(NSString *key);
 
 /// Short alias used at call sites.

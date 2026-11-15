@@ -2,40 +2,37 @@
 //
 // Why AVFoundation and not FFmpeg
 // ------------------------------------------------------------------------
-// The obvious reference implementation for this job statically links roughly
-// 15 MB of near-default FFmpeg and then uses it as nothing more than a stream
-// copy: avformat_open_input, avcodec_parameters_copy, av_interleaved_write_frame,
-// movflags=+faststart. Not one frame is re-encoded. AVFoundation does exactly
-// that, is already linked, and costs no bytes.
+// The obvious alternative statically links ~15 MB of near-default FFmpeg and
+// uses it as nothing more than a stream copy: avformat_open_input,
+// avcodec_parameters_copy, av_interleaved_write_frame, movflags=+faststart. Not
+// one frame re-encoded. AVFoundation does the same, is already linked, and costs
+// no bytes.
 //
-// Borrowing Facebook's own copy is not an option either, and shipping our own
-// dylib under those names is actively dangerous: the app bundles
-// libavcodec.framework and libavutil.framework with install names
-// @rpath/libavcodec.framework/libavcodec — a VP9 *decoder*, with no libavformat,
-// so no muxer at all. A dynamic library of ours with the same @rpath name would
-// collide with the host's.
+// Borrowing Facebook's own copy is not an option, and shipping a dylib under
+// those names is dangerous: the app bundles libavcodec.framework and
+// libavutil.framework with install names @rpath/libavcodec.framework/libavcodec
+// — a VP9 *decoder*, with no libavformat, so no muxer at all. A dylib of this
+// tweak's with the same @rpath name would collide with the host's.
 //
 // How the stream copy works
 // ------------------------------------------------------------------------
-// An AVAssetReaderTrackOutput built with `outputSettings: nil` hands back the
-// track's samples still compressed. An AVAssetWriterInput built with
-// `outputSettings: nil` writes appended samples through "doing no processing"
-// (AVAssetWriterInput.h:63). The one catch, which is also the single most
-// common way to get this wrong: for any file type other than
-// AVFileTypeQuickTimeMovie — and we want MPEG-4 — passthrough requires a
+// An AVAssetReaderTrackOutput with `outputSettings: nil` hands back the track's
+// samples still compressed. An AVAssetWriterInput with `outputSettings: nil`
+// writes appended samples through "doing no processing" (AVAssetWriterInput.h:
+// 63). The catch, and the most common way to get this wrong: for any file type
+// other than AVFileTypeQuickTimeMovie — MPEG-4 here — passthrough requires a
 // non-NULL sourceFormatHint, via
 // +assetWriterInputWithMediaType:outputSettings:sourceFormatHint:
 // (AVAssetWriterInput.h:113), and -addInput: throws without one
-// (AVAssetWriter.h:276). So every input here is created with the source track's
-// own CMFormatDescription as its hint.
+// (AVAssetWriter.h:276). So every input is created with the source track's own
+// CMFormatDescription as its hint.
 //
-// Reader/writer rather than AVMutableComposition + AVAssetExportSession: the
+// Reader/writer, not AVMutableComposition + AVAssetExportSession: the
 // composition route is fewer lines, but passthrough export of a composition has
 // credible reports of progressive audio drift (Apple Developer Forums 663734),
-// worst with mono audio — which is exactly what a Reel's audio representation
-// often is. Reader/writer also lets us choose the session start time from the
-// real first sample of each track instead of hoping the composition's idea of
-// zero matches ours.
+// worst with mono audio — often a Reel's audio representation. Reader/writer
+// also lets the session start time come from each track's real first sample
+// rather than the composition's idea of zero.
 
 #import "FBPMediaMuxer.h"
 
@@ -61,10 +58,10 @@ static NSError *FBPMuxError(FBPMediaMuxerError code,
                            userInfo:info];
 }
 
-/// A CMFormatDescription's media subtype as the four characters it really is, so
-/// the diagnostic can say "avc1" / "mp4a" rather than a bare integer. Used only
-/// to prove, in the log, that what went in is what came out — hence __unused,
-/// since FBPLog and every call to this compile away in release.
+/// A CMFormatDescription's media subtype as its four characters, so the
+/// diagnostic says "avc1" / "mp4a" rather than a bare integer. Proves in the log
+/// that what went in came out — hence __unused, since FBPLog and every call
+/// compile away in release.
 __attribute__((unused))
 static NSString *FBPMuxFourCC(CMFormatDescriptionRef format) {
     if (!format) return @"none";
@@ -86,10 +83,10 @@ static NSString *FBPMuxFourCC(CMFormatDescriptionRef format) {
 #pragma mark - In-flight registry
 
 // A mux owns itself for its lifetime: the caller gets no handle back, so
-// something has to keep the job alive between the two GETs finishing and the
-// completion firing. This set is that owner, and it is also what +cancelAll
-// walks. Entries are added before any work starts and removed in the single
-// exit point, -finishWithError:.
+// something must keep the job alive between the two GETs finishing and the
+// completion firing. This set is that owner, and what +cancelAll walks. Entries
+// are added before any work starts and removed in the single exit,
+// -finishWithError:.
 
 static NSMutableSet *gFBPMuxJobs = nil;
 static NSLock *gFBPMuxJobsLock = nil;
@@ -114,8 +111,7 @@ static void FBPMuxEnsureRegistry(void) {
     /// the two sample pumps never race over the writer's state.
     dispatch_queue_t _controlQueue;
     /// AVAssetWriterInput wants each input driven from its own serial queue;
-    /// sharing one between a video and an audio input risks one input's
-    /// not-ready state starving the other.
+    /// sharing one risks one input's not-ready state starving the other.
     dispatch_queue_t _videoQueue;
     dispatch_queue_t _audioQueue;
 
@@ -190,7 +186,7 @@ static void FBPMuxEnsureRegistry(void) {
     atomic_store_explicit(&_cancelled, true, memory_order_relaxed);
 
     // Nudge the control queue too: a job still waiting on asset headers has no
-    // pump running to notice the flag.
+    // pump to notice the flag.
     dispatch_async(_controlQueue, ^{
         [self checkCancelled];
     });
@@ -223,7 +219,7 @@ static void FBPMuxEnsureRegistry(void) {
 
 - (void)start {
     if (!_videoURL || !_audioURL || !_outputURL) {
-        // No registration yet, so fail straight out rather than through the
+        // Not registered yet, so fail straight out rather than through the
         // normal exit, which expects to deregister.
         FBPMediaMuxCompletion completion = _completion;
         _completion = nil;
@@ -248,19 +244,19 @@ static void FBPMuxEnsureRegistry(void) {
 
 /// Pull both files' headers before touching a reader or a writer.
 ///
-/// This is the cheap half of the robustness story. Both inputs are files we just
-/// downloaded from signed, short-lived CDN URLs, so a "video.mp4" on disk can
-/// just as easily be an HTML error page, a JSON expiry response, or the first
-/// 60 KB of a real MP4 that the connection dropped in the middle of. All three
-/// show up here as unreadable, or readable with no track of the type we need.
+/// The cheap half of the robustness story. Both inputs are files downloaded from
+/// signed, short-lived CDN URLs, so a "video.mp4" on disk can just as easily be
+/// an HTML error page, a JSON expiry response, or the first 60 KB of an MP4 the
+/// connection dropped mid-file. All three show up here as unreadable, or
+/// readable with no track of the needed type.
 - (void)loadAssets {
     if ([self checkCancelled]) {
         [self finishWithError:self.failure];
         return;
     }
 
-    // Precise timing costs a header scan but is what makes the track time
-    // ranges we pick the session start from trustworthy.
+    // Precise timing costs a header scan but makes the track time ranges the
+    // session start is picked from trustworthy.
     NSDictionary *options = @{ AVURLAssetPreferPreciseDurationAndTimingKey: @YES };
     AVURLAsset *videoAsset = [AVURLAsset URLAssetWithURL:_videoURL options:options];
     AVURLAsset *audioAsset = [AVURLAsset URLAssetWithURL:_audioURL options:options];
@@ -350,8 +346,8 @@ static void FBPMuxEnsureRegistry(void) {
     }
 
     // The hint that makes passthrough into an MP4 legal at all. A track with no
-    // format description is not something we can pass through, and guessing one
-    // would mean guessing the codec.
+    // format description cannot be passed through, and guessing one means
+    // guessing the codec.
     CMFormatDescriptionRef videoFormat =
         (__bridge CMFormatDescriptionRef)videoTrack.formatDescriptions.firstObject;
     CMFormatDescriptionRef audioFormat =
@@ -416,18 +412,18 @@ static void FBPMuxEnsureRegistry(void) {
         return NO;
     }
 
-    // nil output settings is the whole point: the samples come out in the
-    // codec they are stored in, with no decode step.
+    // nil output settings is the point: samples come out in the codec they are
+    // stored in, with no decode step.
     _videoOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:videoTrack
                                                              outputSettings:nil];
     _audioOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:audioTrack
                                                              outputSettings:nil];
 
-    // We hand each buffer straight to the writer and release it, so there is
-    // nothing to protect by copying the sample data first. The one buffer held
+    // Each buffer goes straight to the writer and is released, so there is
+    // nothing to protect by copying sample data first. The one buffer held
     // across a queue hop — the peeked first sample below — is appended before
-    // anything else asks the same output for another, so the reader has no
-    // opportunity to recycle underneath it.
+    // anything asks the same output for another, so the reader cannot recycle
+    // underneath it.
     _videoOutput.alwaysCopiesSampleData = NO;
     _audioOutput.alwaysCopiesSampleData = NO;
 
@@ -476,8 +472,8 @@ static void FBPMuxEnsureRegistry(void) {
         return NO;
     }
 
-    // The AVFoundation equivalent of FFmpeg's movflags=+faststart: the moov atom
-    // is written ahead of the media, so the file streams from the first byte.
+    // The AVFoundation equivalent of movflags=+faststart: the moov atom is
+    // written ahead of the media, so the file streams from the first byte.
     _writer.shouldOptimizeForNetworkUse = YES;
 
     _videoInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
@@ -490,18 +486,18 @@ static void FBPMuxEnsureRegistry(void) {
     _videoInput.expectsMediaDataInRealTime = NO;
     _audioInput.expectsMediaDataInRealTime = NO;
 
-    // The single most likely visible bug in this whole file. Rotation in an MP4
-    // is not in the pixels, it is a 3x3 matrix on the video track, and a fresh
+    // The most likely visible bug in this file. Rotation in an MP4 is not in the
+    // pixels, it is a 3x3 matrix on the video track, and a fresh
     // AVAssetWriterInput's matrix is the identity. Copy it across and a portrait
-    // Reel saves portrait; forget to, and every portrait video lands in Photos
-    // lying on its side with the picture itself untouched.
+    // Reel saves portrait; forget, and every portrait video lands in Photos on
+    // its side, picture untouched.
     _videoInput.transform = videoTrack.preferredTransform;
 
-    // VP9 is the reason this is a check and not an assumption: Facebook ships a
-    // VP9 decoder in the app, and if a chosen DASH representation turns out to
-    // be VP9 or Opus, AVAssetWriter's restricted set of passthrough subtypes for
-    // MPEG-4 will not take it. -canAddInput: turns that into a clean error
-    // instead of the exception -addInput: would throw.
+    // VP9 is why this is a check, not an assumption: Facebook ships a VP9
+    // decoder, and a chosen DASH representation that turns out to be VP9 or Opus
+    // is not in AVAssetWriter's restricted passthrough subtypes for MPEG-4.
+    // -canAddInput: turns that into a clean error instead of the exception
+    // -addInput: would throw.
     if (![_writer canAddInput:_videoInput] || ![_writer canAddInput:_audioInput]) {
         if (errorOut) {
             *errorOut = FBPMuxError(FBPMediaMuxerErrorSetupFailed,
@@ -528,14 +524,14 @@ static void FBPMuxEnsureRegistry(void) {
 #pragma mark Timing and sample pumps
 
 /// The first sample of a track, or NULL — in which case @c errorOut says whether
-/// the track was simply empty or the read failed outright.
+/// the track was empty or the read failed outright.
 ///
-/// Peeking is what lets us start the writing session at the real start time
-/// instead of assuming zero. A track's timeRange is a header claim; the first
-/// sample's presentation timestamp is the thing the writer will actually be
-/// asked to accept, and a session started later than that is a hard failure.
-/// It doubles as the last readability check: a file whose headers promise a
-/// track it does not contain fails here rather than producing a silent video.
+/// Peeking starts the writing session at the real start time instead of
+/// assuming zero. A track's timeRange is a header claim; the first sample's
+/// presentation timestamp is what the writer is actually asked to accept, and a
+/// session started later than that is a hard failure. Doubles as the last
+/// readability check: a file whose headers promise a track it does not contain
+/// fails here rather than producing a silent video.
 - (CMSampleBufferRef)copyFirstSampleFrom:(AVAssetReaderTrackOutput *)output
                                   reader:(AVAssetReader *)reader
                                    error:(NSError **)errorOut CF_RETURNS_RETAINED {
@@ -556,7 +552,7 @@ static void FBPMuxEnsureRegistry(void) {
 }
 
 /// A sample's presentation timestamp, falling back to the track's header start
-/// time and then to zero, so we never hand the writer an invalid CMTime.
+/// time and then to zero, so the writer never gets an invalid CMTime.
 static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     CMTime pts = sample ? CMSampleBufferGetPresentationTimeStamp(sample) : kCMTimeInvalid;
     if (CMTIME_IS_NUMERIC(pts)) return pts;
@@ -586,13 +582,13 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
         return;
     }
 
-    // The two files are separate downloads of the same video, so they are
-    // *usually* both based at zero — but a representation can carry an edit list
-    // or an encoder delay that puts its first sample somewhere else, and the two
-    // need not agree. Taking the earlier of the two as the session start keeps
-    // the gap between them exactly as it was: whichever track really starts
-    // later still starts later in the output, by the same amount, so nothing
-    // drifts and nothing is nudged into sync that was not in sync to begin with.
+    // The two files are separate downloads of the same video, so usually both
+    // based at zero — but a representation can carry an edit list or encoder
+    // delay that puts its first sample elsewhere, and the two need not agree.
+    // Taking the earlier as the session start keeps the gap between them as it
+    // was: whichever track starts later still starts later in the output by the
+    // same amount, so nothing drifts and nothing is nudged into sync it never
+    // had.
     CMTime videoStart = FBPMuxStartTime(firstVideo, videoTrack);
     CMTime audioStart = FBPMuxStartTime(firstAudio, audioTrack);
     CMTime sessionStart = CMTimeMinimum(videoStart, audioStart);
@@ -612,9 +608,9 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
 
     [_writer startSessionAtSourceTime:sessionStart];
 
-    // Nothing enforces equal durations. Each pump drives its own track to the
-    // end of its own file and marks its input finished there; the shorter track
-    // simply stops, and the output runs as long as the longer one.
+    // Nothing enforces equal durations. Each pump drives its track to the end of
+    // its file and marks its input finished there; the shorter track stops, and
+    // the output runs as long as the longer one.
     dispatch_group_t group = dispatch_group_create();
 
     [self pumpInput:_videoInput
@@ -638,8 +634,8 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     });
 }
 
-/// Copy one track's samples across, oldest first, for as long as the writer will
-/// take them.
+/// Copy one track's samples across, oldest first, for as long as the writer
+/// takes them.
 ///
 /// @param first A sample already pulled off @c output by the peek above; this
 ///   pump owns it and appends it before asking for another, so peeking does not
@@ -656,12 +652,12 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     // Both mutated only from `queue`, which AVFoundation drives serially.
     __block CMSampleBufferRef pending = first;
     __block BOOL left = NO;
-    // Diagnostic only, so unused once FBPLog compiles away in release.
+    // Diagnostic only, unused once FBPLog compiles away in release.
     __block __unused NSInteger appended = 0;
 
     [input requestMediaDataWhenReadyOnQueue:queue usingBlock:^{
         // AVFoundation keeps invoking this block until the input is marked
-        // finished, so the latch is what makes the group balance.
+        // finished, so the latch is what balances the group.
         if (left) return;
 
         void (^finish)(NSError *) = ^(NSError *error) {
@@ -695,8 +691,8 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
             }
 
             if (!sample) {
-                // End of this track — or a read that died partway, which is what
-                // a download truncated mid-file looks like from here.
+                // End of this track — or a read that died partway, which is how
+                // a download truncated mid-file looks from here.
                 NSError *error = nil;
                 if (reader.status == AVAssetReaderStatusFailed) {
                     error = FBPMuxError(FBPMediaMuxerErrorReadFailed,
@@ -731,7 +727,8 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     }
 
     [_writer finishWritingWithCompletionHandler:^{
-        // Delivered on an arbitrary queue; every decision belongs on ours.
+        // Delivered on an arbitrary queue; every decision belongs on the
+        // control queue.
         dispatch_async(self->_controlQueue, ^{
             if (self->_writer.status == AVAssetWriterStatusCompleted) {
                 [self logOutputTracks];
@@ -746,12 +743,12 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     }];
 }
 
-/// Read the finished file back and log what its tracks actually are.
+/// Read the finished file back and log its tracks.
 ///
-/// This is the cheap standing proof that the pipeline is a stream copy: if a
-/// future change ever makes it re-encode, these four-character codes stop
-/// matching the ones logged on the way in. Debug builds only — FBPLog compiles
-/// away in release, and so does the asset this builds.
+/// Cheap standing proof that the pipeline is a stream copy: a future change that
+/// re-encodes makes these four-character codes stop matching the ones logged on
+/// the way in. Debug builds only — FBPLog compiles away in release, and so does
+/// the asset this builds.
 - (void)logOutputTracks {
 #ifdef DEBUG
     AVURLAsset *result = [AVURLAsset URLAssetWithURL:_outputURL options:nil];
@@ -771,8 +768,8 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     _completed = YES;
 
     if (error) {
-        // Never leave a half-written MP4 behind: the caller's next step is
-        // handing this path to Photos, which would happily import a broken file.
+        // Never leave a half-written MP4 behind: the caller's next step hands
+        // this path to Photos, which would happily import a broken file.
         if (_writer.status == AVAssetWriterStatusWriting) [_writer cancelWriting];
         [NSFileManager.defaultManager removeItemAtURL:_outputURL error:nil];
 
@@ -783,8 +780,8 @@ static CMTime FBPMuxStartTime(CMSampleBufferRef sample, AVAssetTrack *track) {
     [_audioReader cancelReading];
 
     // The writer retains its inputs, which retain the pump blocks, which retain
-    // self. Dropping them here is what lets this object — and the registry entry
-    // below, its last owner — go away.
+    // self. Dropping them lets this object — and the registry entry below, its
+    // last owner — go away.
     _videoReader = nil;
     _audioReader = nil;
     _videoOutput = nil;

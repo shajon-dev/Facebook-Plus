@@ -5,8 +5,8 @@
 // their own route: Reels via the playbackController argument of
 // -didStartPlaybackForVideo:…, Stories via
 // FBSnacksVideoManager.videoPlaybackController -> -currentVideoPlaybackItem.
-// Everything that turns that item into "what can we download, and how big is
-// it" lives here, so a new format only has to be taught to one file.
+// Everything that turns that item into "what is downloadable, and how big" lives
+// here, so a new format only has to be taught to one file.
 //
 // Two tiers of variant come out of here.
 //
@@ -59,9 +59,9 @@ typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
 
 /// One downloadable rendition of a video.
 ///
-/// `pixelHeight`, `bitRate` and `byteSize` are 0 when Facebook did not give us
-/// that number — they are presentation sugar, never a precondition for the
-/// download itself.
+/// `pixelHeight`, `bitRate` and `byteSize` are 0 when Facebook did not provide
+/// that number — presentation sugar, never a precondition for the download
+/// itself.
 @interface FBPDownloadVariant : NSObject
 
 /// The video file to GET. Always non-nil for a variant that exists.
@@ -157,8 +157,8 @@ typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
 /// The item's @c -firstFrameThumbnailURL, when it has one.
 ///
 /// A poster frame the download manager can load for its row. Never fetched
-/// here; this is only the URL, and a build that renamed the getter simply has
-/// none, which is why no row depends on it.
+/// here; this is only the URL, and a build that renamed the getter has none,
+/// which is why no row depends on it.
 @property (nonatomic, copy, readonly, nullable) NSURL *thumbnailURL;
 
 @end

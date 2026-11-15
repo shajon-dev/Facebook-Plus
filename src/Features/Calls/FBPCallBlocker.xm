@@ -2,7 +2,7 @@
 // calls, so an incoming call reaches only the real Messenger app.
 //
 // When Facebook and Messenger are both installed, each registers for VoIP and
-// both ring at once, and the call cannot be answered cleanly. We silence calls
+// both ring at once, and the call cannot be answered cleanly. Calls are silenced
 // in Facebook ONLY, at the two points that are specific to calling and nowhere
 // near ordinary notifications:
 //

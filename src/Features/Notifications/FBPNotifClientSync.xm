@@ -1,40 +1,37 @@
 // Make Facebook fetch and show a notification that its server only hinted at.
 //
-// THE PROBLEM, as the device proved on 2026-11-08. Facebook sends two kinds of
-// APNs push. A real notification carries an alert and mutable-content:1, so iOS
-// runs the service extension — that is what Messenger and calls still get. A
-// Facebook notification (like, comment, tag, friend request) arrives instead as
-// content-available:1 with no alert at all and "pim":{"nt":"badge_update"},
-// which iOS refuses outright:
+// The problem. Facebook sends two kinds of APNs push. A real notification carries
+// an alert and mutable-content:1, so iOS runs the service extension — that is
+// what Messenger and calls still get. A Facebook notification (like, comment,
+// tag, friend request) arrives instead as content-available:1 with no alert at
+// all and "pim":{"nt":"badge_update"}, which iOS refuses outright:
 //
 //   Saving notification 81EB-0D1E: NO [ hasAlertContent: NO ]
 //   Error … UNErrorDomain Code=2002 "Repository could not save notification.
 //                                    No content that needs to alert."
 //   NOT delivering user visible push notification 81EB-0D1E
 //
-// Only the badge moves. The extension is never even eligible, because iOS does
-// not run a service extension for a notification it will not present.
+// Only the badge moves. The extension is never eligible, because iOS does not
+// run a service extension for a notification it will not present.
 //
-// THE PART FACEBOOK SKIPS. That push is not meant to carry the text: the text is
+// The part Facebook skips. That push is not meant to carry the text; the text is
 // fetched. -[FBNotificationsPushNotifClientSyncBackgroundFetchObserver
 // handleBackgroundFetchRequest:] wakes on the push, reads the MobileConfig pair
 // silent_push_app_layer_badge_update_only / …_use_pim_nt, sees nt ==
-// badge_update, and takes the badge-only branch — Facebook's own counter for it
-// is bg_fetch_app_layer_silent_push_skipped_not_badge_update. So
-// FBPushNotifClientSyncManager, which would fetch the notification by pnid over
+// badge_update, and takes the badge-only branch (counter
+// bg_fetch_app_layer_silent_push_skipped_not_badge_update). So
+// FBPushNotifClientSyncManager — which would fetch the notification by pnid over
 // GraphQL and post it through Facebook's own display pipeline (dedup included,
-// via FBPushNotifClientSyncLocalStorageManager and its DisplayedDirectory),
+// via FBPushNotifClientSyncLocalStorageManager and its DisplayedDirectory) —
 // never runs.
 //
-// WHAT THIS DOES. After the observer has done its badge-only work, run that
-// client sync ourselves with the session the observer already holds. Everything
-// here is Facebook's own machinery — the fetch, the filters, the dedup and the
-// posting are all its code; the only thing added is the trigger it declined to
-// pull.
+// The fix. After the observer has done its badge-only work, run that client sync
+// with the session the observer already holds. The fetch, the filters, the dedup
+// and the posting are all Facebook's own code; the only thing added is the
+// trigger it declined to pull.
 //
-// Nothing is forced: if any class, selector or ivar is missing the hook does
-// not install, which is the house rule — one Facebook change costs this feature
-// and nothing else.
+// Nothing is forced: if any class, selector or ivar is missing the hook does not
+// install — one Facebook change costs this feature and nothing else.
 
 #import <objc/runtime.h>
 #import <UIKit/UIKit.h>
@@ -177,12 +174,11 @@ static void fbpRunClientSync(id observer, NSString *pnid) {
 		FBPClientSyncManager *manager = [[managerClass alloc] initWithNetworker:networker];
 		if (!manager) return;
 
-		// Delay 0: the push has already arrived, so there is nothing to wait for.
-		// The extra is the pnid. Without it the sync asks the server for nothing
-		// in particular and comes back succeeded-but-empty, which is exactly
-		// what the device showed: SUCCEEDED, no notification, no drop reason.
-		// FBPushNotifClientSyncQueryBuilder keys its GraphQL query on pnids, and
-		// the extension's own trigger is built the same way.
+		// Delay 0: the push has already arrived, nothing to wait for. The extra
+		// is the pnid; without it the sync asks the server for nothing in
+		// particular and returns succeeded-but-empty (SUCCEEDED, no notification,
+		// no drop reason). FBPushNotifClientSyncQueryBuilder keys its GraphQL
+		// query on pnids, and the extension's own trigger is built the same way.
 		FBPClientSyncTrigger *trigger =
 			[[triggerClass alloc] initWithName:@"FBPlusBadgeUpdate" withDelay:0 andExtra:pnid];
 		FBPDiagLog(@"client sync: trigger extra %@", pnid ?: @"(none)");
@@ -224,8 +220,8 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 	return %orig;
 }
 
-// Not called for a badge-update push on this build — the device proved that —
-// but it is still the cleanest point when Facebook does route one here.
+// Not called for a badge-update push on this build, but still the cleanest point
+// if Facebook ever routes one here.
 - (void)handleBackgroundFetchRequest:(id)request {
 	%orig;
 	FBPDiagLog(@"client sync: background fetch observed");

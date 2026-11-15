@@ -26,24 +26,24 @@ static BOOL gStoryHookInstalled = NO;
 
 static __weak UIViewController *gStoryController = nil;
 static __weak UIView *gStoryMediaView = nil;
-// Every rendition of the current story, best first — resolved by the shared
-// resolver in FBPDownloadVariants.m, the same one Reels uses. A photo story has
-// exactly one, so it takes the same path with no special case.
+// Every rendition of the current story, best first — from the shared resolver
+// in FBPDownloadVariants.m, the same one Reels uses. A photo story has exactly
+// one, so it takes the same path with no special case.
 static NSArray<FBPDownloadVariant *> *gStoryVariants = nil;
 static NSString *gStoryVideoID = nil;
 // Facebook's own title for the current story and its poster frame, when the
-// playback item published them. Presentation only: they label the row in the
-// download manager, and nil there just means the row says "Story".
+// playback item published them. Presentation only: they label the manager row,
+// and nil there means the row says "Story".
 static NSString *gStoryMediaTitle = nil;
 static NSURL *gStoryThumbnailURL = nil;
 static BOOL gStoryMediaIsVideo = NO;
 static UIButton *gStoryDownloadButton = nil;
 static UIProgressView *gStoryProgress = nil;
 static BOOL gStoryDownloading = NO;
-// The two-stream flow for a DASH rung, nil whenever the single-file path is what
-// is running. Non-nil is also what turns the download button into a stop button:
-// a story that is two transfers plus a merge is no longer instant, and a user who
-// started one needs a way out of it.
+// The two-stream flow for a DASH rung, nil when the single-file path is
+// running. Non-nil also turns the download button into a stop button: a story
+// that is two transfers plus a merge is no longer instant, and whoever started
+// one needs a way out.
 static FBPDashDownload *gStoryDashDownload = nil;
 
 static const NSInteger kFBPStoryDownloadTag = 0x53444C31; // SDL1
@@ -173,21 +173,20 @@ static void FBPStoryFlashSymbol(NSString *symbol) {
     });
 }
 
-// Hand a finished local file to Photos, then clean up after it.
+// Hand a finished local file to Photos, then clean up.
 //
-// Lifted out of the single-file delegate below, unchanged, so the two-stream
-// path lands in exactly the same place: same PHAssetChangeRequest, same album
-// behaviour, same temporary-file deletion, same feedback. @c then runs once the
-// save has been attempted, which is where the single-file path invalidates its
-// session.
+// Lifted out of the single-file delegate unchanged, so the two-stream path
+// lands in the same place: same PHAssetChangeRequest, album behaviour,
+// temporary-file deletion, feedback. @c then runs once the save is attempted,
+// where the single-file path invalidates its session.
 static void FBPStorySaveToPhotos(NSURL *fileURL,
                                  BOOL isVideo,
                                  FBPDownloadJob *job,
                                  void (^then)(void)) {
     [FBPDownloadStore.shared job:job didEnterStage:FBPDownloadJobStageSaving];
 
-    // Kept so the manager's row can offer "View in Photos" afterwards. Only
-    // valid to read once the change block has been handed over.
+    // Kept so the manager's row can offer "View in Photos". Only valid to read
+    // once the change block has been handed over.
     __block NSString *assetIdentifier = nil;
 
     [[PHPhotoLibrary sharedPhotoLibrary]
@@ -216,10 +215,9 @@ static void FBPStorySaveToPhotos(NSURL *fileURL,
             if (success) {
                 FBPStoryShowSavedPopup();
             } else {
-                // Previously a silent xmark on this path. A save that Photos
-                // refused is not something to flash past: it is the one failure
-                // where the reason (permissions, storage, an unplayable file)
-                // is actionable.
+                // Previously a silent xmark. A save Photos refused is not to be
+                // flashed past: it is the one failure whose reason (permissions,
+                // storage, an unplayable file) is actionable.
                 FBPShowStoryMessage(
                     [NSString stringWithFormat:FBPL(@"download.reel.saveFailed"),
                               error.localizedDescription
@@ -233,9 +231,9 @@ static void FBPStorySaveToPhotos(NSURL *fileURL,
 
 /// An error whose localizedDescription is already the sentence to show.
 ///
-/// This file's own wording for each failure is kept exactly as it was; wrapping
-/// it in an NSError is only how it reaches the store, which reads
-/// -localizedDescription for anything outside FBPDashDownload's own domain.
+/// This file's wording for each failure is unchanged; wrapping it in an NSError
+/// is only how it reaches the store, which reads -localizedDescription for
+/// anything outside FBPDashDownload's domain.
 static NSError *FBPStoryError(NSString *message) {
     return [NSError errorWithDomain:@"com.shajon.fbplus.downloads"
                                code:1
@@ -246,17 +244,17 @@ static NSError *FBPStoryError(NSString *message) {
 
 @interface FBPStoryDownloadDelegate : NSObject <NSURLSessionDownloadDelegate>
 @property(nonatomic, copy) NSURL *sourceURL;
-/// The manager's record of this transfer. Everything reported to it is in
-/// addition to what this file already did; none of the existing feedback — the
-/// glyph flash, the saved popup, the hidden progress view — changed.
+/// The manager's record of this transfer. Everything reported to it is on top
+/// of what this file already did; the existing feedback (glyph flash, saved
+/// popup, hidden progress view) is unchanged.
 @property(nonatomic, strong) FBPDownloadJob *job;
 /// Whether *this* transfer is a video, captured when it started.
 ///
-/// It used to read gStoryMediaIsVideo at completion time, which is the story on
-/// screen when the download lands rather than the one it belongs to. That was
-/// already wrong if the user swiped on mid-transfer, and the manager's Retry
-/// makes it reachable on purpose: a photo retried later would be handed to
-/// Photos as a video and refused.
+/// It used to read gStoryMediaIsVideo at completion time — the story on screen
+/// when the download lands, not the one it belongs to. Already wrong if the user
+/// swiped on mid-transfer, and the manager's Retry makes it reachable on
+/// purpose: a photo retried later would be handed to Photos as a video and
+/// refused.
 @property(nonatomic, assign) BOOL isVideo;
 @end
 
@@ -284,10 +282,10 @@ totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
 - (void)URLSession:(NSURLSession *)session
       downloadTask:(NSURLSessionDownloadTask *)downloadTask
 didFinishDownloadingToURL:(NSURL *)location {
-    // A refused transfer still "finishes" — with the CDN's error body as its
-    // payload — so without this an expired link was saved to Photos as a
-    // seconds-long broken .mp4. 403 specifically means the signed URL's `oe=`
-    // expiry has passed, which tapping download again fixes.
+    // A refused transfer still "finishes", with the CDN's error body as its
+    // payload, so without this an expired link saved to Photos as a seconds-long
+    // broken .mp4. 403 means the signed URL's `oe=` expiry has passed, which
+    // tapping download again fixes.
     NSHTTPURLResponse *response =
         [downloadTask.response isKindOfClass:NSHTTPURLResponse.class]
         ? (NSHTTPURLResponse *)downloadTask.response : nil;
@@ -353,9 +351,9 @@ didCompleteWithError:(NSError *)error {
     if (!error) return;
 
     FBPStoryLog(@"download error: %@", error);
-    // A transfer the user cancelled from the manager arrives here as
-    // NSURLErrorCancelled; the store knows it was asked for and files the job as
-    // cancelled rather than failed.
+    // A transfer cancelled from the manager arrives here as NSURLErrorCancelled;
+    // the store knows it was asked for and files the job as cancelled, not
+    // failed.
     [FBPDownloadStore.shared job:self.job didFailWithError:error];
 
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -373,13 +371,13 @@ static NSMutableSet *gStoryDownloadDelegates = nil;
 
 /// @param job The manager's record of this download.
 /// @param isRetry YES when the manager restarted a finished job rather than the
-///   user tapping the story's own button. A retry leaves the on-screen button
-///   alone — it belongs to whatever story is showing now, not to the one being
-///   retried — and is not blocked by another download being in flight, because
-///   each transfer here already has its own delegate and session.
+///   user tapping the story's button. A retry leaves the on-screen button alone
+///   — it belongs to whatever story is showing now, not the one being retried —
+///   and is not blocked by another download in flight, since each transfer has
+///   its own delegate and session.
 /// @param isVideo What this media is, decided by the caller when the download
-///   was first started — never re-read from the globals later, which by then
-///   describe whatever story is on screen.
+///   first started — never re-read from the globals, which by then describe
+///   whatever story is on screen.
 static void FBPStoryStartDownload(NSURL *sourceURL,
                                   FBPDownloadJob *job,
                                   BOOL isRetry,
@@ -425,15 +423,16 @@ static void FBPStoryStartDownload(NSURL *sourceURL,
     NSURLSessionDownloadTask *task = [session downloadTaskWithRequest:request];
     [task resume];
 
-    // The single-file story path had no cancel before, because a story file was
+    // The single-file story path had no cancel before, since a story file was
     // small enough that there was nothing to back out of. The manager asks for
-    // one anyway — a job sitting in a list with no way to stop it is the thing
-    // this feature set out to remove — and a download task has always had one.
+    // one anyway — a job with no way to stop it is what this feature set out to
+    // remove — and a download task has always had one.
     [FBPDownloadStore.shared setCancelWork:^(__unused FBPDownloadJob *cancelled) {
         [task cancel];
     } forJob:job];
 
-    // Keep delegate alive for the transfer; release it later after the normal max resource window.
+    // Keep delegate alive for the transfer; release it after the max resource
+    // window.
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(310.0 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
         [gStoryDownloadDelegates removeObject:delegate];
@@ -442,12 +441,12 @@ static void FBPStoryStartDownload(NSURL *sourceURL,
 
 // Turn the download button into a stop button, and back.
 //
-// Stories shows no progress bar — story files are small and the maintainer asked
-// for no visible downloading UI — but a two-stream DASH save is two transfers
-// and a merge, so it is neither small nor instant. Rather than break that
-// promise with a bar, the one control already on screen carries the state: while
-// a two-stream save runs the button is a stop glyph, and tapping it cancels.
-// That keeps Stories silent and still gives cancel a route.
+// Stories shows no progress bar (story files are small, and the maintainer
+// asked for no visible downloading UI), but a two-stream DASH save is two
+// transfers and a merge — neither small nor instant. Rather than add a bar, the
+// one control already on screen carries the state: while a two-stream save runs
+// the button is a stop glyph, and tapping it cancels. Stays silent, still gives
+// cancel a route.
 static void FBPStorySetStopGlyph(BOOL stop) {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIButton *button = gStoryDownloadButton;
@@ -457,8 +456,8 @@ static void FBPStorySetStopGlyph(BOOL stop) {
                               : [UIImage fbp_imageNamed:@"download"];
         if (image) [button setImage:image forState:UIControlStateNormal];
 
-        // Stays enabled on purpose while a two-stream save runs: it is the only
-        // way out of one. The single-file path still greys the button out.
+        // Stays enabled while a two-stream save runs: the only way out of one.
+        // The single-file path still greys the button out.
         button.enabled = YES;
         button.alpha = 1.0;
     });
@@ -479,9 +478,9 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
                                       FBPDownloadJob *job,
                                       BOOL isRetry) {
     if (!FBPStoryDownloaderEnabled()) { FBPStoryHideButton(); return; }
-    // A missing audio URL is only a refusal when there is nothing else for this
-    // flow to do. An AV1 rung with no soundtrack still has to come through here,
-    // because this is the path that converts it.
+    // A missing audio URL is only a refusal when there is nothing else to do.
+    // An AV1 rung with no soundtrack still comes through here, because this is
+    // the path that converts it.
     if (!variant.url || (!variant.audioURL && !variant.needsConversion)) return;
     if (!isRetry && gStoryDownloading) return;
 
@@ -489,9 +488,9 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
 
     [FBPDownloadStore.shared job:job didEnterStage:FBPDownloadJobStageFetching];
 
-    // Same shape of name, in the same directory, as the single-file story path,
-    // so the asset Photos ends up with is indistinguishable from one saved
-    // before the DASH tier existed.
+    // Same name shape and directory as the single-file story path, so the asset
+    // Photos ends up with is indistinguishable from one saved before the DASH
+    // tier existed.
     NSString *tmpName = [NSString stringWithFormat:@"FBP-Story-%@-%@.mp4",
                          gStoryVideoID ?: @"video", NSUUID.UUID.UUIDString];
     NSURL *output = [NSURL fileURLWithPath:
@@ -508,8 +507,8 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
              convertVideo:variant.needsConversion
             sourceBitRate:variant.bitRate
                  progress:^(FBPDashDownloadStage stage, float fraction) {
-        // Driven even though FBPStorySetProgress swallows it, so that one
-        // function stays the only thing between Stories and a visible bar if the
+        // Driven even though FBPStorySetProgress swallows it, so that function
+        // stays the only thing between Stories and a visible bar if the
         // maintainer ever wants one. The manager shows the real number.
         FBPStorySetProgress(fraction, YES);
 
@@ -517,13 +516,13 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
         [store job:job didProgress:fraction];
         [store job:job didEnterStage:FBPStoryStageForDashStage(stage)];
     } completion:^(NSURL *merged, NSError *error) {
-        // A retry started from the manager never owned the on-screen button or
-        // the global flow handle — the story it belongs to left the screen long
-        // ago — so it touches neither on the way out.
+        // A retry from the manager never owned the on-screen button or the
+        // global flow handle — the story it belongs to left the screen long ago
+        // — so it touches neither on the way out.
         if (!isRetry) {
             gStoryDashDownload = nil;
             // Before the save, so the checkmark/xmark flash restores the
-            // download glyph rather than the stop one.
+            // download glyph, not the stop one.
             FBPStorySetStopGlyph(NO);
         }
 
@@ -535,7 +534,7 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
 
         // The flow's errors travel in its own domain, so the store's message
         // builder keeps folding a 403 on either stream into the expired-link
-        // wording, and records a cancellation as one rather than a failure.
+        // wording, and records a cancellation as one, not a failure.
         [FBPDownloadStore.shared job:job didFailWithError:error];
 
         if (isRetry) return;
@@ -553,7 +552,7 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
         }
 
         // Unmistakable on purpose: with no progress bar, a silent xmark was the
-        // only sign a story download had failed, and it was easy to miss.
+        // only sign a story download failed, and easy to miss.
         FBPStoryLog(@"dash download failed: %@", error);
         FBPStoryFlashSymbol(@"xmark");
         FBPShowStoryMessage(message);
@@ -569,11 +568,11 @@ static void FBPStoryStartDashDownload(FBPDownloadVariant *variant,
     }
 }
 
-/// The one way a story download starts, from a tap or from the manager's Retry.
+/// The one way a story download starts, from a tap or the manager's Retry.
 ///
-/// Creating the job here — rather than inside either path — is what lets the
-/// retry work be a block that captures only the variant: it re-enters this
-/// function with the job it is retrying, and the two paths below attach to it.
+/// Creating the job here, not inside either path, lets the retry work be a block
+/// that captures only the variant: it re-enters this function with the job it is
+/// retrying, and the two paths below attach to it.
 static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
                                   FBPDownloadJob *existing,
                                   BOOL isVideo) {
@@ -592,13 +591,12 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
                        needsConversion:variant.needsConversion
                          expectedBytes:variant.byteSize];
 
-        // Captures the variant and the media type and nothing else, so the
-        // block the job keeps for the session holds no session, no task and no
-        // temporary file — and does not go looking at the globals, which by the
-        // time Retry is pressed describe a different story. It re-runs from the
-        // same URLs, which by then may have passed their `oe=` expiry — in which
-        // case it reports exactly that, and the user taps download on the story
-        // itself.
+        // Captures the variant and media type and nothing else, so the block the
+        // job keeps holds no session, task or temporary file, and does not read
+        // the globals, which by the time Retry is pressed describe a different
+        // story. It re-runs from the same URLs, which by then may have passed
+        // their `oe=` expiry — in which case it reports that, and the user taps
+        // download on the story itself.
         FBPDownloadVariant *retryVariant = variant;
         BOOL retryIsVideo = isVideo;
         [store setRetryWork:^(FBPDownloadJob *retried) {
@@ -607,10 +605,10 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
     }
 
     // A DASH rung is a video-only file plus a separate audio file, so it takes
-    // the two-stream path and gets merged before it is saved. An AV1 rung takes
-    // it too, soundtrack or not, because that is where the re-encode happens
-    // and saving AV1 as-is is what Photos refuses. Everything else is
-    // one complete MP4 — or a photo — and goes down the path it always has.
+    // the two-stream path and is merged before saving. An AV1 rung takes it too,
+    // soundtrack or not, because that is where the re-encode happens and Photos
+    // refuses AV1 as-is. Everything else is one complete MP4 — or a photo — and
+    // goes down the path it always has.
     if (variant.needsMux || variant.needsConversion) {
         FBPStoryStartDashDownload(variant, job, isRetry);
     } else {
@@ -633,9 +631,9 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
 - (void)downloadTapped:(UIButton *)sender {
     FBPStoryLog(@"button tapped currentVideoID=%@", gStoryVideoID);
 
-    // While a two-stream save is running this button is a stop button — see
-    // FBPStorySetStopGlyph. Checked first, before any re-resolution: the tap
-    // means "stop", not "start another".
+    // While a two-stream save runs this button is a stop button — see
+    // FBPStorySetStopGlyph. Checked before any re-resolution: the tap means
+    // "stop", not "start another".
     if (gStoryDashDownload) {
         [gStoryDashDownload cancel];
         return;
@@ -644,13 +642,12 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
     NSArray<FBPDownloadVariant *> *variants = gStoryVariants;
 
     // Re-resolve at tap time. Story playback URLs are signed and carry a short
-    // `oe=` expiry, and the picker sheet below can stay open for as long as the
-    // user takes to choose, so the list read at the moment of the tap is the
-    // only one worth trusting. The live read is only used when it produces
-    // something; otherwise the captured list stands.
+    // `oe=` expiry, and the picker sheet can stay open as long as the user takes
+    // to choose, so the list read at the tap is the only one worth trusting.
+    // Used only when it produces something; otherwise the captured list stands.
     //
     // Only video stories can be re-resolved — a photo story's single URL comes
-    // from the controller's own -_getMediaUrl and has no playback item behind it.
+    // from the controller's -_getMediaUrl and has no playback item behind it.
     id playbackController = nil;
     id item = nil;
 
@@ -674,12 +671,11 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
     // Diagnostic (off by default, free when off).
     FBPDownloadLogQualities(item, playbackController, variants);
 
-    // And again on the pick, for the same expiry reason: the tap-time read
-    // above is already stale by the time a sheet the user studied is dismissed.
-    // Video stories only, for the same reason as above.
-    // Assigned to a typed variable rather than written inline as a ternary:
-    // this file compiles as Objective-C++, where `cond ? block : nil` cannot be
-    // reconciled with nullptr.
+    // And again on the pick, for the same expiry reason: the tap-time read is
+    // already stale by the time a studied sheet is dismissed. Video stories
+    // only. A typed variable rather than an inline ternary: this file compiles
+    // as Objective-C++, where `cond ? block : nil` cannot be reconciled with
+    // nullptr.
     FBPDownloadVariantRefresher storyRefresh = nil;
     if (gStoryMediaIsVideo && gStoryMediaView != nil) {
         storyRefresh = ^NSArray<FBPDownloadVariant *> *{
@@ -696,9 +692,9 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
         sender,
         storyRefresh,
         ^(FBPDownloadVariant *variant) {
-            // One entry point now, which registers the job with the download
-            // manager before routing to the single-file or two-stream path. The
-            // media type is read here, at the tap, and travels with the job.
+            // One entry point, which registers the job with the download manager
+            // before routing to the single-file or two-stream path. The media
+            // type is read here, at the tap, and travels with the job.
             FBPStoryBeginDownload(variant, nil, gStoryMediaIsVideo);
         }
     );
@@ -740,10 +736,10 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
         [host addSubview:progress];
     }
 
-    // Sit directly under the eye (mark-as-seen) button, on the same right-hand
-    // axis and one row-gap below it. This mirrors the eye button's grid in
-    // FBPStoryHooks.xm: centre = safe-area top + header row (41) + one gap (44)
-    // per row. The eye is at row 1 (safeTop + 41 + 44); Download is the next row.
+    // Directly under the eye (mark-as-seen) button, same right-hand axis, one
+    // row-gap below. Mirrors the eye button's grid in FBPStoryHooks.xm: centre =
+    // safe-area top + header row (41) + one gap (44) per row. The eye is at row 1
+    // (safeTop + 41 + 44); Download is the next row.
     static const CGFloat kHeaderRowCentre = 41.0;
     static const CGFloat kCloseCentreFromRight = 24.0;
     static const CGFloat kRowGap = 44.0;
@@ -756,9 +752,9 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
     [host bringSubviewToFront:progress];
 
     button.hidden = NO;
-    // A running two-stream save keeps the button live, because it is that
-    // download's stop control for as long as it lasts — including across a
-    // layout pass triggered by the next story starting to play.
+    // A running two-stream save keeps the button live: it is that download's
+    // stop control for as long as it lasts, including across a layout pass from
+    // the next story starting to play.
     button.enabled = !gStoryDownloading || gStoryDashDownload != nil;
     button.alpha = button.enabled ? 1.0 : 0.45;
 
@@ -773,8 +769,8 @@ static void FBPStoryCaptureCurrentVideo(id controller, id mediaView) {
     if (!videoClass || !mediaView || ![mediaView isKindOfClass:videoClass]) return;
 
     // The HD/SD longhand that used to live here is gone: both download surfaces
-    // now go through the one resolver in FBPDownloadVariants.m, so Stories gets
-    // the quality picker for free and a new format only has to be taught once.
+    // go through the one resolver in FBPDownloadVariants.m, so Stories gets the
+    // quality picker for free and a new format is taught once.
     id playbackController = FBPStoryObjectGetter(mediaView, @"playbackController");
     FBPDownloadSource *source =
         FBPDownloadSourceFromPlaybackController(playbackController);
@@ -815,15 +811,14 @@ static void FBPStoryCaptureCurrentPhoto(id controller, id mediaView) {
     gStoryController = controller;
     gStoryMediaView = mediaView;
     gStoryMediaIsVideo = NO;
-    // One rendition, so the picker is skipped entirely and the tap behaves
-    // exactly as it did before quality selection existed.
+    // One rendition, so the picker is skipped and the tap behaves as it did
+    // before quality selection existed.
     gStoryVariants = FBPDownloadSingleVariant(url, nil);
     gStoryVideoID = [NSString stringWithFormat:@"photo-%lu",
                      (unsigned long)url.absoluteString.hash];
     gStoryMediaTitle = nil;
-    // A photo story's own media URL *is* its thumbnail, so the manager's row
-    // gets a real preview for free — no extra getter, no second request beyond
-    // the one the list makes anyway.
+    // A photo story's media URL *is* its thumbnail, so the manager's row gets a
+    // real preview for free — no extra getter, no second request.
     gStoryThumbnailURL = url;
 
     FBPStoryLog(@"captured PHOTO url=%@", url.absoluteString);

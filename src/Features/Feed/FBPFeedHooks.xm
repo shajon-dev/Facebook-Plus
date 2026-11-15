@@ -124,8 +124,6 @@ static BOOL FBPIsThreadsUnit(id model) {
 
 #pragma mark - Feed-unit token diagnostic
 
-// Why this exists.
-//
 // Every entry in FBPCategoryMap() is a bucket token Facebook can rename at any
 // release, and when it does the toggle keeps its switch and silently stops
 // biting — exactly how the bare "PYMK" token died. Against Facebook

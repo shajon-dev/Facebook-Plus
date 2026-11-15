@@ -1,20 +1,19 @@
 // FBP_DIAG-only: report what iOS thinks this app is allowed to show.
 //
-// Why this exists. Device logs on 2026-11-08 showed the notification extension
-// being registered by runningboardd but **never launched** for a push, while
-// the app itself woke and read its keychain each time and the badge count rose.
-// iOS does not run a service extension for a notification it is not going to
-// present, so "alerts are switched off" and "the extension is broken" look
-// identical from the outside — and a reinstall resets those settings. This
-// prints the answer instead of asking someone to read a Settings screen.
+// Device logs on 2026-11-08 showed the notification extension registered by
+// runningboardd but never launched for a push, while the app woke, read its
+// keychain, and the badge count rose. iOS does not run a service extension for a
+// notification it will not present, so "alerts off" and "extension broken" look
+// identical from outside, and a reinstall resets those settings. This prints the
+// answer instead of asking someone to read a Settings screen.
 //
-// Main tweak only: an appex has its own (different) settings, and this links
+// Main tweak only: an appex has its own settings, and this links
 // UserNotifications, which FBPNotifyBridge.dylib deliberately does not.
 //
-// No Logos directives here on purpose. Logos emits its registration code at the
-// end of the file, *outside* any #if, so a %hook or %ctor wrapped in
-// #if FBP_DIAG still gets referenced in a non-diagnostic build and fails to
-// compile. A plain constructor keeps the whole file inert instead.
+// No Logos directives here on purpose: Logos emits its registration code at the
+// end of the file, outside any #if, so a %hook or %ctor wrapped in #if FBP_DIAG
+// is still referenced in a non-diagnostic build and fails to compile. A plain
+// constructor keeps the whole file inert.
 
 #if FBP_DIAG
 
@@ -66,11 +65,10 @@ static void dumpNotificationSettings(NSString *when) {
 
 #pragma mark - Does Facebook ever try to post the notification itself?
 
-// Facebook's own framework carries -[UNUserNotificationCenter
-// addNotificationRequest:withCompletionHandler:], so the app CAN post a local
-// notification — which is what a content-available push expects it to do after
-// DUET wakes it. These two hooks answer whether it tries, and what it was
-// handed to work with.
+// Facebook's framework carries -[UNUserNotificationCenter
+// addNotificationRequest:withCompletionHandler:], so the app can post a local
+// notification — what a content-available push expects after DUET wakes it.
+// These two hooks record whether it does, and with what.
 
 static void (*origAddNotificationRequest)(id, SEL, UNNotificationRequest *, void (^)(NSError *));
 
@@ -92,9 +90,9 @@ static void fbpAddNotificationRequest(id self, SEL _cmd, UNNotificationRequest *
 	});
 }
 
-// os_log drops a long message, and an NSDictionary description spans lines,
-// which any line-based log filter then loses. So: one line, JSON where possible,
-// split into chunks small enough to survive.
+// os_log drops a long message, and an NSDictionary description spans lines that
+// a line-based log filter loses. One line, JSON where possible, split into
+// chunks small enough to survive.
 static void logPayload(NSDictionary *userInfo) {
 	if (!userInfo) {
 		FBPDiagLog(@"didReceiveRemoteNotification payload: (nil)");
@@ -123,8 +121,7 @@ static void logPayload(NSDictionary *userInfo) {
 }
 
 // The payload of a push that arrives with no alert. If it carries the text (or
-// an id the app could resolve), the tweak could post the notification itself —
-// which is the whole point of looking.
+// a resolvable id), the tweak could post the notification itself.
 static void hookRemoteNotificationDelivery(void) {
 	static BOOL hooked = NO;
 	if (hooked) return;
@@ -159,7 +156,7 @@ static void hookRemoteNotificationDelivery(void) {
 
 // -[UIApplication setDelegate:] is where the delegate first becomes reachable.
 // Waiting on a timer is not good enough: a push-woken launch is suspended within
-// a couple of seconds, which is exactly the launch whose payload we want.
+// a couple of seconds, and that is the launch whose payload matters.
 static void (*origSetDelegate)(id, SEL, id);
 
 static void fbpSetDelegate(id self, SEL _cmd, id delegate) {
@@ -186,7 +183,7 @@ static void installDeliveryHooks(void) {
 		                                                                 (IMP)fbpSetDelegate);
 	}
 
-	// Covers the case where the delegate was already set before we got here.
+	// Covers the case where the delegate was already set before this ran.
 	hookRemoteNotificationDelivery();
 }
 

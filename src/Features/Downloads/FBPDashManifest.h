@@ -1,85 +1,77 @@
-// Minimal DASH MPD reader, for exactly one job: turning the manifest Facebook
-// inlines on an FBVideoPlaybackItem into a list of downloadable qualities.
+// Minimal DASH MPD reader, for one job: turning the manifest Facebook inlines on
+// an FBVideoPlaybackItem into a list of downloadable qualities.
 //
-// -[FBVideoPlaybackItem DashPlaylist] hands us the MPD as an NSString: the XML
-// itself, not a URL, so there is no manifest fetch to do. Facebook's static
-// manifests use SegmentBase with @indexRange and Initialization/@range —
-// single-file byte-range DASH — which means each <Representation>'s <BaseURL>
-// is one complete, self-contained fragmented MP4 on the CDN (corroborated by
+// -[FBVideoPlaybackItem DashPlaylist] hands over the MPD as an NSString — the XML
+// itself, not a URL — so there is no manifest fetch. Facebook's static manifests
+// use SegmentBase with @indexRange and Initialization/@range (single-file
+// byte-range DASH), so each <Representation>'s <BaseURL> is one complete
+// self-contained fragmented MP4 on the CDN (corroborated by
 // -[FNFDashPlaylist isSingleSegmentVideo], and by the ranges being contiguous
-// from byte 0). So a representation is fetched with one plain unranged GET: no
-// segment stitching, no Range requests, and every byte range in the document —
-// @indexRange, Initialization/@range, FBFirstSegmentRange — is information we
-// deliberately ignore.
+// from byte 0). A representation is fetched with one unranged GET: no segment
+// stitching, no Range requests, and every byte range in the document —
+// @indexRange, Initialization/@range, FBFirstSegmentRange — is ignored.
 //
-// What this is NOT: a DASH client. There is no adaptation and no timeline. But
-// it is also no longer fussy, and that is a deliberate reversal.
+// Not a DASH client: no adaptation, no timeline. And no longer fussy, a
+// deliberate reversal.
 //
-// It used to refuse MPD@type="dynamic", any representation without a
-// <SegmentBase> child, anything under a <SegmentTemplate> / <SegmentList>,
-// anything carrying <ContentProtection>, any document not rooted in <MPD>, any
-// representation that declared no codec or could not be named, and any
-// soundtrack that was not AAC with a channel layout it recognised — the last of
-// which could take the whole video ladder with it. A rival tweak reading the
-// same -DashPlaylist off the same -currentVideoPlaybackItem checks *none* of
-// those and shows the full 360p…1080p ladder on the same videos, where ours
-// showed two progressive rows. So every one of those gates was costing rungs
-// rather than buying safety, and every one is now a -droppedNotes entry instead
-// of a refusal.
+// It used to refuse MPD@type="dynamic", a representation without a <SegmentBase>
+// child, anything under a <SegmentTemplate> / <SegmentList>, anything carrying
+// <ContentProtection>, a document not rooted in <MPD>, a representation with no
+// codec or no readable name, and a soundtrack that was not AAC with a recognised
+// channel layout — the last of which could take the whole video ladder with it.
+// None of those gates bought safety on real manifests that carry the full
+// 360p…1080p ladder; every one is now a -droppedNotes entry, not a refusal.
 //
-// Two things are still refused, because both are still true: a <BaseURL> that
-// does not resolve to an absolute http(s) URL is not fetchable at all, and VP9
-// can be neither saved to Photos nor converted by anything this tweak has, so
-// offering such a rung would mean a full download followed by a failed save.
-// Both say so in -droppedNotes.
+// Two things are still refused: a <BaseURL> that does not resolve to an absolute
+// http(s) URL is not fetchable, and VP9 can be neither saved to Photos nor
+// converted by anything here, so offering such a rung means a full download then
+// a failed save. Both say so in -droppedNotes.
 //
-// AV1 is the interesting middle case and is no longer simply refused. Photos
-// will not take AV1 (measured: PHPhotosErrorDomain 3302), but FBPMediaConverter
-// can re-encode it to HEVC first — so an AV1 rung is offered when, and only
-// when, this device can actually decode AV1, and comes back marked
-// -needsConversion. On a handset with no AV1 decoder it is refused exactly as
-// before, with a -droppedNotes line that says so. This matters more than it
-// sounds: five of six captured Meta manifests are AV1-only.
+// AV1 is the middle case. Photos will not take it (measured: PHPhotosErrorDomain
+// 3302), but FBPMediaConverter re-encodes it to HEVC first — so an AV1 rung is
+// offered only when the device can decode AV1, and comes back marked
+// -needsConversion. On a handset with no AV1 decoder it is refused as before,
+// with a -droppedNotes line. This matters: five of six captured Meta manifests
+// are AV1-only.
 //
-// There are two readers. NSXMLParser first; when it yields no video rung from a
-// document long enough to hold one, a regular-expression scraper re-reads the
-// same string using the rival's own patterns. The reason is NSXMLParser's
-// contract: it abandons the document at the first well-formedness error, so one
-// unescaped `&` in a signed <BaseURL> loses the entire ladder, while a scraper
-// is immune by construction. A document under 33 characters is not read at all.
+// Two readers. NSXMLParser first; when it yields no video rung from a document
+// long enough to hold one, a regex scraper re-reads the same string. The reason
+// is NSXMLParser's contract: it abandons the document at the first
+// well-formedness error, so one unescaped `&` in a signed <BaseURL> loses the
+// entire ladder, while a scraper is immune by construction. A document under 33
+// characters is not read at all.
 //
-// Quality is NAMED by Facebook's own non-standard FBQualityLabel and RANKED by
-// the frame's shorter edge, and the split is on purpose. Meta encodes several
-// CRFs per resolution — one real feed manifest carries 480p, 540p, 640p and 720p
-// rungs that are all 1280x720 — so dimensions cannot name those four rows
-// without printing "720p" four times, while the label cannot rank a rung the
-// document never labelled. Each is used for the job it can do: see
-// -qualityRank and -displayLabel. Dedupe is on the label text, so the CRF rungs
-// survive as separate rows. On portrait video the rank tracks the short side,
-// so a Reels rung is width="720" height="1280" and ranks 720.
+// Quality is NAMED by Facebook's non-standard FBQualityLabel and RANKED by the
+// frame's shorter edge; the split is on purpose. Meta encodes several CRFs per
+// resolution — one real feed manifest carries 480p, 540p, 640p and 720p rungs
+// that are all 1280x720 — so dimensions cannot name those four rows without
+// printing "720p" four times, while the label cannot rank a rung the document
+// never labelled. See -qualityRank and -displayLabel. Dedupe is on the label
+// text, so the CRF rungs survive as separate rows. On portrait video the rank
+// tracks the short side, so a Reels rung is width="720" height="1280" and ranks
+// 720.
 //
-// Mixed-codec manifests are normal: Meta ships AVC, VP9 and AV1 lanes in one
-// MPD, in several video AdaptationSets, so the same label can appear two or
-// three times. H.264/HEVC, a representation that declares no codec at all, and
-// AV1 where it can be converted all survive; VP9 never does. The filter runs
-// before dedupe so a VP9 entry can never win a label, and the codec ranking
-// puts H.264 ahead of AV1 at the same label so a lane that can be copied always
-// beats one that would have to be re-encoded.
+// Mixed-codec manifests are normal: Meta ships AVC, VP9 and AV1 lanes in one MPD,
+// in several video AdaptationSets, so the same label can appear two or three
+// times. H.264/HEVC, a representation that declares no codec, and AV1 where it
+// can be converted all survive; VP9 never does. The filter runs before dedupe so
+// a VP9 entry can never win a label, and the codec ranking puts H.264 ahead of
+// AV1 at the same label so a lane that can be copied beats one that must be
+// re-encoded.
 //
-// Video and audio are separate representations — a published capture census
-// found 176 of 176 track-separated, and no representation has ever been
-// observed carrying both codecs — so a chosen video quality has to be paired
-// with an audio representation and the two muxed into one file. This reader
-// therefore returns the video ladder *and* the single best audio
-// representation. A silent video has no audio AdaptationSet at all, which is a
-// success, not an error; audio that is there but awkward is also a success, and
+// Video and audio are separate representations — a capture census found 176 of
+// 176 track-separated, and no representation has been observed carrying both
+// codecs — so a chosen video quality is paired with an audio representation and
+// the two muxed into one file. This reader returns the video ladder and the
+// single best audio representation. A silent video has no audio AdaptationSet,
+// which is a success; audio that is there but awkward is also a success, and
 // -audioIsNotAAC says so without withholding anything.
 //
 // Lifetime: never cache a parsed manifest across a user interaction. The
 // <BaseURL>s carry the same short-lived `oe=` signature as every other Facebook
 // media URL, so a manifest parsed a minute ago may already be dead. Parse it
-// again at the moment you need a URL — the existing pick-time refresher in
-// FBPDownloadVariants.m exists for this reason.
+// again at the moment a URL is needed — the pick-time refresher in
+// FBPDownloadVariants.m exists for this.
 
 #import <Foundation/Foundation.h>
 

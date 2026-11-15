@@ -126,8 +126,8 @@ extern NSString *const FBPKeyResolvedGitHubOwner; // GitHub owner last found liv
 
 /// One shared "a confirmation is on screen" latch, so the two confirmation
 /// paths (the ComponentKit forwarder and the method-swizzle commit hooks) never
-/// stack a second prompt on top of the first — which is what made tapping a post
-/// raise the prompt over and over.
+/// stack a second prompt on the first, which previously made tapping a post
+/// raise the prompt repeatedly.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -177,8 +177,8 @@ extern NSString *const FBPAXStoryHeaderView;    // story-header-view
 #pragma mark - View tags
 //
 // Injected container views are located again on subsequent layout passes with
-// -viewWithTag: rather than being re-created, which is what keeps repeated
-// -layoutSubviews calls from stacking duplicate buttons.
+// -viewWithTag: rather than being re-created, so repeated -layoutSubviews calls
+// do not stack duplicate buttons.
 
 typedef NS_ENUM(NSInteger, FBPViewTag) {
     FBPViewTagStoryButton  = 0x7B902,

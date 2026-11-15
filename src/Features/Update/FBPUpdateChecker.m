@@ -10,9 +10,9 @@
 #define FBP_VERSION @"0.0.0"
 #endif
 
-// We publish under two GitHub owners. The primary is preferred; the mirror is
-// used only when the primary's releases endpoint does not answer HTTP 200 (for
-// example while the primary account is suspended).
+// Releases are published under two GitHub owners. The primary is preferred; the
+// mirror is used only when the primary's releases endpoint does not answer HTTP
+// 200 (for example while the primary account is suspended).
 static NSString *const kPrimaryOwner  = @"SHAJON-404";
 static NSString *const kFallbackOwner = @"shajon-dev";
 static NSString *const kRepoName      = @"Facebook-Plus";

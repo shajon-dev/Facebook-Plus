@@ -48,7 +48,7 @@ static NSString *FBPFontSampleText(void) { return @"Facebook Plus — AaBbGg 012
 #pragma mark - Size slider cell
 
 /// A card row carrying an "A" / slider / "A" group with a live percentage. The
-/// controller owns the value handling; the cell just lays the controls out.
+/// controller owns the value handling; the cell lays the controls out.
 @interface FBPFontSizeCell : UITableViewCell
 @property (nonatomic, strong) UISlider *slider;
 @property (nonatomic, strong) UILabel *valueLabel;
@@ -151,7 +151,7 @@ static NSString *FBPFontSampleText(void) { return @"Facebook Plus — AaBbGg 012
     UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc]
         initWithDocumentTypes:@[ @"public.font", @"public.truetype-ttf-font",
                                  @"public.opentype-font", @"com.apple.truetype-datafork-suitcase-font" ]
-                       inMode:UIDocumentPickerModeImport];   // hands us a readable local copy
+                       inMode:UIDocumentPickerModeImport];   // yields a readable local copy
     picker.delegate = self;
     picker.allowsMultipleSelection = YES;
     picker.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;

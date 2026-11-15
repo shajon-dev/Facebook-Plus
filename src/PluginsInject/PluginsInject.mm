@@ -1,10 +1,9 @@
-// Constructor: install the SecItem* rebinds, and the entitlement-derived
-// fallback for the keychain access group.
+// Constructor: install the SecItem* rebinds and the entitlement-derived fallback
+// for the keychain access group.
 //
-// Note what is *not* here any more: the access group used to be resolved once,
-// eagerly, in this constructor, and whatever it got — including nothing — was
-// what the whole process used for the rest of its life. In the notification
-// extension that is a race it can lose, so resolution now lives in
+// The access group used to be resolved once, eagerly, here, and whatever it got
+// — including nothing — was what the whole process used for its lifetime. In the
+// notification extension that is a race it can lose, so resolution now lives in
 // SecRebinds.xm, happens on first use, and is retried until it succeeds.
 
 #import <objc/runtime.h>
@@ -38,8 +37,8 @@ void FBPDiagLogv(NSString *format, ...) {
 // keychain-access-groups entitlement, so reading that entitlement gives the
 // same answer the keychain would have, without touching it. A signer gives the
 // app and its extensions the same entitlement, so the two processes still
-// converge. Note the first entry on a development profile is usually the
-// literal wildcard "<TeamID>.*", which is also what the keychain reports as the
+// converge. The first entry on a development profile is usually the literal
+// wildcard "<TeamID>.*", which is also what the keychain reports as the
 // group of an untagged item on such a profile.
 //
 // application-identifier is the last resort: with no keychain-access-groups

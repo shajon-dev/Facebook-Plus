@@ -3,7 +3,7 @@
 //
 //  * Watch / video feed ads come from FBVideoFeedAdsPool, which hands the player
 //    an array of ad items to interleave. Returning an empty array leaves the
-//    organic videos untouched and simply inserts nothing.
+//    organic videos untouched and inserts nothing.
 //  * Story ("Snacks") ads are loaded by FBSnacksAdsPaginatingFetcher ahead of
 //    time; no-oping its fetch entry points means an ad is never requested, so no
 //    gap is left between stories.
@@ -95,20 +95,22 @@ BOOL FBPModelIsBlockedAd(id model) {
 //
 // Marketplace is a React Native surface: Relay fetches its data with GraphQL over
 // React Native's RCTNetworking, and every request carries an "X-FB-Friendly-Name"
-// header (and/or an fb_api_req_friendly_name body param) naming the query. We hook
-// -[RCTNetworking handlerForRequest:] and do two things while Remove Ads is on:
+// header (and/or an fb_api_req_friendly_name body param) naming the query.
+// -[RCTNetworking handlerForRequest:] is hooked to do two things while Remove Ads
+// is on:
 //
 //   1. Dedicated ads queries (MarketplaceHomeFeedAdsQueryRendererQuery,
 //      MarketplacePDPPersonalizedAdsQuery, …) are handed a handler that fails the
 //      request immediately, so their QueryRenderers get a network error and render
 //      nothing. Real listings come from separate queries and are untouched.
-//   2. Feed / search queries blend ad stories into the normal listing edges, so we
-//      wrap the real handler, buffer the response, and drop any item whose
-//      __typename is an ad type (MarketplaceAdStory, …CarouselAdStory, Sponsored…).
+//   2. Feed / search queries blend ad stories into the normal listing edges, so
+//      the real handler is wrapped, the response buffered, and any item whose
+//      __typename is an ad type (MarketplaceAdStory, …CarouselAdStory, Sponsored…)
+//      dropped.
 //
-// The idea and the core GraphQL-layer logic are adapted from adamsardo's
-// MarketplaceAdBlock (see ROADMAP_AND_CREDITS.md); this is a restyled, toggle-gated
-// port in the tweak's own conventions.
+// The core GraphQL-layer logic is adapted from a third-party source; see
+// THIRD_PARTY_NOTICES.md. Restyled here as a toggle-gated port in the tweak's own
+// conventions.
 
 // The friendly names of the dedicated Marketplace ads queries. The explicit set
 // documents the common ones; the regular expression then catches any other
@@ -252,7 +254,7 @@ static NSData *FBPMarketplaceFilterResponse(NSData *data, NSString *name) {
 
 #pragma mark Marketplace — request handlers
 
-// The subset of RCTURLRequestDelegate we call on the task RCTNetworking passes to
+// The subset of RCTURLRequestDelegate called on the task RCTNetworking passes to
 // a handler. Declared locally so the calls are typed; resolved at runtime.
 @protocol FBPMarketplaceRequestDelegate <NSObject>
 - (void)URLRequest:(id)token didReceiveData:(NSData *)data;

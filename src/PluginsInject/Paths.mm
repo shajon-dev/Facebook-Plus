@@ -49,8 +49,8 @@ BOOL fbpClaimProcessOnce(const char *name) {
 }
 
 // True in an app extension (the appex's own Info.plist carries NSExtension),
-// false in the host app. FBPNotifyBridge.dylib uses this to stay completely
-// inert in the main app: zsign's -P injects it into the main binary as well as
+// false in the host app. FBPNotifyBridge.dylib uses this to stay inert in the
+// main app: zsign's -P injects it into the main binary as well as
 // the appex, and the main app already has the full tweak, so without this gate
 // every redirect and every SecItem rebind is installed twice there.
 BOOL fbpIsAppExtensionProcess(void) {
@@ -63,13 +63,11 @@ BOOL fbpIsAppExtensionProcess(void) {
 }
 
 // NSUserDefaults writes a suite to <container>/Library/Preferences/<suite>.plist
-// and does NOT create those intermediate directories itself. Hand it a
-// redirected container that lacks them and the suite silently reads back empty
-// and loses every write — which, for the group suites Facebook keeps session
-// and account state in, looks exactly like being logged out, in the app and in
-// the notification extension alike. So create them before handing the
-// container over. (The same point is made in sparkle-ig's SPKSideloadFix,
-// which is the other living descendant of zxPluginsInject.)
+// and does not create those intermediate directories itself. A redirected
+// container that lacks them makes the suite silently read back empty and lose
+// every write — which, for the group suites Facebook keeps session and account
+// state in, looks exactly like being logged out, in the app and in the
+// notification extension alike. So create them before handing the container over.
 BOOL prepareDefaultsContainer(NSURL *container) {
 	if (!container) {
 		return NO;
@@ -81,7 +79,7 @@ BOOL prepareDefaultsContainer(NSURL *container) {
 }
 
 // Resolved on demand and **cached only on success**. This used to be a
-// dispatch_once, which cached a *failure* just as permanently: in the
+// dispatch_once, which cached a *failure* equally permanently: in the
 // notification extension LSBundleProxy is not always usable at the moment of
 // the first call, and one lost race then left every later call in that process
 // falling back to the extension's private Documents directory — which is not
@@ -126,7 +124,7 @@ NSURL *getAppGroupPathIfExists() {
 			return nil;
 		}
 
-		// Why the choice has to be deterministic, not just "the first one":
+		// The choice must be deterministic, not "the first one":
 		// the main app and the Notification Service Extension are two separate
 		// processes that each resolve this independently, and every redirected
 		// container (App Group, group-suite NSUserDefaults) is built as a
@@ -134,8 +132,8 @@ NSURL *getAppGroupPathIfExists() {
 		// different groups they end up with different roots, and the session the
 		// app writes lands somewhere the extension never looks. Nothing promises
 		// that the entitlement array arrives in the same order in both processes,
-		// so we filter, sort with a locale-independent comparison, and then take
-		// the first candidate that actually resolves.
+		// so filter, sort with a locale-independent comparison, then take
+		// the first candidate that resolves.
 		NSMutableArray<NSString *> *candidates = [NSMutableArray array];
 		for (id group in appGroups) {
 			if (![group isKindOfClass:[NSString class]]) {

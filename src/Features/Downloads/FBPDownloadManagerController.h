@@ -1,9 +1,9 @@
 // The download manager: the list the user opens to see every download, and the
 // HUD pill that gets them back to it.
 //
-// Neither of these owns a download. FBPDownloadStore does; both of these are
-// views of it, rebuilt from FBPDownloadStoreDidChangeNotification, which is what
-// makes closing either of them harmless.
+// Neither owns a download. FBPDownloadStore does; both are views of it, rebuilt
+// from FBPDownloadStoreDidChangeNotification, which makes closing either
+// harmless.
 
 #import "FBPlus.h"
 
@@ -28,9 +28,9 @@ extern "C" {
 
 /// Start watching the store, so a download started anywhere raises a HUD pill.
 ///
-/// Called once from FBPInitReelsDownloader — the one installer FBPEntry always
-/// runs — because the pill belongs to downloads in general, not to either
-/// surface. Safe to call more than once.
+/// Called once from FBPInitReelsDownloader — the installer FBPEntry always runs
+/// — because the pill belongs to downloads in general, not either surface. Safe
+/// to call more than once.
 extern void FBPDownloadActivityInstall(void);
 
 #ifdef __cplusplus

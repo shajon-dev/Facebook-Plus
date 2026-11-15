@@ -78,17 +78,17 @@ static NSHashTable<UIView *> *gSidebars = nil;
 
 // Session-only "cinema mode": while YES, every Reel's chrome (gradients,
 // caption, author, and the whole like/comment/share/save/more sidebar) is
-// hidden, leaving only the video plus our own download + toggle buttons. The
-// user turns it on/off with the eye toggle; it persists across reel swipes
-// until they untoggle, and resets to shown on relaunch.
+// hidden, leaving only the video plus the tweak's download + toggle buttons. The
+// user turns it on/off with the eye toggle; it persists across reel swipes until
+// they untoggle, and resets to shown on relaunch.
 static BOOL gOverlayHidden = NO;
 
-// The overlay container views we have hidden, held weakly so recycled
-// ComponentKit views don't keep us alive. Used to restore them on untoggle.
+// The overlay container views hidden by the tweak, held weakly so recycled
+// ComponentKit views are not kept alive. Used to restore them on untoggle.
 static NSHashTable<UIView *> *gHiddenOverlays = nil;
 
-// Marks a view as hidden by us (not by Facebook) so the sidebar-visibility
-// check can tell "the reel left the screen" apart from "we stripped its chrome".
+// Marks a view as hidden by the tweak (not by Facebook) so the sidebar-visibility
+// check can tell "the reel left the screen" apart from "its chrome was stripped".
 static const void *kFBPHiddenByUsKey = &kFBPHiddenByUsKey;
 
 static BOOL FBPViewHiddenByUs(UIView *view) {
@@ -168,7 +168,7 @@ static void FBPHideOverlayChildrenOf(UIView *container) {
     }
 }
 
-// Restore every overlay we hid and forget them.
+// Restore every hidden overlay and forget them.
 static void FBPUnhideAllOverlays(void) {
     if (!gHiddenOverlays)
         return;
@@ -187,7 +187,7 @@ static void FBPUnhideAllOverlays(void) {
 
 // While cinema mode is on, the bottom tab bar is faded out along with the rest of
 // the Reels chrome, then restored on untoggle or on leaving Reels. Held strongly
-// only while hidden so we can always restore their alpha; cleared on restore.
+// only while hidden so their alpha can always be restored; cleared on restore.
 static NSMutableSet<UIView *> *gHiddenTabBars = nil;
 
 // Every view that makes up the bottom tab bar's chrome — the icon rows AND the
@@ -213,7 +213,7 @@ static BOOL FBPIsTabBarContainer(UIView *view) {
 }
 
 // Walk the whole window tree, collecting every tab-bar chrome view (icons and
-// backgrounds may be siblings, so we don't stop at the first match).
+// backgrounds may be siblings, so the walk does not stop at the first match).
 static void FBPCollectTabBars(UIView *root, NSMutableArray<UIView *> *out, NSInteger depth) {
     if (!root || depth > 80) return;
     if (FBPIsTabBarContainer(root)) [out addObject:root];
@@ -243,7 +243,7 @@ static void FBPReassertHiddenTabBars(void) {
     }
 }
 
-// Restore every tab bar we faded and forget them.
+// Restore every faded tab bar and forget them.
 static void FBPShowTabBars(void) {
     if (!gHiddenTabBars || gHiddenTabBars.count == 0) return;
     for (UIView *bar in gHiddenTabBars) {
@@ -415,18 +415,17 @@ static void FBPShowMessage(
 
 // One object per download, so several can run at once.
 //
-// What used to be here: a singleton holding one NSURLSession, one task, one
-// `downloading` flag and the UIAlertController that showed the percentage. That
-// shape had two problems the download manager exists to fix. A second tap while
-// something was downloading was answered with "A Reel is already downloading."
-// even though nothing in the flow required that — FBPDashDownload has always
-// supported more than one in flight. And the alert *was* the download's state:
-// dismissing it left the transfer running with nothing left pointing at it.
+// This replaced a singleton holding one NSURLSession, one task, one `downloading`
+// flag and the UIAlertController that showed the percentage. That shape had two
+// problems: a second tap while something was downloading was refused with "A Reel
+// is already downloading." for no real reason (FBPDashDownload has always
+// supported more than one in flight), and the alert *was* the download's state —
+// dismissing it left the transfer running with nothing pointing at it.
 //
-// Now each tap makes one of these, each owns its own session or two-stream
-// flow, and all any of them reports to is FBPDownloadStore. The HUD pill and the
-// manager list are both drawn from the store, so dismissing either of them is
-// not an operation on the download at all.
+// Now each tap makes one of these, each owning its own session or two-stream
+// flow, all reporting to FBPDownloadStore. The HUD pill and the manager list are
+// both drawn from the store, so dismissing either is not an operation on the
+// download.
 
 @interface FBPReelDownloadTask : NSObject <NSURLSessionDownloadDelegate>
 
@@ -973,7 +972,7 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
      *
      *  - These are signed CDN URLs carrying a short `oe=` expiry. A captured
      *    list goes stale on its own, and the picker sheet below can sit open for
-     *    as long as the user takes to decide, so the freshest list we can get is
+     *    as long as the user takes to decide, so the freshest list available is
      *    the one read at the moment of the tap.
      *
      * The live read wins only when it describes the same video (or when nothing
@@ -1559,10 +1558,10 @@ FBPGetOrCreateHideOverlayButton(
     UIView *view = sidebar;
     while (view && view != window) {
         if (view.hidden || view.alpha < 0.05) {
-            // In hide-overlay mode we deliberately hide the Shorts overlay
-            // container (an ancestor of the sidebar). That must NOT read as the
-            // reel having left the screen — the reel is still there, just
-            // stripped — otherwise our own buttons would vanish with it.
+            // In hide-overlay mode the Shorts overlay container (an ancestor of
+            // the sidebar) is deliberately hidden. That must NOT read as the reel
+            // having left the screen — the reel is still there, just stripped —
+            // otherwise the tweak's own buttons would vanish with it.
             if (FBPViewHiddenByUs(view)) {
                 view = view.superview;
                 continue;
@@ -1640,7 +1639,7 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
     }
 
     // Production gate: both features OFF means no overlay at all. Also suppress
-    // our floating buttons while Facebook Plus settings is presented over the
+    // the floating buttons while Facebook Plus settings is presented over the
     // still-live Reels hierarchy (long-press tab case).
     if ((!downloaderEnabled && !hideEnabled) ||
         FBPPlusSettingsIsPresented(window)) {
@@ -1979,7 +1978,7 @@ FBPPlayerViewDidDisappear(
     dispatch_async(
         dispatch_get_main_queue(), ^{
 
-        // Leaving the player: restore any chrome we stripped so recycled Shorts
+        // Leaving the player: restore any stripped chrome so recycled Shorts
         // views never leak a hidden state elsewhere. gOverlayHidden is kept, so
         // returning to Reels re-strips automatically.
         FBPUnhideAllOverlays();

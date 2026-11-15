@@ -2,18 +2,17 @@
 // at, cancel, retry and clear.
 //
 // Why a store at all. A download used to live inside the progress popup that
-// presented it: the alert owned the task, the percentage and the only Cancel
-// there was, so dismissing the alert left a transfer running with nothing left
-// pointing at it. "Download manager a hobe, sekhan theke dekha jabe sob" — so
-// the state moved here, and the popup (now a HUD pill) and the manager list are
-// both only *views* of it. Dismissing either changes nothing; the job is the
-// record.
+// presented it: the alert owned the task, the percentage and the only Cancel,
+// so dismissing it left a transfer running with nothing pointing at it.
+// "Download manager a hobe, sekhan theke dekha jabe sob" — so the state moved
+// here, and the popup (now a HUD pill) and the manager list are both only views
+// of it. Dismissing either changes nothing; the job is the record.
 //
-// Deliberately free of UIKit, exactly like FBPDashDownload. That is what lets
-// the lifecycle — add, progress, stage, finish, fail, cancel, retry, clear, and
-// several jobs at once — be compiled and exercised on a host machine instead of
-// only on a device. The one tweak symbol it reaches for, FBPLocalizedString, is
-// declared in the .m rather than imported, for the same reason.
+// Free of UIKit, like FBPDashDownload, so the lifecycle — add, progress, stage,
+// finish, fail, cancel, retry, clear, several jobs at once — can be compiled and
+// exercised on a host machine. The one tweak symbol it reaches for,
+// FBPLocalizedString, is declared in the .m rather than imported, for the same
+// reason.
 
 #import <Foundation/Foundation.h>
 
@@ -23,22 +22,21 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Posted on the main queue whenever any job is added, advanced or removed.
 ///
-/// Carries no userInfo: a listener re-reads @c jobs, which is a cheap immutable
-/// snapshot. Progress updates arrive at most once per whole percentage point
-/// (FBPDashDownload already coalesces them, and the single-URL path matches it),
-/// so a plain reload per notification is not a treadmill.
+/// Carries no userInfo: a listener re-reads @c jobs, a cheap immutable snapshot.
+/// Progress updates arrive at most once per whole percentage point
+/// (FBPDashDownload coalesces them, and the single-URL path matches it), so a
+/// plain reload per notification is not a treadmill.
 extern NSNotificationName const FBPDownloadStoreDidChangeNotification;
 
 #pragma mark - Job
 
 /// Which step a download is on.
 ///
-/// The two fetches of a two-stream DASH save are *concurrent* — FBPDashDownload
+/// The two fetches of a two-stream DASH save are concurrent — FBPDashDownload
 /// starts both and reports one combined fraction — so there is no honest moment
-/// at which a job is "fetching audio" but not video. One fetching stage
-/// therefore covers both, and @c needsMux is what makes the row say so (see
-/// -stageText). Inventing two sequential stages would mean showing a step that
-/// never happens.
+/// at which a job is "fetching audio" but not video. One fetching stage covers
+/// both, and @c needsMux makes the row say so (see -stageText). Two sequential
+/// stages would show a step that never happens.
 typedef NS_ENUM(NSInteger, FBPDownloadJobStage) {
     /// Created, nothing in flight yet. Also where a retry puts a job.
     FBPDownloadJobStageQueued = 0,
@@ -48,29 +46,28 @@ typedef NS_ENUM(NSInteger, FBPDownloadJobStage) {
     /// Both streams are down and FBPMediaMuxer is running. DASH only.
     FBPDownloadJobStageMerging,
     /// Both streams are down and FBPMediaConverter is re-encoding the picture,
-    /// because the chosen rung is AV1 and Photos refuses AV1. DASH only,
-    /// and mutually exclusive with @c FBPDownloadJobStageMerging — a conversion
-    /// does the merge in the same pass, so a job goes through one or the other,
-    /// never both.
+    /// because the chosen rung is AV1 and Photos refuses AV1. DASH only, and
+    /// mutually exclusive with @c FBPDownloadJobStageMerging — a conversion does
+    /// the merge in the same pass, so a job goes through one or the other, never
+    /// both.
     ///
-    /// Unlike merging, this one is slow enough to need a bar of its own: a
-    /// 127-second 1080p rung is minutes of sustained encoding, so @c fraction
-    /// keeps advancing through it (FBPMediaConverter reports real per-frame
-    /// progress) and cancelling here actually stops work rather than tidying up
-    /// after it.
+    /// Unlike merging, slow enough to need its own bar: a 127-second 1080p rung
+    /// is minutes of sustained encoding, so @c fraction keeps advancing
+    /// (FBPMediaConverter reports real per-frame progress) and cancelling here
+    /// stops work rather than tidying up after it.
     FBPDownloadJobStageConverting,
     /// Handing the finished file to Photos.
     FBPDownloadJobStageSaving,
     /// In Photos. Terminal.
     FBPDownloadJobStageDone,
-    /// Terminal, with @c error set when we were told why.
+    /// Terminal, with @c error set when the flow said why.
     FBPDownloadJobStageFailed,
     /// The user stopped it. Terminal, and never reported as a failure.
     FBPDownloadJobStageCancelled,
 };
 
 /// Where a download came from, so a row can say "Reel" or "Story" without the
-/// store knowing anything about either surface.
+/// store knowing anything about either.
 typedef NS_ENUM(NSInteger, FBPDownloadJobSurface) {
     FBPDownloadJobSurfaceReel = 0,
     FBPDownloadJobSurfaceStory,
@@ -85,23 +82,20 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 /// One download, from the tap that started it to the end of the session.
 ///
 /// Every property is read-only: a job is only ever changed through its store, so
-/// there is exactly one place that also posts the change notification.
+/// one place also posts the change notification.
 ///
-/// And every property is @c atomic, which is unusual in this codebase and is
-/// deliberate. A job is written from wherever its flow reports — an
-/// NSURLSession delegate queue, which is not the main queue, plus Photos'
-/// completion handler — and read from the main queue by the manager list and the
-/// HUD pill. The store's own lock covers the job *array*, not a reader reaching
-/// straight into a job, so without this the UI's reads race the flow's writes
-/// (confirmed by ThreadSanitizer on the host harness, which reported exactly
-/// that on -fraction, -bytesReceived and -bytesExpected before this was
-/// changed).
+/// Every property is @c atomic, which is unusual here and deliberate. A job is
+/// written from wherever its flow reports — an NSURLSession delegate queue (not
+/// the main queue) plus Photos' completion handler — and read from the main
+/// queue by the manager list and the HUD pill. The store's lock covers the job
+/// *array*, not a reader reaching into a job, so without this the UI's reads
+/// race the flow's writes (confirmed by ThreadSanitizer on the host harness, on
+/// -fraction, -bytesReceived and -bytesExpected before this changed).
 ///
-/// What atomic buys is per-property: no torn or stale read. It does not make a
-/// *group* of properties consistent, so a row can show a fraction and a byte
-/// count that are one update apart. That is a cosmetic difference of a few
-/// milliseconds in a progress row, and the alternative — holding a lock across
-/// the whole of a UI read — would be paying for a guarantee nothing here needs.
+/// Atomic buys per-property no torn or stale read. It does not make a *group* of
+/// properties consistent, so a row can show a fraction and a byte count one
+/// update apart — a cosmetic few-millisecond difference in a progress row, where
+/// holding a lock across a whole UI read would buy a guarantee nothing needs.
 @interface FBPDownloadJob : NSObject
 
 /// Stable for the life of the job, including across a retry.
@@ -121,17 +115,17 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 
 /// A poster frame, when one was cheaply available (-firstFrameThumbnailURL on
 /// the playback item, or the image itself for a photo story). Never fetched by
-/// the store — it is a URL for the list UI to load if it wants to.
+/// the store — a URL for the list UI to load if it wants.
 @property (atomic, copy, readonly, nullable) NSURL *thumbnailURL;
 
 /// This job is a two-stream DASH save, so it has a merge step.
 @property (atomic, assign, readonly) BOOL needsMux;
 
-/// The chosen rung is AV1, so the picture has to be re-encoded before Photos
-/// will take it. Set at the tap, from the variant, so a row can say the
-/// save will be slow *before* the stage arrives rather than only once it does.
+/// The chosen rung is AV1, so the picture must be re-encoded before Photos takes
+/// it. Set at the tap, from the variant, so a row can say the save will be slow
+/// before the stage arrives.
 ///
-/// When this is set the job's merge step is replaced by
+/// When set, the job's merge step is replaced by
 /// @c FBPDownloadJobStageConverting, not joined by it.
 @property (atomic, assign, readonly) BOOL needsConversion;
 
@@ -165,9 +159,9 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 /// Done, failed or cancelled.
 @property (atomic, assign, readonly) BOOL isFinished;
 
-/// Running, and the surface gave us something to stop.
+/// Running, and the surface provided something to stop.
 @property (atomic, assign, readonly) BOOL canCancel;
-/// Finished badly, and the surface gave us something to start again.
+/// Finished badly, and the surface provided something to start again.
 @property (atomic, assign, readonly) BOOL canRetry;
 
 /// Localized line for the current stage, e.g. "Merging audio and video…".
@@ -200,10 +194,9 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
 ///   exact for a progressive one, an estimate for a DASH rung — so a row can
 ///   show a total before the first response header arrives. 0 when unknown.
 ///
-///   Deliberately the download and not the size the picker row showed: for a
-///   rung that has to be re-encoded those are different numbers, and this one
-///   has to match what the CDN will send, because the Content-Length replaces it
-///   and the progress bar is weighted by it.
+///   The download, not the size the picker row showed: for a re-encoded rung
+///   those differ, and this must match what the CDN sends, since the
+///   Content-Length replaces it and the progress bar is weighted by it.
 - (FBPDownloadJob *)addJobWithSurface:(FBPDownloadJobSurface)surface
                                 title:(nullable NSString *)title
                               quality:(nullable NSString *)quality
@@ -230,15 +223,14 @@ typedef void (^FBPDownloadJobWork)(FBPDownloadJob *job);
          expected:(long long)expected;
 
 /// Terminal success. @c identifier is the created asset's localIdentifier when
-/// Photos gave us one.
+/// Photos returned one.
 - (void)job:(FBPDownloadJob *)job
     didFinishWithAssetIdentifier:(nullable NSString *)identifier;
 
 /// Terminal failure. A job the user already asked to stop lands on
 /// @c FBPDownloadJobStageCancelled instead, whatever error the flow reports —
 /// NSURLSession answers a cancelled transfer with NSURLErrorCancelled, and
-/// showing that as a failure would be telling the user their own tap broke
-/// something.
+/// showing that as a failure would blame the user's own tap.
 - (void)job:(FBPDownloadJob *)job didFailWithError:(nullable NSError *)error;
 
 /// Terminal, by the user's own request.
