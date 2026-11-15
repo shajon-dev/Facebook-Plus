@@ -66,6 +66,7 @@ extern NSString *const FBPKeyNoThreads;         // Remove the Threads promo unit
 extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should join"
 extern NSString *const FBPKeyNoSuggestedPages;  // Remove "suggested pages for you"
 extern NSString *const FBPKeyNoSurveys;         // Remove "are you interested in this post?" surveys
+extern NSString *const FBPKeyNoCommentProductBanner; // Remove the affiliate/product link banner in the comment sheet
 
 // Confirmations (opt-in: guard an action behind a prompt)
 extern NSString *const FBPKeyConfirmComment;    // Confirm before posting a comment
