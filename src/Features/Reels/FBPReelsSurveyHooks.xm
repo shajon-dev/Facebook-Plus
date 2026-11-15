@@ -30,6 +30,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 
 #import <objc/runtime.h>
 
@@ -40,6 +41,7 @@
 %hook FBShortsInlineSurveyInjectionManager
 
 - (void)maybeAddInlineSurveyComponents:(id)arg1 {
+    FBPTraceFire("reels.FBShortsInlineSurveyInjectionManager.maybeAddInlineSurveyComponents");
     if (FBPEnabled(FBPKeyNoSurveys)) return;
     %orig;
 }
@@ -57,11 +59,13 @@
 %hook _TtC27FBShortsInlineSurveyHelpers26FBShortsInlineSurveyHelper
 
 + (BOOL)inlineSurveyLoadInjectionManagerEnabledWithSession:(id)session {
+    FBPTraceFire("reels.FBShortsInlineSurveyHelper.inlineSurveyLoadInjectionManagerEnabled");
     if (FBPEnabled(FBPKeyNoSurveys)) return NO;
     return %orig;
 }
 
 + (BOOL)inlineSurveyLoadEnabledWithSession:(id)session {
+    FBPTraceFire("reels.FBShortsInlineSurveyHelper.inlineSurveyLoadEnabled");
     if (FBPEnabled(FBPKeyNoSurveys)) return NO;
     return %orig;
 }

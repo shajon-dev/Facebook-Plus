@@ -13,6 +13,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -103,21 +104,25 @@ static BOOL FBPTryOpenExternally(UIViewController *webVC, NSURL *url) {
 %hook FBWebViewController
 
 - (void)_loadRequest:(id)request isInitial:(BOOL)isInitial {
+    FBPTraceFire("links.FBWebViewController._loadRequest");
     if (isInitial && FBPTryOpenExternally((UIViewController *)self, FBPResolveURL(request))) return;
     %orig;
 }
 
 - (void)loadInitialURL:(id)urlArg config:(id)config {
+    FBPTraceFire("links.FBWebViewController.loadInitialURLConfig");
     if (FBPTryOpenExternally((UIViewController *)self, FBPResolveURL(urlArg))) return;
     %orig;
 }
 
 - (void)loadInitialURL:(id)urlArg {
+    FBPTraceFire("links.FBWebViewController.loadInitialURL");
     if (FBPTryOpenExternally((UIViewController *)self, FBPResolveURL(urlArg))) return;
     %orig;
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    FBPTraceFire("links.FBWebViewController.viewDidAppear");
     %orig;
     if ([objc_getAssociatedObject(self, kFBPLinkHandledKey) boolValue]) return;
     FBPTryOpenExternally((UIViewController *)self, FBPControllerURL(self));

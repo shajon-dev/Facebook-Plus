@@ -3,6 +3,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 #import "FBPResources.h"
 #import "FBPSettingsController.h"
 #import "FBPWelcomeController.h"
@@ -66,6 +67,7 @@ static void FBPAttachSettingsGesture(UIView *view) {
 %hook FBTabBarContainerView
 
 - (void)layoutSubviews {
+    FBPTraceFire("chrome.FBTabBarContainerView.layoutSubviews");
     %orig;
     FBPAttachSettingsGesture(self);
 }
@@ -75,6 +77,7 @@ static void FBPAttachSettingsGesture(UIView *view) {
 %hook FBTabBarItemDefaultView
 
 - (void)layoutSubviews {
+    FBPTraceFire("chrome.FBTabBarItemDefaultView.layoutSubviews");
     %orig;
     FBPAttachSettingsGesture(self);
 }
@@ -92,6 +95,7 @@ static void FBPAttachSettingsGesture(UIView *view) {
 %hook FBFloatingTabBar
 
 - (void)layoutSubviews {
+    FBPTraceFire("chrome.FBFloatingTabBar.layoutSubviews");
     %orig;
     FBPAttachSettingsGesture(self);
 }
@@ -101,6 +105,7 @@ static void FBPAttachSettingsGesture(UIView *view) {
 %hook FBNativeTabBar
 
 - (void)layoutSubviews {
+    FBPTraceFire("chrome.FBNativeTabBar.layoutSubviews");
     %orig;
     FBPAttachSettingsGesture(self);
 }
@@ -116,6 +121,7 @@ static void FBPAttachSettingsGesture(UIView *view) {
 %hook FBTabBarAndContentViewController
 
 - (void)setTabBarViewOffsetFraction:(double)fraction animationKind:(NSUInteger)kind {
+    FBPTraceFire("chrome.FBTabBarAndContentViewController.setTabBarViewOffsetFraction");
     %orig;
     [NSNotificationCenter.defaultCenter
         postNotificationName:FBPTabBarVisibilityDidChangeNotification
@@ -180,6 +186,7 @@ static UIImageView *FBPFindNavLogo(UIView *root) {
 %hook FBNavigationBar
 
 - (void)layoutSubviews {
+    FBPTraceFire("chrome.FBNavigationBar.layoutSubviews");
     %orig;
     // FBNavigationBar is not declared as a UIView subclass in the tweak's
     // headers, so cast to reach the view-tree helpers.
@@ -202,6 +209,7 @@ static UIImageView *FBPFindNavLogo(UIView *root) {
 
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)options {
+    FBPTraceFire("chrome.FBBaseAppDelegate.application");
     BOOL result = %orig;
 
     if (FBPEnabled(FBPKeyAutoClearCache)) {

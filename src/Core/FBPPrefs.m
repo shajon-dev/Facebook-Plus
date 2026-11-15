@@ -52,12 +52,9 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyFeedLike         : @YES,
         FBPKeyOLED             : @NO,
         FBPKeyLinksInSafari    : @YES,
-        // Diagnostics are off by default: the maintainer turns one on only to
-        // capture the live feed-unit token set, or the quality ladder Facebook
-        // serves a given video in, then turns it straight back off.
+        // The diagnostic log is kept across launches by default; everything the
+        // tweak does is captured into it, so there are no per-feature log toggles.
         FBPKeyLogsKeep         : @YES,
-        FBPKeyLogFeedUnits     : @NO,
-        FBPKeyLogDownloadQualities : @NO,
         FBPKeyKeychainRebind   : @YES,
         FBPKeyNotifClientSync  : @YES,
         FBPKeyNotifyUpdates    : @YES,

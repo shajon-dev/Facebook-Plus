@@ -829,6 +829,7 @@ static void FBPStoryCaptureCurrentPhoto(id controller, id mediaView) {
 }
 
 static void FBPStoryDidStartPlayingHook(id self, SEL _cmd, id mediaView, id info) {
+    FBPTraceFire("downloads.story.didStartPlaying");
     if (gOrigStoryDidStartPlaying)
         gOrigStoryDidStartPlaying(self, _cmd, mediaView, info);
 

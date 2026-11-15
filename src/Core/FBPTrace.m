@@ -122,15 +122,14 @@ static void FBPLogMirrorToFile(NSString *line) {
 #pragma mark - The record
 
 // Held in memory rather than read back from the mirror, which depends on a
-// writable path not every install has. Capped, oldest line first out, so a long
-// session cannot grow without bound.
-static const NSUInteger kFBPLogCapacity = 2000;
-
+// writable path not every install has. No line cap: consecutive repeats collapse
+// to one "… xN" entry (see FBPLogRecord) so a chatty hook cannot grow the record,
+// and the daily auto-clear bounds what a long-lived launch accumulates.
 static NSMutableArray<NSString *> *FBPLogLines(void) {
     static NSMutableArray<NSString *> *lines;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        lines = [NSMutableArray arrayWithCapacity:kFBPLogCapacity];
+        lines = [NSMutableArray array];
         // Kept across launches: seed the record from last launch's file so the
         // count and the export carry the history forward.
         if (FBPLogsKeepAcrossLaunches()) {
@@ -142,9 +141,6 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
             for (NSString *line in [existing componentsSeparatedByString:@"\n"]) {
                 if (line.length) [lines addObject:line];
             }
-            if (lines.count > kFBPLogCapacity) {
-                [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogCapacity)];
-            }
         }
     });
     return lines;
@@ -152,21 +148,72 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
 
 static os_unfair_lock gFBPLogLock = OS_UNFAIR_LOCK_INIT;
 
+// A run of consecutive identical lines (same ok / tag / message) collapses to one
+// entry with a count — "… x12" — instead of flooding the record. The in-memory
+// entry is rewritten in place as the count climbs; os_log and the file mirror
+// cannot rewrite what they have already emitted, so they lag by one run — a line
+// goes out when the next different line arrives (FBPLogFlushPendingLocked). This
+// is what keeps a chatty call site (an appearance snapshot that repeats on every
+// layout, say) from evicting every other line out of the capped record.
+static BOOL gFBPRunOK = NO;
+static NSString *gFBPRunTag = nil;
+static NSString *gFBPRunMessage = nil;
+static NSString *gFBPPendingLine = nil;   // the run's line, not yet sent downstream
+static NSUInteger gFBPRepeatCount = 0;
+
+static NSString *FBPLineWithCount(NSString *base, NSUInteger count) {
+    return count > 1 ? [NSString stringWithFormat:@"%@ x%lu", base, (unsigned long)count]
+                     : base;
+}
+
+// Emits the finished run to os_log and the file, then ends it. Caller holds
+// gFBPLogLock. Ending the run matters: a repeat arriving after a flush must start
+// a fresh line rather than keep counting into one already written out.
+static void FBPLogFlushPendingLocked(void) {
+    if (!gFBPPendingLine) return;
+    NSString *out = FBPLineWithCount(gFBPPendingLine, gFBPRepeatCount);
+    gFBPPendingLine = nil;
+    gFBPRunTag = nil;
+    gFBPRunMessage = nil;
+    gFBPRepeatCount = 0;
+
+    os_log(FBPTraceLog(), "%{public}s", out.UTF8String);
+    FBPLogMirrorToFile(out);
+}
+
 void FBPLogRecord(BOOL ok, NSString *_Nullable tag, NSString *message) {
     if (!message.length) return;
 
-    NSString *line = FBPLogFormatLine(ok, tag, message);
-
     os_unfair_lock_lock(&gFBPLogLock);
     NSMutableArray<NSString *> *lines = FBPLogLines();
-    [lines addObject:line];
-    if (lines.count > kFBPLogCapacity) {
-        [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogCapacity)];
-    }
-    os_unfair_lock_unlock(&gFBPLogLock);
 
-    os_log(FBPTraceLog(), "%{public}s", line.UTF8String);
-    FBPLogMirrorToFile(line);
+    BOOL sameAsRun = gFBPPendingLine != nil &&
+                     ok == gFBPRunOK &&
+                     ((tag == nil && gFBPRunTag == nil) ||
+                      [tag isEqualToString:gFBPRunTag]) &&
+                     [message isEqualToString:gFBPRunMessage];
+
+    if (sameAsRun && lines.count > 0) {
+        gFBPRepeatCount++;
+        // Rewritten with the new count, keeping the timestamp the run started at.
+        lines[lines.count - 1] = FBPLineWithCount(gFBPPendingLine, gFBPRepeatCount);
+        os_unfair_lock_unlock(&gFBPLogLock);
+        return;
+    }
+
+    // A different line: close out the previous run (to os_log + file), then begin a
+    // new one. The new line is itself only sent downstream once it, too, ends.
+    FBPLogFlushPendingLocked();
+
+    NSString *line = FBPLogFormatLine(ok, tag, message);
+    gFBPRunOK = ok;
+    gFBPRunTag = [tag copy];
+    gFBPRunMessage = [message copy];
+    gFBPPendingLine = line;
+    gFBPRepeatCount = 1;
+
+    [lines addObject:line];
+    os_unfair_lock_unlock(&gFBPLogLock);
 }
 
 void FBPTraceEmit(NSString *line) {
@@ -184,6 +231,12 @@ NSUInteger FBPLogLineCount(void) {
 void FBPLogClear(void) {
     os_unfair_lock_lock(&gFBPLogLock);
     [FBPLogLines() removeAllObjects];
+    // End any run in progress so a repeat after the clear starts a fresh line
+    // rather than counting into one that no longer exists.
+    gFBPPendingLine = nil;
+    gFBPRunTag = nil;
+    gFBPRunMessage = nil;
+    gFBPRepeatCount = 0;
     os_unfair_lock_unlock(&gFBPLogLock);
 
     // Empty the file mirror too, so a kept-across-launches log does not bring the

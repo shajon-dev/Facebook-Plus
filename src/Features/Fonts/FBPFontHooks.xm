@@ -21,6 +21,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
+#import "FBPTrace.h"
 
 #import <CoreText/CoreText.h>
 #import <objc/runtime.h>
@@ -200,37 +201,44 @@ static BOOL FBPShouldReplaceName(NSString *name) {
 %hook UIFont
 
 + (UIFont *)systemFontOfSize:(CGFloat)fontSize {
+    FBPTraceFire("fonts.UIFont.systemFontOfSize");
     if (FBPFontScopeActive()) return %orig;
     return FBPReplacementFont(fontSize, UIFontWeightRegular) ?: %orig;
 }
 
 + (UIFont *)boldSystemFontOfSize:(CGFloat)fontSize {
+    FBPTraceFire("fonts.UIFont.boldSystemFontOfSize");
     if (FBPFontScopeActive()) return %orig;
     return FBPReplacementFont(fontSize, UIFontWeightBold) ?: %orig;
 }
 
 + (UIFont *)italicSystemFontOfSize:(CGFloat)fontSize {
+    FBPTraceFire("fonts.UIFont.italicSystemFontOfSize");
     if (FBPFontScopeActive()) return %orig;
     return FBPReplacementFont(fontSize, UIFontWeightRegular) ?: %orig;
 }
 
 + (UIFont *)systemFontOfSize:(CGFloat)fontSize weight:(UIFontWeight)weight {
+    FBPTraceFire("fonts.UIFont.systemFontOfSizeWeight");
     if (FBPFontScopeActive()) return %orig;
     return FBPReplacementFont(fontSize, weight) ?: %orig;
 }
 
 + (UIFont *)preferredFontForTextStyle:(UIFontTextStyle)style {
+    FBPTraceFire("fonts.UIFont.preferredFontForTextStyle");
     UIFont *original = %orig;
     if (FBPFontScopeActive()) return original;
     return FBPReplacementFont(original.pointSize, UIFontWeightRegular) ?: original;
 }
 
 + (UIFont *)fontWithName:(NSString *)name size:(CGFloat)fontSize {
+    FBPTraceFire("fonts.UIFont.fontWithName");
     if (FBPFontScopeActive() || !FBPShouldReplaceName(name)) return %orig;
     return FBPReplacementFont(fontSize, FBPWeightFromName(name.lowercaseString)) ?: %orig;
 }
 
 + (UIFont *)fontWithDescriptor:(UIFontDescriptor *)descriptor size:(CGFloat)fontSize {
+    FBPTraceFire("fonts.UIFont.fontWithDescriptor");
     if (FBPFontScopeActive()) return %orig;
 
     NSString *family = descriptor.fontAttributes[UIFontDescriptorFamilyAttribute]

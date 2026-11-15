@@ -17,6 +17,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 
 #import <objc/runtime.h>
 
@@ -58,6 +59,7 @@ BOOL FBPModelIsBlockedAd(id model) {
 %hook FBVideoFeedAdsPool
 
 - (NSArray *)insertedItems {
+    FBPTraceFire("ads.FBVideoFeedAdsPool.insertedItems");
     if (FBPEnabled(FBPKeyNoAds)) return @[];
     return %orig;
 }
@@ -73,16 +75,19 @@ BOOL FBPModelIsBlockedAd(id model) {
 %hook FBSnacksAdsPaginatingFetcher
 
 - (void)startFetch:(id)arg1 organicConsumption:(id)arg2 {
+    FBPTraceFire("ads.FBSnacksAdsPaginatingFetcher.startFetch");
     if (FBPEnabled(FBPKeyNoAds)) return;
     %orig;
 }
 
 - (void)fetchAdsForStoryWithRequestPayload:(id)payload {
+    FBPTraceFire("ads.FBSnacksAdsPaginatingFetcher.fetchAdsForStoryWithRequestPayload");
     if (FBPEnabled(FBPKeyNoAds)) return;
     %orig;
 }
 
 - (void)fetchAdsForStoryWithRequestPayloadAsync:(id)payload {
+    FBPTraceFire("ads.FBSnacksAdsPaginatingFetcher.fetchAdsForStoryWithRequestPayloadAsync");
     if (FBPEnabled(FBPKeyNoAds)) return;
     %orig;
 }
@@ -420,6 +425,7 @@ static NSMutableSet *FBPMarketplaceLiveDelegates(void) {
 %hook RCTNetworking
 
 - (id)handlerForRequest:(NSURLRequest *)request {
+    FBPTraceFire("ads.RCTNetworking.handlerForRequest");
     // Zero overhead and full fidelity when Remove Ads is off.
     if (!FBPEnabled(FBPKeyNoAds)) return %orig;
 

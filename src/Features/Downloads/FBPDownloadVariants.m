@@ -946,16 +946,16 @@ static os_log_t FBPDownloadQualityLog(void) {
     return log;
 }
 
-/// Cached mirror of FBPKeyLogDownloadQualities, refreshed from the notification
-/// the settings panel posts on commit, so the switch takes effect without a
-/// relaunch. When it is off a download tap costs one relaxed load and a
-/// not-taken branch.
+/// Whether the DASH download-quality probe runs. Off (no user toggle); see
+/// FBPDownloadRefreshQualityLogging. When off a download tap costs one relaxed
+/// load and a not-taken branch.
 static atomic_bool gFBPLogDownloadQualities = false;
 
 static void FBPDownloadRefreshQualityLogging(void) {
-    atomic_store_explicit(&gFBPLogDownloadQualities,
-                          FBPEnabled(FBPKeyLogDownloadQualities) ? true : false,
-                          memory_order_relaxed);
+    // The per-feature log toggle was removed; this DASH-manifest quality probe
+    // stays off. Flip to true only for a local build when deciding whether a new
+    // download-quality tier is worth adding.
+    atomic_store_explicit(&gFBPLogDownloadQualities, false, memory_order_relaxed);
 }
 
 BOOL FBPDownloadQualityLoggingEnabled(void) {

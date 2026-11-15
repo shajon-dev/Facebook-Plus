@@ -58,6 +58,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 
 #import <objc/runtime.h>
 
@@ -72,6 +73,7 @@
       externalVariables:(id)externalVariables
 dismissalExternalVariableName:(id)dismissalName
                 toolbox:(id)toolbox {
+    FBPTraceFire("feed.FBFeedInlineSurveyComponent.newWithActionLink");
     // nil is the "no card for this story" answer the factory already gives when
     // the action link is missing, so the host post renders exactly as it does
     // for a story that was never eligible for a survey.

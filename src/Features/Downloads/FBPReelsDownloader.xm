@@ -1811,6 +1811,7 @@ FBPHitTestLayoutSubviews(
     id self,
     SEL _cmd
 ) {
+    FBPTraceFire("downloads.reels.hitTestLayoutSubviews");
     if (gOriginalHitTestLayoutSubviews) {
         gOriginalHitTestLayoutSubviews(self, _cmd);
     }
@@ -1835,6 +1836,7 @@ FBPSidebarDidMoveToWindow(
     id self,
     SEL _cmd
 ) {
+    FBPTraceFire("downloads.reels.sidebarDidMoveToWindow");
     if (gOriginalSidebarDidMoveToWindow) {
 
         gOriginalSidebarDidMoveToWindow(
@@ -1886,6 +1888,7 @@ FBPDidStartPlayback(
     id analyticsContext,
     id playbackController
 ) {
+    FBPTraceFire("downloads.reels.didStartPlayback");
     if (gOriginalDidStartPlayback) {
         gOriginalDidStartPlayback(
             self,
@@ -1926,6 +1929,7 @@ FBPPlayerViewWillAppear(
     SEL _cmd,
     BOOL animated
 ) {
+    FBPTraceFire("downloads.reels.playerViewWillAppear");
     /*
      * A newly-created fullscreen player must never inherit the previous
      * viewer's CDN URL.
@@ -1956,6 +1960,7 @@ FBPPlayerViewDidDisappear(
     SEL _cmd,
     BOOL animated
 ) {
+    FBPTraceFire("downloads.reels.playerViewDidDisappear");
     if (gOriginalPlayerViewDidDisappear) {
         gOriginalPlayerViewDidDisappear(
             self,

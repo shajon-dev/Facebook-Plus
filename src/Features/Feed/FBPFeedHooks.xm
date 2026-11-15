@@ -8,6 +8,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 
 #import <objc/message.h>
 #import <os/log.h>
@@ -155,7 +156,8 @@ static os_log_t FBPFeedUnitLog(void) {
     return log;
 }
 
-/// Cached mirror of FBPKeyLogFeedUnits.
+/// Whether the per-model feed-unit token probe runs. Off (no user toggle); see
+/// FBPRefreshFeedUnitLogging.
 ///
 /// FBPShouldFilterModel runs for every object the Pando tree materialises, so
 /// when the toggle is off the diagnostic has to cost one relaxed load of this
@@ -166,9 +168,11 @@ static os_log_t FBPFeedUnitLog(void) {
 static atomic_bool gFBPLogFeedUnits = false;
 
 static void FBPRefreshFeedUnitLogging(void) {
-    atomic_store_explicit(&gFBPLogFeedUnits,
-                          FBPEnabled(FBPKeyLogFeedUnits) ? true : false,
-                          memory_order_relaxed);
+    // The per-feature log toggle was removed; this heavy per-model probe (it runs
+    // for every object the Pando tree materialises) stays off so it never janks
+    // scrolling. The main log already captures the feed hooks and their filter
+    // decisions. Flip this to true only for a local filter-debugging build.
+    atomic_store_explicit(&gFBPLogFeedUnits, false, memory_order_relaxed);
 }
 
 /// Field keys the diagnostic probes.
@@ -377,6 +381,7 @@ static BOOL FBPShouldFilterModel(id model) {
 
 // The current path in FB v570/v574.
 - (id)initWithFBPandoTree:(void *)tree {
+    FBPTraceFire("feed.FBMemModelObject.initWithFBPandoTree");
     id model = %orig;
     return FBPShouldFilterModel(model) ? nil : model;
 }
@@ -394,6 +399,7 @@ static BOOL FBPShouldFilterModel(id model) {
 
 // fbp:legacy initWithFBPandoTree:
 - (id)initWithFBTree:(void *)tree {
+    FBPTraceFire("feed.FBMemModelObject.initWithFBTree");
     id model = %orig;
     return FBPShouldFilterModel(model) ? nil : model;
 }

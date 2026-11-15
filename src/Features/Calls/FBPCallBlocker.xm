@@ -24,6 +24,7 @@
 // system classes that always exist, so the installer latches once on first run.
 
 #import "FBPlus.h"
+#import "FBPTrace.h"
 
 #import <PushKit/PushKit.h>
 #import <CallKit/CallKit.h>
@@ -34,6 +35,7 @@
 %hook PKPushRegistry
 
 - (void)setDesiredPushTypes:(NSSet<PKPushType> *)desiredPushTypes {
+    FBPTraceFire("calls.PKPushRegistry.setDesiredPushTypes");
     if ([desiredPushTypes containsObject:PKPushTypeVoIP]) {
         NSMutableSet *stripped = [desiredPushTypes mutableCopy];
         [stripped removeObject:PKPushTypeVoIP];
@@ -49,6 +51,7 @@
 - (void)reportNewIncomingCallWithUUID:(NSUUID *)UUID
                                update:(CXCallUpdate *)update
                            completion:(void (^)(NSError *error))completion {
+    FBPTraceFire("calls.CXProvider.reportNewIncomingCall");
     // Swallow the call: do not present any call UI. Still invoke the completion
     // (with no error) so Facebook's call-setup code does not hang waiting on it.
     if (completion) completion(nil);

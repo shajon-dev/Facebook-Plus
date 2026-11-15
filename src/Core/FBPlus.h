@@ -102,11 +102,6 @@ extern NSString *const FBPKeyLinksInSafari;     // Open external links in the de
 
 // Diagnostics
 extern NSString *const FBPKeyLogsKeep;          // keep the diagnostic log across launches
-extern NSString *const FBPKeyLogFeedUnits;      // os_log the live feed-unit token set
-/// os_log what Facebook actually serves for a video on a download tap — the
-/// DASH manifest's representations and labels, and whether any of them is muxed.
-/// Answers whether a DASH quality tier would be worth building.
-extern NSString *const FBPKeyLogDownloadQualities;
 // Sideload compatibility
 /// Pin keychain calls that need it to the probed access group (see
 /// src/PluginsInject/SecRebinds.xm). On by default; turning it off disables the

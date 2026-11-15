@@ -38,6 +38,7 @@
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
+#import "FBPTrace.h"
 #import "Header.h"
 
 @interface FBPClientSyncTrigger: NSObject
@@ -216,6 +217,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 %hook FBNotificationsPushNotifClientSyncBackgroundFetchObserver
 
 - (instancetype)initWithSession:(id)session {
+	FBPTraceFire("notif.FBNotificationsPushNotifClientSyncBackgroundFetchObserver.initWithSession");
 	fbpRememberSession(session);
 	return %orig;
 }
@@ -223,6 +225,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 // Not called for a badge-update push on this build, but still the cleanest point
 // if Facebook ever routes one here.
 - (void)handleBackgroundFetchRequest:(id)request {
+	FBPTraceFire("notif.FBNotificationsPushNotifClientSyncBackgroundFetchObserver.handleBackgroundFetchRequest");
 	%orig;
 	FBPDiagLog(@"client sync: background fetch observed");
 	fbpRunClientSync(self, nil);
@@ -233,6 +236,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 %hook FBPushNotifClientSyncGraphQLNetworker
 
 - (instancetype)initWithSession:(id)session {
+	FBPTraceFire("notif.FBPushNotifClientSyncGraphQLNetworker.initWithSession");
 	fbpRememberSession(session);
 	return %orig;
 }
@@ -247,6 +251,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 - (void)application:(id)application
     didReceiveRemoteNotification:(NSDictionary *)userInfo
           fetchCompletionHandler:(id)handler {
+	FBPTraceFire("notif.FBBaseAppDelegate.didReceiveRemoteNotification");
 	%orig;
 
 	if (!fbpIsBadgeUpdatePush(userInfo)) return;
@@ -272,6 +277,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
               deviceId:(id)deviceId
              extraData:(id)extraData
                  pnids:(id)pnids {
+	FBPTraceFire("notif.FBPushNotifClientSyncQueryBuilder.builderWithCount");
 	// One line: an NSArray description spans lines and a line-based log filter
 	// loses everything after the opening bracket.
 	NSString *ids = @"(nil)";
@@ -295,6 +301,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 %hook FBPushNotifClientSyncManager
 
 - (void)evaluatePush:(id)push {
+	FBPTraceFire("notif.FBPushNotifClientSyncManager.evaluatePush");
 	FBPDiagLog(@"client sync: evaluating a fetched push");
 	%orig;
 }
@@ -305,6 +312,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 %hook FBPushNotifClientSyncLocalFilterResult
 
 - (id)dropWithReason:(id)reason {
+	FBPTraceFire("notif.FBPushNotifClientSyncLocalFilterResult.dropWithReason");
 	FBPDiagLog(@"client sync: dropped — %@", reason);
 	return %orig;
 }
@@ -321,12 +329,14 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 %hook FBUserSession
 
 - (instancetype)init {
+	FBPTraceFire("notif.FBUserSession.init");
 	id session = %orig;
 	fbpRememberSession(session);
 	return session;
 }
 
 - (instancetype)initWithApiSessionStore:(id)store {
+	FBPTraceFire("notif.FBUserSession.initWithApiSessionStore");
 	id session = %orig;
 	fbpRememberSession(session);
 	return session;

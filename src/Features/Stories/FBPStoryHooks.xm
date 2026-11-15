@@ -3,6 +3,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 #import "FBPResources.h"
 #import "FBPToast.h"
 #import "FBPSheet.h"
@@ -40,6 +41,7 @@ static BOOL gAllowSeenPassthrough = NO;
                   session:(id)session
 shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate
 skipSeenMutationForLastUnseenThread:(BOOL)skipMutation {
+    FBPTraceFire("story.FBSnacksBucketsSeenStateManager.markThreadAsSeen.modern");
     if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
     %orig;
 }
@@ -56,6 +58,7 @@ skipSeenMutationForLastUnseenThread:(BOOL)skipMutation {
                    bucket:(id)bucket
                   session:(id)session
 shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
+    FBPTraceFire("story.FBSnacksBucketsSeenStateManager.markThreadAsSeen.legacy");
     if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
     %orig;
 }
@@ -73,6 +76,7 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 /// Stops the viewer rolling into the next author's stories. Manual swipes use a
 /// different navigation action and are unaffected.
 - (void)_advanceToNextItemWithNavigationAction:(NSUInteger)action {
+    FBPTraceFire("story.FBSnacksThreadSwitcherViewController.advanceToNextItem");
     if (FBPEnabled(FBPKeyNoAutoNext)) return;
     %orig;
 }
@@ -267,6 +271,7 @@ static BOOL gStoryRowInstalled = NO;
 
 /// Internal debug flag, off in production. Repurposed as the row's slot.
 - (BOOL)shouldShowInlineSnacksDebugOverlay {
+    FBPTraceFire("story.FBSnacksTrayTileMenuConfiguration.shouldShowInlineSnacksDebugOverlay");
     if (FBPStoryRowWanted() && FBPCanBuildStoryRow()) return YES;
     return %orig;
 }
@@ -276,6 +281,7 @@ static BOOL gStoryRowInstalled = NO;
 %hook FBSnacksSettingsBottomSheetActionHandlerV2
 
 - (FBPFDSControl)_inlineSnacksDebugOverlayItem {
+    FBPTraceFire("story.FBSnacksSettingsBottomSheetActionHandlerV2.inlineSnacksDebugOverlayItem");
     if (!FBPStoryRowWanted() || !FBPCanBuildStoryRow()) return %orig;
 
     UIViewController *viewer = FBPCurrentStoryViewer();
@@ -394,6 +400,7 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
 %hook FBSnacksBucketViewController
 
 - (void)viewDidLayoutSubviews {
+    FBPTraceFire("story.FBSnacksBucketViewController.viewDidLayoutSubviews");
     %orig;
     FBPInstallStoryFallbackButton(self);
 }

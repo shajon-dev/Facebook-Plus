@@ -28,6 +28,7 @@
 // is present and then latches with FBP_ONCE.
 
 #import "FBPlus.h"
+#import "FBPTrace.h"
 
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -162,6 +163,7 @@ static BOOL FBPRouteThroughUniversalLink(id delegate, UIApplication *application
 - (BOOL)application:(UIApplication *)application
             openURL:(NSURL *)url
             options:(NSDictionary *)options {
+    FBPTraceFire("linkbridge.FBBaseAppDelegate.openURL");
     NSURL *targetURL = FBPBridgeTargetURL(url);
     if (!targetURL) return %orig;
 
@@ -175,6 +177,7 @@ static BOOL FBPRouteThroughUniversalLink(id delegate, UIApplication *application
 - (BOOL)application:(UIApplication *)application
     continueUserActivity:(NSUserActivity *)userActivity
       restorationHandler:(id)restorationHandler {
+    FBPTraceFire("linkbridge.FBBaseAppDelegate.continueUserActivity");
     // A real Universal Link (e.g. Messenger opening m.facebook.com). Rewrite the
     // host to the canonical www form before the app routes it, so mobile/web
     // host variants do not degrade to Home. Non-Facebook activities untouched.

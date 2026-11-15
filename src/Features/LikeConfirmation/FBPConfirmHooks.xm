@@ -14,6 +14,7 @@
 #import "FBPlus.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
+#import "FBPTrace.h"
 #import "FBPResources.h"
 #import "FBPSheet.h"
 
@@ -196,6 +197,7 @@ static BOOL gConfirmedPassthrough = NO;
 %hook CKComponentActionControlForwarder
 
 - (void)handleControlEventFromSender:(id)sender withEvent:(UIEvent *)event {
+    FBPTraceFire("confirm.CKComponentActionControlForwarder.handleControlEvent");
     if (gConfirmedPassthrough) {
         %orig;
         return;

@@ -474,15 +474,6 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPActionRow(kActionClearCache, FBPL(@"row.clearcache.title"), nil, @"trash.fill", NO),
                 FBPActionRow(kActionCheckUpdate, FBPL(@"row.checkupdate.title"), FBPL(@"row.checkupdate.desc"), @"arrow.down.circle", NO),
             ]),
-            FBPSection(FBPL(@"footer.logfeedunits"), @[
-                FBPSwitchRow(FBPKeyLogFeedUnits, FBPL(@"row.logfeedunits.title"),
-                             FBPL(@"row.logfeedunits.desc"), @"ladybug.fill"),
-            ]),
-            FBPSection(FBPL(@"footer.logdownloadqualities"), @[
-                FBPSwitchRow(FBPKeyLogDownloadQualities,
-                             FBPL(@"row.logdownloadqualities.title"),
-                             FBPL(@"row.logdownloadqualities.desc"), @"ladybug.fill"),
-            ]),
             FBPSection(FBPL(@"footer.resetpushkeys"), @[
                 FBPSwitchRow(FBPKeyKeychainRebind, FBPL(@"row.keychainrebind.title"), FBPL(@"row.keychainrebind.desc"), @"key.fill"),
                 FBPSwitchRow(FBPKeyNotifClientSync, FBPL(@"row.notifclientsync.title"),
@@ -661,8 +652,25 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
         [self exportLogs];
     } else if ([action isEqualToString:kActionLogClear]) {
         FBPLogClear();
+        // Rebuild the page so the "Recorded Lines" row drops to 0 at once, instead
+        // of showing the pre-clear count until the user leaves and comes back.
+        [self reloadCurrentCategory];
         [FBPToastManager.shared showMessage:FBPL(@"toast.logCleared") success:YES];
     }
+}
+
+// Re-reads the live category (FBPCategories rebuilds each call, so dynamic row
+// values like the recorded-line count are recomputed) and reloads the table.
+- (void)reloadCurrentCategory {
+    NSString *icon = _category[kRowIcon];
+    for (NSDictionary *category in FBPCategories()) {
+        if ([category[kRowIcon] isEqualToString:icon]) {
+            _category = category;
+            _sections = category[kRowCategory];
+            break;
+        }
+    }
+    [self.tableView reloadData];
 }
 
 // Re-localize when returning from a pushed page (e.g. the language picker).
