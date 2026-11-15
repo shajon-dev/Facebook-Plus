@@ -154,7 +154,7 @@ def include_dirs(*roots):
 
 
 SRC = os.path.join(ROOT, "src")
-FISHHOOK = os.path.join(ROOT, "fishhook")
+FISHHOOK = os.path.join(SRC, "Core", "fishhook")
 BRIDGE_DIR = os.path.join(ROOT, "FBPNotifyBridge", "src")
 PLUGINS_INJECT = os.path.join(SRC, "PluginsInject")
 
@@ -162,9 +162,9 @@ PLUGINS_INJECT = os.path.join(SRC, "PluginsInject")
 def configurations(which):
     version = tweak_version()
 
-    # The tweak: everything under src/, plus fishhook, which the root Makefile
-    # compiles from outside src/.
-    tweak_files = walk_sources(SRC, FISHHOOK)
+    # The tweak: everything under src/, which now includes the fishhook submodule
+    # at src/Core/fishhook.
+    tweak_files = walk_sources(SRC)
     tweak_defines = [f'-DFBP_VERSION=@"{version}"']
 
     # The bridge: its own source plus the shared PluginsInject sources, exactly

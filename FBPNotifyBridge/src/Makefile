@@ -34,7 +34,7 @@ FBPNotifyBridge_FILES = \
 	../../src/PluginsInject/Paths.mm \
 	../../src/PluginsInject/PluginsInject.mm \
 	../../src/PluginsInject/SecRebinds.xm \
-	../../fishhook/fishhook.c
+	../../src/Core/fishhook/fishhook.c
 
 # FBP_NOTIFY_BRIDGE tells the shared src/PluginsInject sources they are being
 # compiled into this dylib, so they can stay inert outside an app extension.

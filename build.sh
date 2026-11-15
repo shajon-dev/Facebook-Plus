@@ -343,14 +343,14 @@ if [ -f "$IPA_IN" ]; then
 		else
 			echo "==> NSE session bridge: ${BRIDGE_DYLIB}"
 		fi
-		# This subproject compiles two shared sources through ../../, and theos
-		# mirrors those relative paths into stamp directories *next to* the
-		# subproject: FBPNotifyBridge/src/src/PluginsInject and
-		# FBPNotifyBridge/src/fishhook. They hold nothing but an empty .stamp
-		# marker — the real objects go under .theos/ — so they are removed to keep
-		# the working tree clean. theos recreates them on the next build, and
-		# .gitignore still lists them for anyone running `make -C` by hand.
-		rm -rf "$BRIDGE_DIR/src" "$BRIDGE_DIR/fishhook"
+		# This subproject compiles shared sources through ../../, and theos mirrors
+		# those relative paths into stamp directories *next to* the subproject, all
+		# under FBPNotifyBridge/src/src/ (…/src/PluginsInject and …/src/Core/fishhook).
+		# They hold nothing but an empty .stamp marker — the real objects go under
+		# .theos/ — so they are removed to keep the working tree clean. theos
+		# recreates them on the next build, and .gitignore still lists them for
+		# anyone running `make -C` by hand.
+		rm -rf "$BRIDGE_DIR/src"
 	fi
 
 	echo "==> Injecting $DEB_INJECT (+ icons${PLUGINS:+ + ${#PLUGINS[@]} extension(s)}) into $IPA_IN with cyan…"

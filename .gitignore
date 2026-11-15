@@ -6,9 +6,8 @@ packages/
 
 # theos also drops empty object-directory stamps *next to* a subproject when
 # that subproject compiles sources from outside its own directory, which
-# FBPNotifyBridge/src does (it shares src/PluginsInject/ and fishhook/ with the
-# root tweak). These two are build droppings, not source.
-FBPNotifyBridge/src/fishhook/
+# FBPNotifyBridge/src does (it shares src/PluginsInject/ and src/Core/fishhook/
+# with the root tweak). These are build droppings, not source.
 FBPNotifyBridge/src/src/
 
 # ---------------------------------------------------------------------------

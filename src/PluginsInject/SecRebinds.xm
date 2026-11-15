@@ -91,7 +91,7 @@
 #import <mach-o/dyld.h>
 
 #import "Header.h"
-#import "../../fishhook/fishhook.h"
+#import "../Core/fishhook/fishhook.h"
 
 static OSStatus (*origSecItemAdd)(CFDictionaryRef attributes, CFTypeRef *result);
 static OSStatus (*origSecItemCopyMatching)(CFDictionaryRef query, CFTypeRef *result);

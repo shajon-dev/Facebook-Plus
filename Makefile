@@ -62,7 +62,7 @@ FacebookPlus_FILES = \
 	src/PluginsInject/SecRebinds.xm \
 	src/PluginsInject/SideloadFix.xm \
 	src/PluginsInject/NotifDiag.mm \
-	fishhook/fishhook.c
+	src/Core/fishhook/fishhook.c
 
 # The tweak's own version, read from control, exposed to the code as FBP_VERSION
 # (an NSString literal) so the update checker can compare against GitHub releases.
