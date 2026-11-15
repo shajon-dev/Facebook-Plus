@@ -101,6 +101,7 @@ extern NSString *const FBPKeyFontScale;         // Custom-font size multiplier (
 extern NSString *const FBPKeyLinksInSafari;     // Open external links in the default browser
 
 // Diagnostics
+extern NSString *const FBPKeyLogsKeep;          // keep the diagnostic log across launches
 extern NSString *const FBPKeyLogFeedUnits;      // os_log the live feed-unit token set
 /// os_log what Facebook actually serves for a video on a download tap — the
 /// DASH manifest's representations and labels, and whether any of them is muxed.

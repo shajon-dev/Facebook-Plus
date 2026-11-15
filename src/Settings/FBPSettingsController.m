@@ -483,12 +483,6 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                              FBPL(@"row.logdownloadqualities.title"),
                              FBPL(@"row.logdownloadqualities.desc"), @"ladybug.fill"),
             ]),
-            FBPSection(FBPL(@"footer.logs"), @[
-                FBPActionRow(kActionLogExport, FBPL(@"row.logexport.title"),
-                             FBPL(@"row.logexport.desc"), @"square.and.arrow.up", NO),
-                FBPActionRow(kActionLogClear, FBPL(@"row.logclear.title"),
-                             FBPL(@"row.logclear.desc"), @"trash.fill", NO),
-            ]),
             FBPSection(FBPL(@"footer.resetpushkeys"), @[
                 FBPSwitchRow(FBPKeyKeychainRebind, FBPL(@"row.keychainrebind.title"), FBPL(@"row.keychainrebind.desc"), @"key.fill"),
                 FBPSwitchRow(FBPKeyNotifClientSync, FBPL(@"row.notifclientsync.title"),
@@ -499,6 +493,22 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             FBPSection(nil, @[
                 FBPActionRow(kActionWelcome, FBPL(@"row.welcome.title"), nil, @"hand.wave.fill", NO),
                 FBPActionRow(kActionReset, FBPL(@"row.reset.title"), nil, @"arrow.counterclockwise", YES),
+            ]),
+        ]},
+        @{ kRowTitle : FBPL(@"cat.logs.title"), kRowDesc : FBPL(@"cat.logs.summary"),
+           kRowIcon : @"ladybug.fill", kRowCategory : @[
+            FBPSection(nil, @[
+                FBPInfoRow(FBPL(@"logs.recordedlines"),
+                           [NSString stringWithFormat:@"%lu", (unsigned long)FBPLogLineCount()],
+                           @"doc.text", nil),
+                FBPSwitchRow(FBPKeyLogsKeep, FBPL(@"row.logskeep.title"),
+                             FBPL(@"row.logskeep.desc"), @"tray.and.arrow.down.fill"),
+            ]),
+            FBPSection(nil, @[
+                FBPActionRow(kActionLogExport, FBPL(@"row.logexport.title"),
+                             FBPL(@"row.logexport.desc"), @"square.and.arrow.up", NO),
+                FBPActionRow(kActionLogClear, FBPL(@"row.logclear.title"),
+                             FBPL(@"row.logclear.desc"), @"trash.fill", NO),
             ]),
         ]},
     ];

@@ -40,9 +40,12 @@ void FBPTraceEmit(NSString *line);
 /// How many lines the in-memory record currently holds.
 NSUInteger FBPLogLineCount(void);
 
-/// Empties the in-memory record. The file mirror belongs to this launch and a
-/// root shell may be reading it, so it is left alone.
+/// Empties the in-memory record and truncates the file mirror.
 void FBPLogClear(void);
+
+/// Clears the log once per calendar day, on the first call after local midnight.
+/// Call at launch.
+void FBPLogDailyClearIfDue(void);
 
 #pragma mark - Feature diagnostics
 

@@ -54,6 +54,21 @@ os_log_t FBPTraceLog(void) {
     return log;
 }
 
+#pragma mark - Settings read directly from the preferences suite
+
+// Read straight from the defaults suite (never through FBPPrefs/UIKit) so this
+// file stays Foundation-only. Mirrors kSuiteName and the FBPKeyLogs* constants.
+static NSString *const kFBPTraceSuite     = @"com.shajon.fbplus";
+static NSString *const kFBPTraceKeepKey   = @"logsKeep";
+static NSString *const kFBPTraceLastClear = @"logsLastClear";
+
+// On by default: the log is kept across launches unless the user turns it off.
+static BOOL FBPLogsKeepAcrossLaunches(void) {
+    id value = [[[NSUserDefaults alloc] initWithSuiteName:kFBPTraceSuite]
+                   objectForKey:kFBPTraceKeepKey];
+    return value ? [value boolValue] : YES;
+}
+
 #pragma mark - The file mirror
 
 // Reading os_log back off an iPhone needs usbmux, which a network-only setup
@@ -76,9 +91,10 @@ static void FBPTraceOpenFile(void) {
     dispatch_once(&once, ^{
         NSString *path = FBPTracePath();
         if (!path.length) return;
-        // O_TRUNC: each launch starts a fresh file, so no rotation is needed.
-        int fd = open(path.fileSystemRepresentation,
-                      O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        // Append when the log is kept across launches; otherwise start fresh each
+        // launch. The daily auto-clear and the Clear action truncate it.
+        int flags = O_WRONLY | O_CREAT | (FBPLogsKeepAcrossLaunches() ? O_APPEND : O_TRUNC);
+        int fd = open(path.fileSystemRepresentation, flags, 0644);
         if (fd >= 0) gFBPTraceFD = fd;
     });
 }
@@ -113,7 +129,24 @@ static const NSUInteger kFBPLogCapacity = 2000;
 static NSMutableArray<NSString *> *FBPLogLines(void) {
     static NSMutableArray<NSString *> *lines;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{ lines = [NSMutableArray arrayWithCapacity:kFBPLogCapacity]; });
+    dispatch_once(&once, ^{
+        lines = [NSMutableArray arrayWithCapacity:kFBPLogCapacity];
+        // Kept across launches: seed the record from last launch's file so the
+        // count and the export carry the history forward.
+        if (FBPLogsKeepAcrossLaunches()) {
+            NSString *path = FBPTracePath();
+            NSString *existing = path.length ? [NSString stringWithContentsOfFile:path
+                                                                         encoding:NSUTF8StringEncoding
+                                                                            error:nil]
+                                             : nil;
+            for (NSString *line in [existing componentsSeparatedByString:@"\n"]) {
+                if (line.length) [lines addObject:line];
+            }
+            if (lines.count > kFBPLogCapacity) {
+                [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogCapacity)];
+            }
+        }
+    });
     return lines;
 }
 
@@ -152,6 +185,37 @@ void FBPLogClear(void) {
     os_unfair_lock_lock(&gFBPLogLock);
     [FBPLogLines() removeAllObjects];
     os_unfair_lock_unlock(&gFBPLogLock);
+
+    // Empty the file mirror too, so a kept-across-launches log does not bring the
+    // cleared lines back and an export right after Clear is empty.
+    os_unfair_lock_lock(&gFBPTraceFileLock);
+    if (gFBPTraceFD >= 0) {
+        if (ftruncate(gFBPTraceFD, 0) == 0) lseek(gFBPTraceFD, 0, SEEK_SET);
+    } else {
+        NSString *path = FBPTracePath();
+        if (path.length) [[NSData data] writeToFile:path atomically:YES];
+    }
+    os_unfair_lock_unlock(&gFBPTraceFileLock);
+}
+
+// Clears the log once per calendar day, on the first call after local midnight.
+// Call at launch; a same-day call returns at once.
+void FBPLogDailyClearIfDue(void) {
+    static NSDateFormatter *formatter;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        formatter = [NSDateFormatter new];
+        formatter.dateFormat = @"yyyy-MM-dd";
+        formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+        formatter.timeZone = NSTimeZone.localTimeZone;
+    });
+    NSString *today = [formatter stringFromDate:NSDate.date];
+
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:kFBPTraceSuite];
+    if ([[defaults stringForKey:kFBPTraceLastClear] isEqualToString:today]) return;
+
+    FBPLogClear();
+    [defaults setObject:today forKey:kFBPTraceLastClear];
 }
 
 #pragma mark - Feature diagnostics

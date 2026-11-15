@@ -73,7 +73,9 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
         // Registers defaults before any hook can read a preference.
         (void)FBPPrefs.shared;
 
-        // Prime the local device-name lookup and open the diagnostic log.
+        // Clear the kept log once a day (local midnight), then prime the
+        // device-name lookup and open the diagnostic log.
+        FBPLogDailyClearIfDue();
         FBPResolveDeviceName();
         FBPTraceLine(@"launch · on %@ into %@", FBPDeviceDisplayName(),
                      NSBundle.mainBundle.bundleIdentifier);
