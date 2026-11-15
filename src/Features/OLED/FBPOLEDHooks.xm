@@ -58,13 +58,51 @@ static BOOL gOLEDEnabled = NO;
 
 static void FBPRefreshOLED(void) { gOLEDEnabled = FBPEnabled(FBPKeyOLED); }
 
-/// YES when iOS itself is set to Dark Mode. Read from the screen's trait
-/// collection, which reflects the *system* appearance and is not affected by any
-/// per-window override, so it is the true "is iOS in Dark Mode" signal.
+/// The app's current key window (never one of ours), or any app window as a
+/// fallback. Used to read the effective interface style.
+static UIWindow *FBPAppKeyWindow(void) {
+    UIWindow *fallback = nil;
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) continue;
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+            if (window.isKeyWindow) return window;
+            if (!fallback) fallback = window;
+        }
+    }
+    return fallback;
+}
+
+/// The live interface style, cached from window trait changes so the hot path
+/// (every setBackgroundColor:/layoutSubviews) never walks the window list.
+///
+/// NOT read from UIScreen.mainScreen.traitCollection: on device that reports a
+/// stale "dark" after the system switches to Light — a captured log showed
+/// `screen=dark` while `current`, `keyWin` and the window override all reported
+/// light, which is exactly what left OLED engaged (and the whole app black) in
+/// Light Mode. A window's own trait collection tracks the switch correctly, so it
+/// is the source of truth; FBPUpdateSystemStyle refreshes this from the window's
+/// traitCollectionDidChange and on foreground.
+static UIUserInterfaceStyle gFBPSystemStyle = UIUserInterfaceStyleUnspecified;
+
+static void FBPUpdateSystemStyle(UIUserInterfaceStyle style) {
+    if (@available(iOS 13.0, *)) {
+        if (style != UIUserInterfaceStyleUnspecified) gFBPSystemStyle = style;
+    }
+}
+
+/// YES when the app's effective appearance is Dark Mode (which follows iOS while
+/// Facebook does not force a theme). Reads the cache, falling back to a live
+/// window until the first trait change seeds it.
 static BOOL FBPSystemIsDark(void) {
     if (@available(iOS 13.0, *)) {
-        return UIScreen.mainScreen.traitCollection.userInterfaceStyle ==
-               UIUserInterfaceStyleDark;
+        if (gFBPSystemStyle != UIUserInterfaceStyleUnspecified) {
+            return gFBPSystemStyle == UIUserInterfaceStyleDark;
+        }
+        UIWindow *key = FBPAppKeyWindow();
+        if (key) {
+            return key.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark;
+        }
     }
     return NO;
 }
@@ -76,6 +114,50 @@ static BOOL FBPSystemIsDark(void) {
 /// genuinely dark surfaces are blackened.
 static BOOL FBPOLEDActive(void) {
     return gOLEDEnabled && FBPSystemIsDark();
+}
+
+#pragma mark - Diagnostics
+
+/// Human name for an interface style, for the diagnostic log.
+static NSString *FBPStyleName(UIUserInterfaceStyle style) {
+    if (@available(iOS 13.0, *)) {
+        switch (style) {
+            case UIUserInterfaceStyleDark:  return @"dark";
+            case UIUserInterfaceStyleLight: return @"light";
+            default: break;
+        }
+    }
+    return @"unspec";
+}
+
+/// One diagnostic line describing exactly what OLED sees at a given moment — the
+/// toggle, the *screen* appearance (our detection source), the key window's own
+/// effective appearance, any forced window override, and the two derived gates.
+/// This is what answers, from a device log, whether OLED fails to disengage
+/// because detection is wrong (screen not reporting Light) or because Facebook
+/// forces its window dark so no trait change ever reaches our hooks.
+static void FBPOLEDLogState(const char *when) {
+    if (@available(iOS 13.0, *)) {
+        UIUserInterfaceStyle screen = UIScreen.mainScreen.traitCollection.userInterfaceStyle;
+        UIUserInterfaceStyle current =
+            UITraitCollection.currentTraitCollection.userInterfaceStyle;
+        UIWindow *key = nil;
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if (![scene isKindOfClass:UIWindowScene.class]) continue;
+            for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+                if (window.isKeyWindow) { key = window; break; }
+                if (!key) key = window;
+            }
+            if (key.isKeyWindow) break;
+        }
+        FBPDiag(@"oled",
+                @"%s toggle=%d screen=%@ current=%@ keyWin=%@ override=%@ systemDark=%d active=%d",
+                when, gOLEDEnabled, FBPStyleName(screen), FBPStyleName(current),
+                FBPStyleName(key.traitCollection.userInterfaceStyle),
+                FBPStyleName(key.overrideUserInterfaceStyle),
+                FBPSystemIsDark(), FBPOLEDActive());
+    }
 }
 
 #pragma mark - Colour judgement
@@ -670,6 +752,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 %hook UIView
 
 - (void)setBackgroundColor:(UIColor *)color {
+    FBPTraceFire("oled.UIView.setBackgroundColor");
     if (FBPOLEDActive() && !FBPOLEDSkip(self) &&
         [NSStringFromClass(self.class) containsString:@"LineComponent"]) {
         // A separator line keeps a faint white instead of vanishing into black.
@@ -684,16 +767,25 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 - (void)layoutSubviews {
     %orig;
+    FBPTraceFire("oled.UIView.layoutSubviews");
     FBPApplyView(self, FBPOLEDActive());
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previous {
     %orig;
+    FBPTraceFire("oled.UIView.traitCollectionDidChange");
     if (@available(iOS 13.0, *)) {
         if (previous &&
             previous.userInterfaceStyle != self.traitCollection.userInterfaceStyle) {
-            // iOS switched Light↔Dark: re-run the layout logic so OLED engages for
-            // Dark and fully reverts for Light on this view.
+            // A window-level style flip is the whole-app Light↔Dark switch. Refresh
+            // the cached system style from the window (the authoritative source)
+            // before relayout, so the layout hooks read the new appearance.
+            if ([self isKindOfClass:UIWindow.class] && !FBPOLEDSkip(self)) {
+                FBPUpdateSystemStyle(self.traitCollection.userInterfaceStyle);
+                FBPOLEDLogState("trait-change");
+            }
+            // Re-run the layout logic so OLED engages for Dark and fully reverts
+            // for Light on this view.
             [self setNeedsLayout];
         }
     }
@@ -703,6 +795,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 %hook UITableView
 - (void)setBackgroundColor:(UIColor *)color {
+    FBPTraceFire("oled.UITableView.setBackgroundColor");
     UIColor *resolved = FBPBGForSet(self, color);
     %orig(resolved);
 }
@@ -710,6 +803,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 %hook UITableViewCell
 - (void)setBackgroundColor:(UIColor *)color {
+    FBPTraceFire("oled.UITableViewCell.setBackgroundColor");
     UIColor *resolved = FBPBGForSet(self, color);
     %orig(resolved);
 }
@@ -717,6 +811,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 %hook UICollectionView
 - (void)setBackgroundColor:(UIColor *)color {
+    FBPTraceFire("oled.UICollectionView.setBackgroundColor");
     UIColor *resolved = FBPBGForSet(self, color);
     %orig(resolved);
 }
@@ -730,6 +825,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 %hook FBMovableNavigationBarView
 - (void)layoutSubviews {
     %orig;
+    FBPTraceFire("oled.FBMovableNavigationBarView.layoutSubviews");
     BOOL active = FBPOLEDActive();
     if (active) {
         if (FBPColorIsDark(FBPResolve(self.backgroundColor))) {
@@ -755,6 +851,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 // vanish. Force light content (white glyphs) while OLED is on.
 %hook FBMovableNavigationBarViewController
 - (UIStatusBarStyle)preferredStatusBarStyle {
+    FBPTraceFire("oled.FBMovableNavigationBarViewController.preferredStatusBarStyle");
     if (FBPOLEDActive()) return UIStatusBarStyleLightContent;
     return %orig;
 }
@@ -784,26 +881,46 @@ static void FBPNudgeOLEDRelayout(void) {
 void FBPInitOLEDHooks(void) {
     FBPRefreshOLED();
 
-    // Keep the cached toggle in sync when settings change, then nudge a relayout
-    // so turning OLED on/off takes effect promptly. OLED no longer forces any
-    // appearance; it follows the iOS Light/Dark setting (FBPOLEDActive).
-    [NSNotificationCenter.defaultCenter
-        addObserverForName:FBPSettingsDidChangeNotification
-                    object:nil
-                     queue:NSOperationQueue.mainQueue
-                usingBlock:^(NSNotification *note) {
-        FBPRefreshOLED();
-        FBPNudgeOLEDRelayout();
-    }];
+    // Everything below registers process-wide state exactly once. FBPInitOLEDHooks
+    // is re-run on every dyld image load (see FBPEntry.xm), so without this latch the
+    // notification observers would be added again for each image — a became-active
+    // would then fire the block dozens of times and storm the log and the relayout.
+    FBP_ONCE(gOLED) {
+        // Keep the cached toggle in sync when settings change, then nudge a relayout
+        // so turning OLED on/off takes effect promptly. OLED no longer forces any
+        // appearance; it follows the iOS Light/Dark setting (FBPOLEDActive).
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:FBPSettingsDidChangeNotification
+                        object:nil
+                         queue:NSOperationQueue.mainQueue
+                    usingBlock:^(NSNotification *note) {
+            FBPRefreshOLED();
+            FBPOLEDLogState("settings-changed");
+            FBPNudgeOLEDRelayout();
+        }];
 
-    // A live iOS Light↔Dark switch is handled per-view by the traitCollectionDidChange
-    // hook. Returning from the background is the one case that can miss, so re-apply
-    // for the current system appearance on foreground.
-    [NSNotificationCenter.defaultCenter
-        addObserverForName:UIApplicationDidBecomeActiveNotification
-                    object:nil
-                     queue:NSOperationQueue.mainQueue
-                usingBlock:^(NSNotification *note) { FBPNudgeOLEDRelayout(); }];
+        // A live iOS Light↔Dark switch is handled per-view by the
+        // traitCollectionDidChange hook. Returning from the background is the one
+        // case that can miss, so re-apply for the current appearance on foreground.
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:UIApplicationDidBecomeActiveNotification
+                        object:nil
+                         queue:NSOperationQueue.mainQueue
+                    usingBlock:^(NSNotification *note) {
+            // Re-seed the cached style in case the appearance changed while the app
+            // was backgrounded (no trait change fires then).
+            if (@available(iOS 13.0, *)) {
+                FBPUpdateSystemStyle(
+                    FBPAppKeyWindow().traitCollection.userInterfaceStyle);
+            }
+            FBPOLEDLogState("became-active");
+            FBPNudgeOLEDRelayout();
+        }];
 
-    FBP_ONCE(gOLED) { %init(FBPOLEDGlobal); }
+        if (@available(iOS 13.0, *)) {
+            FBPUpdateSystemStyle(FBPAppKeyWindow().traitCollection.userInterfaceStyle);
+        }
+        %init(FBPOLEDGlobal);
+        FBPDiag(@"oled", @"hooks installed, toggle=%d", gOLEDEnabled);
+    }
 }
