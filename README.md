@@ -10,7 +10,7 @@
   <p>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square"></a>
     <img alt="Platform" src="https://img.shields.io/badge/Platform-iOS%2015.1%2B-lightgrey.svg?style=flat-square">
-    <img alt="Version" src="https://img.shields.io/badge/Version-1.0.4-success.svg?style=flat-square">
+    <a href="https://github.com/shajon-dev/Facebook-Plus/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/shajon-dev/Facebook-Plus?style=flat-square&label=Version&color=success"></a>
   </p>
 </div>
 
@@ -56,11 +56,15 @@
     </tr>
     <tr>
       <td nowrap>🎨 <b>Appearance</b></td>
-      <td>OLED dark mode (true black)<br>Alternate app icons<br>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td>
+      <td>OLED dark mode (true black) that follows your iOS Light / Dark setting<br>Alternate app icons<br>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td>
     </tr>
     <tr>
       <td nowrap>🔔 <b>Updates</b></td>
       <td>In-app update checker with changelog and one-tap download</td>
+    </tr>
+    <tr>
+      <td nowrap>🩺 <b>Diagnostics</b></td>
+      <td>Exportable in-app activity log for bug reports — kept across launches, cleared daily<br>About card with the Facebook Plus, Facebook, iOS and device details</td>
     </tr>
   </tbody>
 </table>
@@ -137,7 +141,7 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
 
 1. **Clone the repository** (including submodules):
    ```bash
-   git clone --recursive https://github.com/SHAJON-404/Facebook-Plus.git
+   git clone --recursive https://github.com/shajon-dev/Facebook-Plus.git
    cd Facebook-Plus
    ```
 
@@ -240,9 +244,9 @@ What this means for you:
 │   ├── fonts           # Bundled custom fonts offered by the Fonts picker
 │   ├── logo            # Custom app-icons drop folder for build.py injection
 │   └── svg             # Source vector graphics
-├── scripts             # Python utility scripts (e.g., icon merging, svg rendering)
+├── scripts             # verify.py (clang typecheck + 44-check test suite) and audit.py (static audit)
 ├── src                 # Tweak source code
-│   ├── Core            # Constructor, preferences, and resources
+│   ├── Core            # Constructor, preferences, logging/diagnostics, fishhook submodule
 │   ├── Features        # All hooks & feature implementations:
 │   │   ├── Ads         # Feed, video, story & Marketplace ad removal (feed chokepoint + RN/GraphQL)
 │   │   ├── AppChrome   # UI settings gesture (TabBar, Wordmark long-press & Settings Button)
@@ -256,16 +260,18 @@ What this means for you:
 │   │   ├── Language    # UI language override hooks
 │   │   ├── LikeConfirmation # Confirm likes via the ComponentKit forwarder (feed & Reels)
 │   │   ├── Links       # Open external links in default browser & inbound link bridge
-│   │   ├── OLED        # True black dark mode implementation
+│   │   ├── Notifications # Client-sync bridge for detailed push on sideloaded builds
+│   │   ├── OLED        # True black dark mode that follows the iOS system appearance
 │   │   ├── Onboarding  # Welcome screen controller
+│   │   ├── Reels       # Cinema mode (hide overlay/tab bar) & Reels download
 │   │   ├── Stories     # Story-related hooks (Ghost mode, auto-advance block)
 │   │   └── Update      # In-app update checker + update screen (GitHub Releases)
 │   ├── PluginsInject   # Sideload compatibility layer (Keychain / App-Group / CloudKit)
 │   ├── Settings        # Dedicated full-screen Facebook Plus settings UI
 │   └── UI              # Shared UI components
 │       ├── Sheet       # Detent & Presentation controllers
-│       └── Toast       # HUD / Progress pills
-└── test                # Input IPA directory and test scripts
+│       └── Toast       # HUD / Progress pills (app-logo toast)
+└── test                # Decrypted input IPA and signing certificates
 ```
 
 **Resilient Hooking:** Each hook dynamically verifies that its target class and selector exist before installation. If a Facebook update changes a specific class, only that single feature degrades safely without crashing the entire tweak. The settings gesture, for example, hooks both the classic tab bar and the new iOS 26 liquid-glass bars so long-press keeps working across iOS versions.
