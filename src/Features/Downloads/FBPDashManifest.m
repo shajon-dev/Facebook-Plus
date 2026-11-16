@@ -52,6 +52,11 @@
 // the signature in step. A host harness supplies its own definition.
 extern BOOL FBPMediaConversionIsAvailable(void);
 
+// Same arrangement for the VP9 tier: canonical declaration in FBPVP9Bridge.h,
+// which pulls in CoreVideo. YES when Facebook's own libavcodec can be borrowed
+// to decode VP9 (see FBPVP9Bridge.h). A host harness supplies its own.
+extern BOOL FBPVP9ConversionIsAvailable(void);
+
 #pragma mark - Bounds
 //
 // Bounds on work, not judgements about content. The MPD arrives as a string of
@@ -295,6 +300,12 @@ static BOOL FBPDashVideoCodecIsAV1(NSString *codecs) {
     return [lower hasPrefix:@"av01"] || [lower hasPrefix:@"av1"];
 }
 
+static BOOL FBPDashVideoCodecIsVP9(NSString *codecs) {
+    if (codecs.length == 0) return NO;
+    NSString *lower = codecs.lowercaseString;
+    return [lower hasPrefix:@"vp09"] || [lower hasPrefix:@"vp9"];
+}
+
 static BOOL FBPDashVideoCodecIsSupported(NSString *codecs) {
     if (codecs.length == 0) return YES;
     NSString *lower = codecs.lowercaseString;
@@ -302,6 +313,11 @@ static BOOL FBPDashVideoCodecIsSupported(NSString *codecs) {
         if ([lower hasPrefix:needle]) return YES;
     }
     if (FBPDashVideoCodecIsAV1(codecs)) return FBPMediaConversionIsAvailable();
+    // VP9: Photos still refuses it, but it is re-encoded like AV1 — decoded by
+    // Facebook's own borrowed libavcodec (FBPVP9Bridge), since VideoToolbox has
+    // no VP9 decoder. Offered only where that borrow has resolved; a device or a
+    // future build where it has not keeps VP9 refused, with a -droppedNotes line.
+    if (FBPDashVideoCodecIsVP9(codecs)) return FBPVP9ConversionIsAvailable();
     return NO;
 }
 
@@ -346,6 +362,9 @@ static BOOL FBPDashAudioCodecIsAAC(NSString *codecs) {
 /// choose when Facebook has already served H.264.
 static NSInteger FBPDashVideoCodecRank(NSString *codecs) {
     NSString *lower = codecs.lowercaseString;
+    // VP9 last: it re-encodes like AV1 but through a borrowed decoder, so when a
+    // manifest offers the same label in another lane, prefer that one.
+    if (FBPDashVideoCodecIsVP9(codecs)) return 3;
     if (FBPDashVideoCodecIsAV1(codecs)) return 2;
     for (NSString *needle in @[@"hvc1", @"hev1", @"hevc"]) {
         if ([lower hasPrefix:needle]) return 1;
@@ -406,11 +425,13 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
         _height = height;
         _bandwidth = bandwidth;
         _codecRank = FBPDashVideoCodecRank(codecs ?: @"");
-        // Set from the codecs string alone, which is safe because an AV1 rung
-        // only gets this far on a device the gate has already established can
-        // decode AV1. Audio representations run through this initializer too and
-        // never match, so there is nothing to exclude.
-        _needsConversion = FBPDashVideoCodecIsAV1(codecs ?: @"");
+        // Set from the codecs string alone, which is safe because an AV1 or VP9
+        // rung only gets this far on a device the gate has already established can
+        // decode it (VideoToolbox for AV1, the borrowed libavcodec for VP9). Audio
+        // representations run through this initializer too and never match, so
+        // there is nothing to exclude.
+        _needsConversion = FBPDashVideoCodecIsAV1(codecs ?: @"") ||
+                           FBPDashVideoCodecIsVP9(codecs ?: @"");
         _hasKnownChannelLayout = YES;
     }
     return self;

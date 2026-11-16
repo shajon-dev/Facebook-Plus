@@ -36,6 +36,11 @@ extern void FBPInitCallBlocker(void);
 /// lives in a plain .m and is not.
 extern "C" void FBPMediaConversionPrewarm(void);
 
+/// Settles, off the main thread, whether Facebook's own libavcodec can be
+/// borrowed to decode VP9 (src/Features/Downloads/FBPVP9Bridge.m) — so the first
+/// VP9 download does not pay for the symbol resolution on its control queue.
+extern "C" void FBPVP9BridgePrewarm(void);
+
 /// Runs every installer. Each group latches itself with FBP_ONCE, so calling
 /// this repeatedly installs each hook exactly once.
 static void FBPInstallHooks(void) {
@@ -90,6 +95,7 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
         // FBPInstallHooks because it is not a hook and must not be repeated for
         // every image dyld reports.
         FBPMediaConversionPrewarm();
+        FBPVP9BridgePrewarm();
 
         // Inlined (not a local) so the release build, where FBPLog is a no-op,
         // does not trip -Werror=unused-variable.

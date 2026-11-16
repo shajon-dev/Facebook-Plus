@@ -22,17 +22,19 @@
 // None of those gates bought safety on real manifests that carry the full
 // 360p…1080p ladder; every one is now a -droppedNotes entry, not a refusal.
 //
-// Two things are still refused: a <BaseURL> that does not resolve to an absolute
-// http(s) URL is not fetchable, and VP9 can be neither saved to Photos nor
-// converted by anything here, so offering such a rung means a full download then
-// a failed save. Both say so in -droppedNotes.
+// One thing is still refused outright: a <BaseURL> that does not resolve to an
+// absolute http(s) URL is not fetchable, so such a rung is dropped with a
+// -droppedNotes line.
 //
-// AV1 is the middle case. Photos will not take it (measured: PHPhotosErrorDomain
-// 3302), but FBPMediaConverter re-encodes it to HEVC first — so an AV1 rung is
-// offered only when the device can decode AV1, and comes back marked
-// -needsConversion. On a handset with no AV1 decoder it is refused as before,
-// with a -droppedNotes line. This matters: five of six captured Meta manifests
-// are AV1-only.
+// AV1 and VP9 are the middle case. Photos refuses both as-is (measured for AV1:
+// PHPhotosErrorDomain 3302), but each is re-encoded to HEVC before the save and
+// comes back marked -needsConversion. AV1 is decoded by VideoToolbox, so an AV1
+// rung is offered only when the device has an AV1 decoder (FBPMediaConverter);
+// VP9, which VideoToolbox cannot decode on any Apple device, is decoded by
+// Facebook's own bundled libavcodec, borrowed by FBPVP9Bridge, so a VP9 rung is
+// offered only when that borrow has resolved (FBPVP9Converter). Where neither
+// holds the rung is refused as before, with a -droppedNotes line. This matters:
+// five of six captured Meta manifests are AV1-only.
 //
 // Two readers. NSXMLParser first; when it yields no video rung from a document
 // long enough to hold one, a regex scraper re-reads the same string. The reason
@@ -53,11 +55,11 @@
 //
 // Mixed-codec manifests are normal: Meta ships AVC, VP9 and AV1 lanes in one MPD,
 // in several video AdaptationSets, so the same label can appear two or three
-// times. H.264/HEVC, a representation that declares no codec, and AV1 where it
-// can be converted all survive; VP9 never does. The filter runs before dedupe so
-// a VP9 entry can never win a label, and the codec ranking puts H.264 ahead of
-// AV1 at the same label so a lane that can be copied beats one that must be
-// re-encoded.
+// times. H.264/HEVC, a representation that declares no codec, and AV1 or VP9
+// where each can be converted all survive. The codec ranking puts H.264 ahead of
+// AV1, and AV1 ahead of VP9, at the same label, so a lane that can be copied
+// beats one that must be re-encoded, and the cheaper re-encode beats the
+// borrowed-decoder one.
 //
 // Video and audio are separate representations — a capture census found 176 of
 // 176 track-separated, and no representation has been observed carrying both
@@ -127,14 +129,15 @@ NS_ASSUME_NONNULL_BEGIN
 /// at one resolution can only be told apart by their labels.
 @property (nonatomic, copy, readonly, nullable) NSString *displayLabel;
 
-/// This rung is AV1, so saving it means re-encoding the picture to HEVC first —
-/// H.264 where this device cannot encode HEVC — (FBPMediaConverter) rather than
-/// copying it (FBPMediaMuxer).
+/// This rung is AV1 or VP9, so saving it means re-encoding the picture to HEVC
+/// first — H.264 where this device cannot encode HEVC — (FBPMediaConverter for
+/// AV1, FBPVP9Converter for VP9) rather than copying it (FBPMediaMuxer).
 ///
-/// Only ever YES on a device that can actually decode AV1 — the codec gate
-/// refuses AV1 outright where it cannot, so such a rung never becomes a
-/// representation at all. A caller can therefore treat this as "convert it",
-/// never as "check whether conversion is possible".
+/// Only ever YES where this rung can actually be converted — the codec gate
+/// refuses AV1 on a device with no AV1 decoder, and VP9 where the borrowed
+/// libavcodec did not resolve, so such a rung never becomes a representation at
+/// all. A caller can therefore treat this as "convert it", never as "check
+/// whether conversion is possible".
 ///
 /// What it costs, so a caller can decide whether to prefer another rung:
 /// minutes of sustained encoding instead of a moment of I/O, a battery hit, and

@@ -1,5 +1,6 @@
 #import "FBPDashDownload.h"
 #import "FBPMediaConverter.h"
+#import "FBPVP9Converter.h"
 #import "FBPMediaMuxer.h"
 
 #import <os/log.h>
@@ -375,7 +376,11 @@ static void FBPDashRelease(FBPDashDownload *download) {
             // a conversion. The step's completion still fires, with its own
             // cancel error, and that is what reaches -finishWithOutput:error:.
             if (self->_convertVideo) {
+                // Either converter may be the one in flight (the VP9 path is
+                // chosen per file in -startConversion); cancelling both is safe —
+                // the one that is not running has nothing to cancel.
                 [FBPMediaConverter cancelAll];
+                [FBPVP9Converter cancelAll];
             } else {
                 [FBPMediaMuxer cancelAll];
             }
@@ -553,18 +558,22 @@ static void FBPDashRelease(FBPDashDownload *download) {
 /// long pole of an AV1 save, so its fraction is forwarded into the flow's own
 /// bar rather than letting the bar sit still through it.
 - (void)startConversion {
-    [FBPMediaConverter convertVideoURL:_videoFile
-                             audioURL:_audioFile
-                        sourceBitRate:_sourceBitRate
-                            outputURL:_outputURL
-                             progress:^(float fraction) {
+    // AV1 is decoded by AVFoundation (FBPMediaConverter); VP9 is the one codec it
+    // cannot, so that goes to the borrowed-decoder converter (FBPVP9Converter).
+    // -canDecodeVideoAtURL: is a per-file -isPlayable, so the split follows the
+    // device's real capability rather than a codec guess, and both converters
+    // share the same progress/completion contract and the same error domain.
+    BOOL avfoundationDecodes = [FBPMediaConverter canDecodeVideoAtURL:_videoFile];
+
+    void (^progress)(float) = ^(float fraction) {
         dispatch_async(self->_control, ^{
             if (self->_stage != FBPDashDownloadStageConverting) return;
             self->_convertFraction = fraction;
             [self reportProgress];
         });
-    }
-                           completion:^(NSURL *converted, NSError *convertError) {
+    };
+
+    void (^completion)(NSURL *_Nullable, NSError *_Nullable) = ^(NSURL *converted, NSError *convertError) {
         dispatch_async(self->_control, ^{
             if (converted && !convertError && !self->_cancelled) {
                 FBPDashLog("convert ok -> %{private}@", converted.path);
@@ -591,7 +600,23 @@ static void FBPDashRelease(FBPDashDownload *download) {
                                        underlyingError:convertError
                                             statusCode:0]];
         });
-    }];
+    };
+
+    if (avfoundationDecodes) {
+        [FBPMediaConverter convertVideoURL:_videoFile
+                                 audioURL:_audioFile
+                            sourceBitRate:_sourceBitRate
+                                outputURL:_outputURL
+                                 progress:progress
+                               completion:completion];
+    } else {
+        [FBPVP9Converter convertVideoURL:_videoFile
+                               audioURL:_audioFile
+                          sourceBitRate:_sourceBitRate
+                              outputURL:_outputURL
+                               progress:progress
+                             completion:completion];
+    }
 }
 
 #pragma mark Exit

@@ -82,13 +82,15 @@ typedef NS_ENUM(NSInteger, FBPDownloadVariantTier) {
 /// @c audioURL != nil. A variant that cannot be saved by downloading one URL.
 @property (nonatomic, assign, readonly) BOOL needsMux;
 
-/// This rung is AV1, so the picture has to be re-encoded — to HEVC, or H.264
-/// where this device cannot encode HEVC — before Photos will accept it
-/// (FBPMediaConverter) rather than copied (FBPMediaMuxer).
+/// This rung is AV1 or VP9, so the picture has to be re-encoded — to HEVC, or
+/// H.264 where this device cannot encode HEVC — before Photos will accept it
+/// (FBPMediaConverter for AV1, FBPVP9Converter for VP9) rather than copied
+/// (FBPMediaMuxer).
 ///
-/// Only ever YES where the device can decode AV1 — the DASH reader refuses AV1
-/// rungs outright where it cannot — so a downloader can treat this as "convert
-/// it", never as "find out whether conversion is possible".
+/// Only ever YES where this rung can be converted — the DASH reader refuses AV1
+/// where the device has no AV1 decoder, and VP9 where the borrowed libavcodec did
+/// not resolve — so a downloader can treat this as "convert it", never as "find
+/// out whether conversion is possible".
 ///
 /// A converting variant is strictly more expensive than any other: minutes of
 /// encoding, a battery cost, and an output about twice the size of the source.

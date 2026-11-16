@@ -48,6 +48,8 @@ FacebookPlus_FILES = \
 	src/Features/Downloads/FBPMediaMuxer.m \
 	src/Features/Downloads/FBPDav1dBridge.m \
 	src/Features/Downloads/FBPMediaConverter.m \
+	src/Features/Downloads/FBPVP9Bridge.m \
+	src/Features/Downloads/FBPVP9Converter.m \
 	src/Features/Downloads/FBPDashDownload.m \
 	src/Features/Downloads/FBPDownloadStore.m \
 	src/Features/Downloads/FBPDownloadManagerController.m \
