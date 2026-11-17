@@ -1,4 +1,4 @@
-// Hide the "Recommended" (おすすめ) mid-card interstitial in Reels (issue #1).
+// Hide the "Recommended" (おすすめ) mid-card interstitial in Reels (https://github.com/shajon-dev/Facebook-Plus/issues/1).
 //
 // Facebook interleaves a full-screen "mid-card" between reels. One of them is the
 // algorithm-transparency / recommended card — a page that shows only a title

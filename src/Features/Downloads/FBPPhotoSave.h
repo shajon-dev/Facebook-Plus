@@ -1,5 +1,5 @@
 // One place every "save to Photos" goes through, so the tweak asks for the
-// narrowest permission iOS offers (issue #6).
+// narrowest permission iOS offers (https://github.com/shajon-dev/Facebook-Plus/issues/6).
 //
 // Saving a reel or a story used to reach `-[PHPhotoLibrary performChanges:]`
 // with the library's authorization still undetermined, and iOS then prompted for

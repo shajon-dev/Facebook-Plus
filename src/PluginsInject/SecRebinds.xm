@@ -10,7 +10,7 @@
 // they are entitled to, and moving the group turns a hit into errSecItemNotFound
 // or -34018 errSecMissingEntitlement — Facebook's own code logs that and
 // degrades, and a system caller may treat it as fatal (the suspected cause of
-// GitHub issue #13, where tapping Message on a profile killed the app). Hence
+// GitHub issue https://github.com/SHAJON-404/Facebook-Plus/issues/13, where tapping Message on a profile killed the app). Hence
 // the three outcomes below.
 //
 // WHAT HAPPENS TO A QUERY
@@ -25,7 +25,7 @@
 //     kSecUseDataProtectionKeychain below.
 //   * it names a com.apple.* group — system owned (com.apple.token,
 //     com.apple.accounts.*.defaultaccess, …). Left exactly as it is: that is a
-//     system or auth framework asking on its own behalf, and the issue-#13 fix.
+//     system or auth framework asking on its own behalf, and the issue https://github.com/SHAJON-404/Facebook-Plus/issues/13 fix.
 //   * it names the resolved group — left alone, the rewrite was a no-op.
 //   * it names NO group — pinned to the resolved group, so everything a
 //     re-signed app writes and reads back lands in one group it holds instead
@@ -38,7 +38,7 @@
 // WHY kSecUseDataProtectionKeychain NO LONGER EXCLUDES A FOREIGN GROUP
 //
 // It used to. Passing those queries through untouched was added with the
-// issue-#13 narrowing, on the reasoning that they are caller-owned items a
+// issue https://github.com/SHAJON-404/Facebook-Plus/issues/13 narrowing, on the reasoning that they are caller-owned items a
 // rewrite can only break. In the notification extension that reasoning is
 // backwards: disassembling NotificationServiceExtension (Facebook
 // 586.0.0) shows kSecUseDataProtectionKeychain is loaded in the *same*
@@ -65,7 +65,7 @@
 //
 // WHY A FAILED LOOKUP STRIPS THE GROUP RATHER THAN PASSING IT THROUGH
 //
-// Also from the issue-#13 narrowing, which replaced "assign a nil
+// Also from the issue https://github.com/SHAJON-404/Facebook-Plus/issues/13 narrowing, which replaced "assign a nil
 // accessGroupId" (ARC removes the key, so the group was stripped) with "leave
 // the query alone". Leaving it alone is strictly worse: the query keeps a group
 // the process cannot hold and is guaranteed to fail, whereas a query with no
@@ -81,7 +81,7 @@
 //
 // It did not used to. The patched IPA carried a vendored, closed-source
 // keychain patch (blatantsPatch.dylib) injected into the main app only, added
-// because a re-signed login was being dropped after a few hours (issue #2), and
+// because a re-signed login was being dropped after a few hours (https://github.com/shajon-dev/Facebook-Plus/issues/2), and
 // this file stood down wherever that image was loaded rather than rebind the
 // same four symbols twice. The price was that the app and the notification
 // extension ran two *different* rewrite rules over the one access group they
@@ -97,7 +97,7 @@
 // lands in the process's default group either way, because the probe item is
 // itself untagged, so the group it reports IS the default group. The only
 // things it did that this file deliberately does not are rewrite the com.apple.*
-// groups that issue #13 traced a crash to, and pin the caller-owned no-group
+// groups that issue https://github.com/SHAJON-404/Facebook-Plus/issues/13 traced a crash to, and pin the caller-owned no-group
 // queries described above. Nothing it did was load-bearing for session
 // persistence that is not done here, so it was removed and both processes now
 // run this one implementation.

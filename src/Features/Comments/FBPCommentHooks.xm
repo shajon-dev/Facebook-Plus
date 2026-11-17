@@ -1,5 +1,5 @@
 // Removes the affiliate / product-link banner that Facebook pins to the bottom
-// of the comment sheet (issue #3).
+// of the comment sheet (https://github.com/shajon-dev/Facebook-Plus/issues/3).
 //
 // When a post's author attaches an affiliate / product link (e.g. a Shopee
 // product), Facebook shows a floating CTA — product thumbnail, title, store
