@@ -1,8 +1,7 @@
 // The toast pill: a translucent dark capsule with a leading badge, a message
-// label and an optional progress bar — the layout, dimensions and motion are a
-// straight copy of ReTube's HUD so the two tweaks share one look. The badge
-// carries the Facebook Plus app logo for a normal message, and a red cross for
-// a failure so errors still read at a glance.
+// label and an optional progress bar. The badge carries the Facebook Plus app
+// logo for a normal message, and a red cross for a failure so errors still read
+// at a glance.
 
 #import "FBPToast.h"
 #import "FBPResources.h"

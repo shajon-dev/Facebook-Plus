@@ -80,7 +80,7 @@
 // WHY THE MAIN APP RUNS THIS TOO
 //
 // It did not used to. The patched IPA carried a vendored, closed-source
-// keychain patch (blatantsPatch.dylib) injected into the main app only, added
+// keychain patch injected into the main app only, added
 // because a re-signed login was being dropped after a few hours (https://github.com/shajon-dev/Facebook-Plus/issues/2), and
 // this file stood down wherever that image was loaded rather than rebind the
 // same four symbols twice. The price was that the app and the notification
@@ -88,8 +88,8 @@
 // are supposed to agree on — and agreement is the whole point, because the
 // session the app writes is the session the extension reads back.
 //
-// Disassembling that dylib settled it: it is the same zxPluginsInject ancestor
-// as this file, with an eager version of the probe below, the same
+// Disassembling that dylib settled it: it shares this file's compatibility-layer
+// ancestry, with an eager version of the probe below, the same
 // LSBundleProxy container redirects, and a SecItem* shim that does one thing —
 // mutableCopy the dictionary and set kSecAttrAccessGroup to the probed group on
 // *every* call. For Facebook's own keychain traffic that is a strict subset of
