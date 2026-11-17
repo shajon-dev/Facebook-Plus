@@ -77,6 +77,31 @@
 // it can be switched off at runtime with no rebuild — the A/B a keychain crash
 // report needs.
 //
+// WHY THE MAIN APP RUNS THIS TOO
+//
+// It did not used to. The patched IPA carried a vendored, closed-source
+// keychain patch (blatantsPatch.dylib) injected into the main app only, added
+// because a re-signed login was being dropped after a few hours (issue #2), and
+// this file stood down wherever that image was loaded rather than rebind the
+// same four symbols twice. The price was that the app and the notification
+// extension ran two *different* rewrite rules over the one access group they
+// are supposed to agree on — and agreement is the whole point, because the
+// session the app writes is the session the extension reads back.
+//
+// Disassembling that dylib settled it: it is the same zxPluginsInject ancestor
+// as this file, with an eager version of the probe below, the same
+// LSBundleProxy container redirects, and a SecItem* shim that does one thing —
+// mutableCopy the dictionary and set kSecAttrAccessGroup to the probed group on
+// *every* call. For Facebook's own keychain traffic that is a strict subset of
+// the rules below: a foreign group is pinned either way, and an untagged query
+// lands in the process's default group either way, because the probe item is
+// itself untagged, so the group it reports IS the default group. The only
+// things it did that this file deliberately does not are rewrite the com.apple.*
+// groups that issue #13 traced a crash to, and pin the caller-owned no-group
+// queries described above. Nothing it did was load-bearing for session
+// persistence that is not done here, so it was removed and both processes now
+// run this one implementation.
+//
 // This file is shared with FBPNotifyBridge.dylib, which is loaded into the
 // notification extension and compiles it with neither UIKit nor the settings
 // code on its include path. The preference is therefore read straight out of
@@ -88,7 +113,6 @@
 // extension's session lookup.
 
 #import <Security/Security.h>
-#import <mach-o/dyld.h>
 
 #import "Header.h"
 #import "../Core/fishhook/fishhook.h"
@@ -391,34 +415,10 @@ static OSStatus fbpSecItemDelete(CFDictionaryRef query) {
 	}
 }
 
-// YES if the vendored keychain patch blatantsPatch is in the image list. The
-// patched IPA injects blatantsPatch.dylib (vendor/blatantsPatch/) into the MAIN
-// app to keep a sideloaded session from being dropped (issue #2); it rebinds the
-// same SecItem* functions. Two rebinders fighting over one symbol is
-// unpredictable, so when it is present this rebind stands down and lets it own
-// the main app's keychain. All images are mapped before any initializer runs, so
-// the constructor sees it even if blatantsPatch's own initializer has not run
-// yet. The notification extension is a separate process this dylib is NOT
-// injected into, so there this returns NO and the rebind installs as usual —
-// issue #12 notifications keep working.
-static BOOL blatantsPatchPresent(void) {
-	uint32_t count = _dyld_image_count();
-	for (uint32_t i = 0; i < count; i++) {
-		const char *name = _dyld_get_image_name(i);
-		if (name && strstr(name, "blatantsPatch")) return YES;
-	}
-	return NO;
-}
-
+// Installed unconditionally, in the main app and in the notification extension
+// alike — there is no longer a second rebinder to stand down for. See "WHY THE
+// MAIN APP RUNS THIS TOO" at the top of this file.
 void rebindSecFuncs() {
-	// Defer to the injected third-party patch when present rather than rebinding
-	// the same functions twice (see blatantsPatchPresent).
-	if (blatantsPatchPresent()) {
-		PILog(@"blatantsPatch present — leaving the keychain rebind to it");
-		FBPDiagLog(@"blatantsPatch present — SecItem rebind not installed by us");
-		return;
-	}
-
 	// Warmed here, before the shims can be reached, so the preference read never
 	// runs inside a keychain call.
 	primeKeychainRebindPref();

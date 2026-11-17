@@ -406,8 +406,8 @@ class NSEBridge:
 
 
 class IpaInjector:
-    # The cyan injection step: rootless .deb + keychain patch + custom icons +
-    # Safari extensions + icon-merge plist, then the NSE bridge after cyan.
+    # The cyan injection step: rootless .deb + custom icons + Safari extensions
+    # + icon-merge plist, then the NSE bridge after cyan.
     def __init__(self, paths, control, debug):
         self.paths = paths
         self.control = control
@@ -418,22 +418,6 @@ class IpaInjector:
         if local.exists():
             return str(local)
         return shutil.which("cyan")
-
-    def _blatants(self):
-        # Set-but-empty disables it; unset uses the vendored default.
-        if "BLATANTS_DYLIB" in os.environ:
-            value = os.environ["BLATANTS_DYLIB"]
-        else:
-            value = "vendor/blatantsPatch/blatantsPatch.dylib"
-        if not value:
-            return None
-        path = Path(value)
-        if not path.is_absolute():
-            path = self.paths.root / path
-        if not path.is_file():
-            Log.warn(str(path) + " not found — building the IPA without the keychain patch (issue #2).")
-            return None
-        return path
 
     def inject(self, rootless_deb):
         if not self.paths.ipa_in.is_file():
@@ -460,7 +444,6 @@ class IpaInjector:
             os.close(fd)
             IconPlist(self.paths).write(self.paths.ipa_in, icon_merge)
 
-        blatants = self._blatants()
         plugins = SafariExtensions(self.paths, self.debug).build_all()
 
         nse_enabled = (os.environ.get("NSE_BRIDGE") or "1") != "0"
@@ -470,12 +453,10 @@ class IpaInjector:
 
         # Every injectable goes under ONE -f. cyan's -f replaces on repeat rather
         # than appending, so a second -f would silently drop the first — which is
-        # exactly how the tweak .deb went missing once the keychain patch was
-        # added as its own -f. Order: tweak .deb, keychain patch, app-icon PNGs,
-        # Safari extension(s).
+        # exactly how the tweak .deb went missing once a second injectable was
+        # added as its own -f. Order: tweak .deb, app-icon PNGs, Safari
+        # extension(s).
         inject = [str(rootless_deb)]
-        if blatants:
-            inject.append(str(blatants))
         inject += [str(logo) for logo in logos]
         inject += [str(appex) for appex in plugins]
 
@@ -968,7 +949,6 @@ class FacebookPlus:
         print("Environment variables:")
         print("  BUNDLE_ID            Override CFBundleIdentifier for the injected IPA")
         print("  NSE_BRIDGE           Set 0 to build the IPA without the NSE session bridge")
-        print("  BLATANTS_DYLIB       Keychain patch injected into the IPA; '' to omit")
         print("  FBP_CERT_PASSWORD    Password for the signing .p12 (else test/certificate/password.txt, default '1')")
         print("  FBP_SSH_HOST         Default device IP for --ssh (same as --host)")
         print("  FBP_SSH_KEY          Default SSH private key for --ssh (same as --key)")
