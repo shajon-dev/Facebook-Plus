@@ -273,7 +273,11 @@ static BOOL gConfirmedPassthrough = NO;
     [alert addAction:confirm];
     alert.preferredAction = confirm;
 
-    alert.view.tintColor = FBPTintColor();
+    // The settings tint (#B5DAFC) is tuned for the black settings panel and is
+    // almost invisible on the system alert's light-gray background, so the
+    // buttons read as faint pale-blue. The standard system blue stays legible in
+    // both the light and dark alert styles.
+    alert.view.tintColor = UIColor.systemBlueColor;
     FBPSetConfirmPromptVisible(YES);
     [host presentViewController:alert animated:YES completion:nil];
 }

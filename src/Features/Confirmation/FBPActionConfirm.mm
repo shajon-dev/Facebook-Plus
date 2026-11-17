@@ -158,7 +158,10 @@ static void FBPPresentConfirm(FBPConfirmKind kind, dispatch_block_t onConfirm) {
         }];
         [alert addAction:go];
         alert.preferredAction = go;
-        alert.view.tintColor = FBPTintColor();
+        // System blue, not the settings tint (#B5DAFC): that pale blue is tuned
+        // for the black settings panel and is almost invisible on the system
+        // alert's light-gray background. System blue stays legible light and dark.
+        alert.view.tintColor = UIColor.systemBlueColor;
         FBPSetConfirmPromptVisible(YES);
         [host presentViewController:alert animated:YES completion:nil];
     };

@@ -38,8 +38,8 @@ FacebookPlus_FILES = \
 	src/Features/Reels/FBPReelsSurveyHooks.xm \
 	src/Features/Reels/FBPReelsMidCardHooks.xm \
 	src/Features/Stories/FBPStoryHooks.xm \
-	src/Features/LikeConfirmation/FBPConfirmHooks.xm \
-	src/Features/Confirmations/FBPActionConfirm.mm \
+	src/Features/Confirmation/FBPConfirmHooks.xm \
+	src/Features/Confirmation/FBPActionConfirm.mm \
 	src/Features/AppChrome/FBPChromeHooks.xm \
 	src/Features/OLED/FBPOLEDHooks.xm \
 	src/Features/HDR/FBPHDRHooks.xm \
@@ -89,11 +89,11 @@ FBP_INCLUDE_DIRS = \
 	src/Features/AppChrome \
 	src/Features/AppIcons \
 	src/Features/Calls \
+	src/Features/Confirmation \
 	src/Features/Downloads \
 	src/Features/Feed \
 	src/Features/Fonts \
 	src/Features/Language \
-	src/Features/LikeConfirmation \
 	src/Features/Links \
 	src/Features/Notifications \
 	src/Features/OLED \
