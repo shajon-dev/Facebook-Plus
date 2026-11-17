@@ -90,6 +90,7 @@
 "download.merge.failed" = "Не удалось объединить звук и изображение этого видео.\n%@";
 "download.convert.failed" = "Не удалось преобразовать это видео для «Фото».\n%@";
 "download.convert.unsupported" = "Этот iPhone не может преобразовать это качество. Выберите другое.";
+"save.photos.denied" = "Facebook Plus нужно разрешение на добавление в «Фото». Включите его в Настройках.";
 "vp9.error.cancelled" = "Преобразование отменено.";
 "vp9.error.badArguments" = "Отсутствует видео или место сохранения.";
 "vp9.error.unavailable" = "Этот iPhone не может преобразовать это видео.";

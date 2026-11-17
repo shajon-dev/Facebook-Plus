@@ -5,6 +5,7 @@
 #import "FBPDownloadVariants.h"
 #import "FBPDashDownload.h"
 #import "FBPDownloadStore.h"
+#import "FBPPhotoSave.h"
 #import "FBPDownloadManagerController.h"
 
 #import <Foundation/Foundation.h>
@@ -617,12 +618,12 @@ static NSError *FBPReelError(NSString *message) {
     // to read once the change block has been handed over.
     __block NSString *assetIdentifier = nil;
 
-    [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+    FBPPhotoSavePerformChanges(^{
         PHAssetChangeRequest *request =
             [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:fileURL];
         assetIdentifier = request.placeholderForCreatedAsset.localIdentifier;
 
-    } completionHandler:^(BOOL success, NSError *error) {
+    }, ^(BOOL success, NSError *error) {
         [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
 
         if (success) {
@@ -636,7 +637,7 @@ static NSError *FBPReelError(NSString *message) {
             [NSString stringWithFormat:FBPL(@"download.reel.saveFailed"),
                                        error.localizedDescription
                                            ?: FBPL(@"download.error.unknown")]];
-    }];
+    });
 }
 
 #pragma mark Single-file path

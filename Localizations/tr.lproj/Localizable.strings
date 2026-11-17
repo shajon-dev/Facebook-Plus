@@ -90,6 +90,7 @@
 "download.merge.failed" = "Bu videonun sesi ve görüntüsü birleştirilemedi.\n%@";
 "download.convert.failed" = "Bu video Fotoğraflar için dönüştürülemedi.\n%@";
 "download.convert.unsupported" = "Bu iPhone bu kaliteyi dönüştüremiyor. Başka birini deneyin.";
+"save.photos.denied" = "Facebook Plus’ın Fotoğraflar’a ekleme izni gerekiyor. Ayarlar’dan açın.";
 "vp9.error.cancelled" = "Dönüştürme iptal edildi.";
 "vp9.error.badArguments" = "Video veya kayıt konumu eksikti.";
 "vp9.error.unavailable" = "Bu iPhone bu videoyu dönüştüremiyor.";

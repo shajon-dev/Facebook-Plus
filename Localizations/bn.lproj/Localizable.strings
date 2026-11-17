@@ -92,6 +92,7 @@
 "download.merge.failed" = "এই ভিডিওর অডিও আর ছবি জোড়া লাগানো গেল না।\n%@";
 "download.convert.failed" = "এই ভিডিওটি Photos-এর জন্য রূপান্তর করা গেল না।\n%@";
 "download.convert.unsupported" = "এই iPhone এই কোয়ালিটি রূপান্তর করতে পারে না। অন্য একটি বেছে নিন।";
+"save.photos.denied" = "Photos-এ যোগ করতে Facebook Plus-এর অনুমতি দরকার। Settings থেকে চালু করুন।";
 "vp9.error.cancelled" = "রূপান্তর বাতিল করা হয়েছে।";
 "vp9.error.badArguments" = "ভিডিও বা সেভ করার জায়গা পাওয়া যায়নি।";
 "vp9.error.unavailable" = "এই iPhone এই ভিডিওটি রূপান্তর করতে পারে না।";

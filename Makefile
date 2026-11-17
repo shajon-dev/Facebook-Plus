@@ -46,6 +46,7 @@ FacebookPlus_FILES = \
 	src/Features/Downloads/FBPDashManifest.m \
 	src/Features/Downloads/FBPDownloadVariants.m \
 	src/Features/Downloads/FBPMediaMuxer.m \
+	src/Features/Downloads/FBPPhotoSave.m \
 	src/Features/Downloads/FBPDav1dBridge.m \
 	src/Features/Downloads/FBPMediaConverter.m \
 	src/Features/Downloads/FBPVP9Bridge.m \

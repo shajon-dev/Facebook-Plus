@@ -90,6 +90,7 @@
 "download.merge.failed" = "Không thể ghép âm thanh và hình ảnh của video này.\n%@";
 "download.convert.failed" = "Không thể chuyển đổi video này cho Ảnh.\n%@";
 "download.convert.unsupported" = "iPhone này không chuyển đổi được chất lượng này. Hãy chọn mức khác.";
+"save.photos.denied" = "Facebook Plus cần quyền để thêm vào Ảnh. Hãy bật trong Cài đặt.";
 "vp9.error.cancelled" = "Đã hủy chuyển đổi.";
 "vp9.error.badArguments" = "Thiếu video hoặc vị trí lưu.";
 "vp9.error.unavailable" = "iPhone này không chuyển đổi được video này.";

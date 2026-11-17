@@ -90,6 +90,7 @@
 "download.merge.failed" = "この動画の音声と映像を結合できませんでした。\n%@";
 "download.convert.failed" = "この動画を「写真」用に変換できませんでした。\n%@";
 "download.convert.unsupported" = "この iPhone ではこの画質を変換できません。別の画質を選んでください。";
+"save.photos.denied" = "「写真」に追加するには Facebook Plus の許可が必要です。「設定」でオンにしてください。";
 "vp9.error.cancelled" = "変換をキャンセルしました。";
 "vp9.error.badArguments" = "動画または保存先がありませんでした。";
 "vp9.error.unavailable" = "この iPhone ではこの動画を変換できません。";

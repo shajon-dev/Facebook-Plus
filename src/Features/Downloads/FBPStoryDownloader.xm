@@ -5,6 +5,7 @@
 #import "FBPDownloadVariants.h"
 #import "FBPDashDownload.h"
 #import "FBPDownloadStore.h"
+#import "FBPPhotoSave.h"
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Photos/Photos.h>
@@ -189,13 +190,12 @@ static void FBPStorySaveToPhotos(NSURL *fileURL,
     // once the change block has been handed over.
     __block NSString *assetIdentifier = nil;
 
-    [[PHPhotoLibrary sharedPhotoLibrary]
-     performChanges:^{
+    FBPPhotoSavePerformChanges(^{
         PHAssetChangeRequest *request = isVideo
             ? [PHAssetChangeRequest creationRequestForAssetFromVideoAtFileURL:fileURL]
             : [PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:fileURL];
         assetIdentifier = request.placeholderForCreatedAsset.localIdentifier;
-    } completionHandler:^(BOOL success, NSError *error) {
+    }, ^(BOOL success, NSError *error) {
         FBPStoryLog(@"Photos save success=%d type=%@ error=%@",
                     success, isVideo ? @"video" : @"photo", error);
 
@@ -226,7 +226,7 @@ static void FBPStorySaveToPhotos(NSURL *fileURL,
         });
 
         if (then) then();
-    }];
+    });
 }
 
 /// An error whose localizedDescription is already the sentence to show.

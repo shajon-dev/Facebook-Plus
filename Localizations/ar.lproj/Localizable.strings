@@ -90,6 +90,7 @@
 "download.merge.failed" = "تعذّر دمج صوت هذا الفيديو مع صورته.\n%@";
 "download.convert.failed" = "تعذّر تحويل هذا الفيديو ليُحفظ في الصور.\n%@";
 "download.convert.unsupported" = "لا يستطيع هذا الـ iPhone تحويل هذه الجودة. جرّب جودة أخرى.";
+"save.photos.denied" = "يحتاج Facebook Plus إلى إذن للإضافة إلى الصور. فعّله من الإعدادات.";
 "vp9.error.cancelled" = "أُلغي التحويل.";
 "vp9.error.badArguments" = "الفيديو أو موقع الحفظ مفقود.";
 "vp9.error.unavailable" = "لا يستطيع هذا الـ iPhone تحويل هذا الفيديو.";

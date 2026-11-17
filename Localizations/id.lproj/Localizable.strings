@@ -90,6 +90,7 @@
 "download.merge.failed" = "Audio dan gambar video ini tidak bisa digabungkan.\n%@";
 "download.convert.failed" = "Tidak bisa mengonversi video ini untuk Foto.\n%@";
 "download.convert.unsupported" = "iPhone ini tidak bisa mengonversi kualitas ini. Coba yang lain.";
+"save.photos.denied" = "Facebook Plus perlu izin untuk menambah ke Foto. Aktifkan di Pengaturan.";
 "vp9.error.cancelled" = "Konversi dibatalkan.";
 "vp9.error.badArguments" = "Video atau lokasi penyimpanan tidak ada.";
 "vp9.error.unavailable" = "iPhone ini tidak bisa mengonversi video ini.";

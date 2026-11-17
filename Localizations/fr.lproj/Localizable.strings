@@ -90,6 +90,7 @@
 "download.merge.failed" = "Impossible de fusionner l’audio et l’image de cette vidéo.\n%@";
 "download.convert.failed" = "Impossible de convertir cette vidéo pour Photos.\n%@";
 "download.convert.unsupported" = "Cet iPhone ne peut pas convertir cette qualité. Essayez-en une autre.";
+"save.photos.denied" = "Facebook Plus a besoin de l’autorisation d’ajouter à Photos. Activez-la dans Réglages.";
 "vp9.error.cancelled" = "La conversion a été annulée.";
 "vp9.error.badArguments" = "La vidéo ou l’emplacement d’enregistrement manquait.";
 "vp9.error.unavailable" = "Cet iPhone ne peut pas convertir cette vidéo.";

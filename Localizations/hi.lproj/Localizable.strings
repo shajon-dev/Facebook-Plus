@@ -90,6 +90,7 @@
 "download.merge.failed" = "इस वीडियो का ऑडियो और चित्र जोड़ा नहीं जा सका।\n%@";
 "download.convert.failed" = "इस वीडियो को Photos के लिए बदला नहीं जा सका।\n%@";
 "download.convert.unsupported" = "यह iPhone इस क्वालिटी को नहीं बदल सकता। कोई दूसरी चुनें।";
+"save.photos.denied" = "Photos में जोड़ने के लिए Facebook Plus को अनुमति चाहिए। इसे Settings में चालू करें।";
 "vp9.error.cancelled" = "रूपांतरण रद्द कर दिया गया।";
 "vp9.error.badArguments" = "वीडियो या सहेजने का स्थान मौजूद नहीं था।";
 "vp9.error.unavailable" = "यह iPhone इस वीडियो को नहीं बदल सकता।";
