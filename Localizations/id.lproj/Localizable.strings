@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "Pratinjau fitur berbayar pelanggan";
+"row.metaplus.title" = "Aktifkan Facebook Plus";
+"row.metaplus.desc" = "Pratinjau semua fitur berbayar tanpa berlangganan.";
+"footer.metaplus" = "Hanya pratinjau — fitur sisi server tidak akan benar-benar berfungsi.";
+"alert.metaplus.title" = "Aktifkan Facebook Plus?";
+"alert.metaplus.message" = "Ini membuka fitur berbayar hanya untuk pratinjau. Jika Anda menggunakan fitur yang mencapai server Facebook — misalnya reaksi diamond atau hati pada sebuah story — akun Anda bisa ditangguhkan.";
+"alert.metaplus.confirm" = "Aktifkan";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "Metode Buka";
+"row.plusmode.desc" = "Cara fitur Plus dibuka — jika satu tidak berhasil, coba yang lain.";
+"row.plusmode.direct" = "Hook langsung";
+"row.plusmode.trial" = "Uji coba";
+"footer.plusmode" = "Langsung mengaktifkan fitur seketika.\nUji coba membuat aplikasi mensimulasikan uji coba aktif.";

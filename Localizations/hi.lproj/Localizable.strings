@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "सशुल्क सब्सक्राइबर सुविधाएँ देखें";
+"row.metaplus.title" = "Facebook Plus चालू करें";
+"row.metaplus.desc" = "बिना सदस्यता के हर सशुल्क सुविधा देखें।";
+"footer.metaplus" = "केवल पूर्वावलोकन — सर्वर वाली सुविधाएँ वास्तव में काम नहीं करेंगी।";
+"alert.metaplus.title" = "Facebook Plus चालू करें?";
+"alert.metaplus.message" = "यह सशुल्क सुविधाओं को केवल पूर्वावलोकन के लिए अनलॉक करता है। यदि आप ऐसी कोई सुविधा इस्तेमाल करते हैं जो Facebook के सर्वर तक पहुँचती है — जैसे किसी स्टोरी पर डायमंड या हार्ट रिएक्शन — तो आपका खाता निलंबित हो सकता है।";
+"alert.metaplus.confirm" = "चालू करें";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "अनलॉक तरीका";
+"row.plusmode.desc" = "Plus सुविधाएँ कैसे अनलॉक हों — एक काम न करे तो दूसरा आज़माएँ।";
+"row.plusmode.direct" = "डायरेक्ट हुक";
+"row.plusmode.trial" = "ट्रायल";
+"footer.plusmode" = "डायरेक्ट सुविधाओं को तुरंत चालू करता है।\nट्रायल ऐप में एक सक्रिय ट्रायल सिमुलेट करता है।";

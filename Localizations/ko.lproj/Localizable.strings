@@ -230,3 +230,20 @@ ucuccd8나치게 밝은 HDR 대신 표준 범위로 표시합니다.";
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "유료 구독 기능 미리 보기";
+"row.metaplus.title" = "Facebook Plus 사용";
+"row.metaplus.desc" = "모든 유료 기능을 구독 없이 미리 보기.";
+"footer.metaplus" = "미리 보기 전용 — 서버 측 기능은 실제로 작동하지 않습니다.";
+"alert.metaplus.title" = "Facebook Plus를 사용할까요?";
+"alert.metaplus.message" = "유료 기능을 미리 보기용으로만 잠금 해제합니다. Facebook 서버에 도달하는 기능 — 예: 스토리에 다이아몬드나 하트 반응 사용 — 을 사용하면 계정이 정지될 수 있습니다.";
+"alert.metaplus.confirm" = "사용";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "잠금 해제 방식";
+"row.plusmode.desc" = "Plus 기능을 해제하는 방식 — 하나가 안 되면 다른 것을 시도하세요.";
+"row.plusmode.direct" = "직접 후크";
+"row.plusmode.trial" = "체험판";
+"footer.plusmode" = "직접은 기능을 즉시 켭니다.\n체험판은 앱이 활성 체험을 시뮬레이션하게 합니다.";

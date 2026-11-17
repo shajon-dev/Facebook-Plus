@@ -100,6 +100,10 @@ extern NSString *const FBPKeyDisableHDR;        // Force SDR rendering (clamp HD
 extern NSString *const FBPKeyFont;              // Chosen UI font family ("" / unset = original)
 extern NSString *const FBPKeyFontScale;         // Custom-font size multiplier ("" / unset = 1.0)
 
+// Facebook Plus
+extern NSString *const FBPKeyMetaPlus;          // Unlock paid subscriber benefits for preview
+extern NSString *const FBPKeyMetaPlusMode;      // Unlock method: "direct" (force gates) or "trial" (simulate an active trial)
+
 // Links
 extern NSString *const FBPKeyLinksInSafari;     // Open external links in the default browser
 

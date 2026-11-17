@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "Ücretli abone özelliklerini önizle";
+"row.metaplus.title" = "Facebook Plus’ı Etkinleştir";
+"row.metaplus.desc" = "Tüm ücretli özellikleri abone olmadan önizle.";
+"footer.metaplus" = "Yalnızca önizleme — sunucu taraflı özellikler gerçekte çalışmaz.";
+"alert.metaplus.title" = "Facebook Plus etkinleştirilsin mi?";
+"alert.metaplus.message" = "Bu, ücretli özellikleri yalnızca önizleme için açar. Facebook’un sunucularına ulaşan bir özelliği kullanırsanız — örneğin bir hikâyede elmas veya kalp tepkisi — hesabınız askıya alınabilir.";
+"alert.metaplus.confirm" = "Etkinleştir";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "Kilit Açma Yöntemi";
+"row.plusmode.desc" = "Plus özelliklerinin nasıl açılacağı — biri işe yaramazsa diğerini deneyin.";
+"row.plusmode.direct" = "Doğrudan hook";
+"row.plusmode.trial" = "Deneme";
+"footer.plusmode" = "Doğrudan özellikleri hemen açar.\nDeneme, uygulamanın etkin bir denemeyi simüle etmesini sağlar.";

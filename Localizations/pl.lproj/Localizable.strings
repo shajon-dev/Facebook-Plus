@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "Podgląd płatnych funkcji subskrypcji";
+"row.metaplus.title" = "Włącz Facebook Plus";
+"row.metaplus.desc" = "Podgląd wszystkich płatnych funkcji bez subskrypcji.";
+"footer.metaplus" = "Tylko podgląd — funkcje po stronie serwera nie zadziałają naprawdę.";
+"alert.metaplus.title" = "Włączyć Facebook Plus?";
+"alert.metaplus.message" = "To odblokowuje płatne funkcje tylko do podglądu. Jeśli użyjesz funkcji docierającej do serwerów Facebooka — na przykład reakcji diamentem lub sercem w relacji — Twoje konto może zostać zawieszone.";
+"alert.metaplus.confirm" = "Włącz";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "Metoda odblokowania";
+"row.plusmode.desc" = "Jak odblokowywane są funkcje Plus — jeśli jedna nie działa, spróbuj drugiej.";
+"row.plusmode.direct" = "Bezpośredni hook";
+"row.plusmode.trial" = "Wersja próbna";
+"footer.plusmode" = "Bezpośredni od razu włącza funkcje.\nWersja próbna sprawia, że aplikacja symuluje aktywny okres próbny.";

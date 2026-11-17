@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "有料サブスク機能をプレビュー";
+"row.metaplus.title" = "Facebook Plus を有効化";
+"row.metaplus.desc" = "すべての有料機能を登録なしでプレビュー。";
+"footer.metaplus" = "プレビューのみ — サーバー側の機能は実際には動作しません。";
+"alert.metaplus.title" = "Facebook Plus を有効にしますか？";
+"alert.metaplus.message" = "これは有料機能をプレビュー用にのみ解放します。Facebook のサーバーに届く操作 — たとえばストーリーでのダイヤモンドやハートのリアクション — を行うと、アカウントが停止される可能性があります。";
+"alert.metaplus.confirm" = "有効化";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "解除方法";
+"row.plusmode.desc" = "Plus 機能の解除方法 — 片方が効かなければもう片方を試してください。";
+"row.plusmode.direct" = "直接フック";
+"row.plusmode.trial" = "トライアル";
+"footer.plusmode" = "「直接」は機能をすぐに有効化します。\n「トライアル」はアプリに有効なトライアルを模倣させます。";

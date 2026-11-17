@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "Xem trước tính năng trả phí";
+"row.metaplus.title" = "Bật Facebook Plus";
+"row.metaplus.desc" = "Xem trước mọi tính năng trả phí mà không cần đăng ký.";
+"footer.metaplus" = "Chỉ xem trước — các tính năng phía máy chủ sẽ không thực sự hoạt động.";
+"alert.metaplus.title" = "Bật Facebook Plus?";
+"alert.metaplus.message" = "Thao tác này mở khóa các tính năng trả phí chỉ để xem trước. Nếu bạn dùng một tính năng chạm tới máy chủ của Facebook — ví dụ thả biểu tượng kim cương hoặc tim trên một tin — tài khoản của bạn có thể bị khóa.";
+"alert.metaplus.confirm" = "Bật";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "Cách mở khóa";
+"row.plusmode.desc" = "Cách mở khóa các tính năng Plus — nếu một cách không hiệu quả, hãy thử cách kia.";
+"row.plusmode.direct" = "Hook trực tiếp";
+"row.plusmode.trial" = "Dùng thử";
+"footer.plusmode" = "Trực tiếp bật ngay các tính năng.\nDùng thử khiến ứng dụng mô phỏng một bản dùng thử đang hoạt động.";

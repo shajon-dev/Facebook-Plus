@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "预览付费订阅功能";
+"row.metaplus.title" = "启用 Facebook Plus";
+"row.metaplus.desc" = "无需订阅即可预览所有付费功能。";
+"footer.metaplus" = "仅预览——需要服务器的功能实际不会生效。";
+"alert.metaplus.title" = "启用 Facebook Plus？";
+"alert.metaplus.message" = "这只会为预览解锁付费功能。如果你使用会到达 Facebook 服务器的功能——例如在快拍中使用钻石或爱心心情——你的账户可能会被封禁。";
+"alert.metaplus.confirm" = "启用";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "解锁方式";
+"row.plusmode.desc" = "Plus 功能的解锁方式——若其中一个无效，请试另一个。";
+"row.plusmode.direct" = "直接挂钩";
+"row.plusmode.trial" = "试用";
+"footer.plusmode" = "“直接”立即开启功能。\n“试用”让应用模拟一个进行中的试用。";

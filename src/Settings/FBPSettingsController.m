@@ -42,6 +42,11 @@ static NSString *const kRowValue   = @"value";   // trailing value text (info / 
 static NSString *const kRowLink    = @"link";    // tappable URL (info rows)
 static NSString *const kRowDanger  = @"danger";
 static NSString *const kRowCategory = @"category"; // detail sections for a menu row
+static NSString *const kRowConfirm  = @"confirmOnEnable"; // {title,message,confirm} alert shown before a switch turns on
+
+// Associated-object key for a switch's confirm-on-enable payload. Its address is
+// the key; the stored value is the kRowConfirm dictionary.
+static const void *kFBPSwitchConfirmKey = &kFBPSwitchConfirmKey;
 
 static NSString *const kTypeSwitch   = @"switch";
 static NSString *const kTypeAction   = @"action";
@@ -63,6 +68,7 @@ static NSString *const kActionDownloads   = @"downloads";
 static NSString *const kActionResetPush  = @"resetPushKeys";
 static NSString *const kActionLogExport  = @"logExport";
 static NSString *const kActionLogClear   = @"logClear";
+static NSString *const kActionPlusMode   = @"plusMode";
 
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
@@ -280,6 +286,10 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         toggle.on = FBPEnabled(row[kRowKey]);
         objc_setAssociatedObject(toggle, @selector(tag), row[kRowKey],
                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (row[kRowConfirm]) {
+            objc_setAssociatedObject(toggle, kFBPSwitchConfirmKey, row[kRowConfirm],
+                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
         [toggle addTarget:self action:@selector(fbpToggleSwitch:)
          forControlEvents:UIControlEventValueChanged];
         [self setAccessory:toggle inCell:cell];
@@ -306,8 +316,12 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             valueLabel.text = value;
             [pieces addObject:valueLabel];
         }
+        // The unlock-method row opens an action sheet, so it gets the up/down
+        // menu glyph rather than the push chevron the other rows use.
+        BOOL isPicker = [row[kRowKey] isEqualToString:kActionPlusMode];
         BOOL showChevron = [type isEqualToString:kTypeCategory] ||
                            row[kRowCategory] != nil ||
+                           isPicker ||
                            [row[kRowKey] isEqualToString:kActionAppIcon] ||
                            [row[kRowKey] isEqualToString:kActionFonts] ||
                            [row[kRowKey] isEqualToString:kActionLanguage] ||
@@ -315,7 +329,8 @@ static UIImage *FBPSettingsIcon(NSString *name) {
                            [row[kRowKey] isEqualToString:kActionWelcome];
         if (showChevron) {
             UIImageView *chevron = [[UIImageView alloc] initWithImage:
-                [UIImage fbp_symbolNamed:@"chevron.right" size:13 weight:UIImageSymbolWeightSemibold]];
+                [UIImage fbp_symbolNamed:(isPicker ? @"chevron.up.chevron.down" : @"chevron.right")
+                                    size:13 weight:UIImageSymbolWeightSemibold]];
             chevron.tintColor = UIColor.tertiaryLabelColor;
             [pieces addObject:chevron];
         }
@@ -343,6 +358,34 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 - (void)fbpToggleSwitch:(UISwitch *)sender {
     NSString *key = objc_getAssociatedObject(sender, @selector(tag));
     if (!key) return;
+
+    NSDictionary *confirm = objc_getAssociatedObject(sender, kFBPSwitchConfirmKey);
+    if (sender.isOn && confirm) {
+        // Ask before turning this on. Snap the switch back to off first, so a
+        // cancel (or a dismiss) leaves both the UI and the stored preference
+        // exactly as they were; only the confirm action commits.
+        [sender setOn:NO animated:NO];
+        UIAlertController *alert = [UIAlertController
+            alertControllerWithTitle:confirm[@"title"]
+                             message:confirm[@"message"]
+                      preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
+                                                  style:UIAlertActionStyleCancel
+                                                handler:nil]];
+        [alert addAction:[UIAlertAction actionWithTitle:confirm[@"confirm"]
+                                                  style:UIAlertActionStyleDestructive
+                                                handler:^(UIAlertAction *action) {
+            [sender setOn:YES animated:YES];
+            [FBPPrefs.shared setBool:YES forKey:key];
+            [FBPPrefs.shared commit];
+        }]];
+        // System blue keeps the buttons legible on the alert's light background
+        // (the settings tint is tuned for the black panel, not a system alert).
+        alert.view.tintColor = UIColor.systemBlueColor;
+        [self presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+
     [FBPPrefs.shared setBool:sender.isOn forKey:key];
     [FBPPrefs.shared commit];
 }
@@ -355,6 +398,18 @@ static NSDictionary *FBPSwitchRow(NSString *key, NSString *title, NSString *desc
     NSMutableDictionary *row = [@{ kRowType : kTypeSwitch, kRowKey : key,
                                    kRowTitle : title, kRowIcon : icon } mutableCopy];
     if (desc.length) row[kRowDesc] = desc;
+    return row;
+}
+// A switch that asks for confirmation the moment it is turned on. `alertTitle` /
+// `alertMessage` / `confirmButton` are the alert's text; cancelling leaves the
+// switch off and writes nothing (see fbpToggleSwitch:).
+static NSDictionary *FBPSwitchRowConfirm(NSString *key, NSString *title, NSString *desc,
+                                         NSString *icon, NSString *alertTitle,
+                                         NSString *alertMessage, NSString *confirmButton) {
+    NSMutableDictionary *row = [FBPSwitchRow(key, title, desc, icon) mutableCopy];
+    row[kRowConfirm] = @{ @"title"   : alertTitle   ?: @"",
+                          @"message" : alertMessage ?: @"",
+                          @"confirm" : confirmButton ?: @"" };
     return row;
 }
 static NSDictionary *FBPActionRow(NSString *action, NSString *title, NSString *desc,
@@ -396,9 +451,20 @@ static NSDictionary *FBPDownloadManagerRow(void) {
     return row;
 }
 
+// The Facebook Plus unlock-method picker. Shows the current mode as its trailing
+// value; tapping it opens an action sheet (see plusModeTapped).
+static NSDictionary *FBPPlusModeRow(void) {
+    NSMutableDictionary *row =
+        [FBPActionRow(kActionPlusMode, FBPL(@"row.plusmode.title"),
+                      nil, @"crown.fill", NO) mutableCopy];
+    BOOL trial = [[FBPPrefs.shared stringForKey:FBPKeyMetaPlusMode] isEqualToString:@"trial"];
+    row[kRowValue] = trial ? FBPL(@"row.plusmode.trial") : FBPL(@"row.plusmode.direct");
+    return row;
+}
+
 #pragma mark - Category definitions
 
-/// The six categories; each has a title, summary, menu glyph, and the grouped
+/// The categories; each has a title, summary, menu glyph, and the grouped
 /// sections shown on its own page.
 static NSArray<NSDictionary *> *FBPCategories(void) {
     return @[
@@ -466,6 +532,19 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             FBPSection(nil, @[
                 FBPActionRow(kActionAppIcon, FBPL(@"row.appicon.title"), FBPL(@"row.appicon.desc"), @"app.badge.fill", NO),
                 FBPActionRow(kActionFonts, FBPL(@"row.fonts.title"), FBPL(@"row.fonts.desc"), @"textformat", NO),
+            ]),
+        ]},
+        @{ kRowTitle : FBPL(@"cat.plus.title"), kRowDesc : FBPL(@"cat.plus.summary"),
+           kRowIcon : @"crown.fill", kRowCategory : @[
+            FBPSection(FBPL(@"footer.metaplus"), @[
+                FBPSwitchRowConfirm(FBPKeyMetaPlus, FBPL(@"row.metaplus.title"),
+                                    nil, @"crown.fill",
+                                    FBPL(@"alert.metaplus.title"),
+                                    FBPL(@"alert.metaplus.message"),
+                                    FBPL(@"alert.metaplus.confirm")),
+            ]),
+            FBPSection(FBPL(@"footer.plusmode"), @[
+                FBPPlusModeRow(),
             ]),
         ]},
         @{ kRowTitle : FBPL(@"cat.general.title"), kRowDesc : FBPL(@"cat.general.summary"),
@@ -661,7 +740,40 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
         // of showing the pre-clear count until the user leaves and comes back.
         [self reloadCurrentCategory];
         [FBPToastManager.shared showMessage:FBPL(@"toast.logCleared") success:YES];
+    } else if ([action isEqualToString:kActionPlusMode]) {
+        [self presentPlusModePicker];
     }
+}
+
+// Action sheet to pick the Facebook Plus unlock method. "Direct" forces the
+// reveal gate outright; "Trial" makes the app believe an active trial is running.
+- (void)presentPlusModePicker {
+    UIAlertController *sheet = [UIAlertController
+        alertControllerWithTitle:FBPL(@"row.plusmode.title")
+                         message:FBPL(@"row.plusmode.desc")
+                  preferredStyle:UIAlertControllerStyleActionSheet];
+
+    void (^choose)(NSString *) = ^(NSString *mode) {
+        [FBPPrefs.shared setString:mode forKey:FBPKeyMetaPlusMode];
+        [FBPPrefs.shared commit];
+        [self reloadCurrentCategory];
+    };
+    [sheet addAction:[UIAlertAction actionWithTitle:FBPL(@"row.plusmode.direct")
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(UIAlertAction *a) { choose(@"direct"); }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:FBPL(@"row.plusmode.trial")
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(UIAlertAction *a) { choose(@"trial"); }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
+                                              style:UIAlertActionStyleCancel handler:nil]];
+    sheet.view.tintColor = UIColor.systemBlueColor;
+
+    // iPad: anchor the popover to the centre of the screen so it does not crash
+    // for want of a source view.
+    sheet.popoverPresentationController.sourceView = self.view;
+    sheet.popoverPresentationController.sourceRect =
+        CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 0, 0);
+    [self presentViewController:sheet animated:YES completion:nil];
 }
 
 // Re-reads the live category (FBPCategories rebuilds each call, so dynamic row

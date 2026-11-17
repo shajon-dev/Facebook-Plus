@@ -54,6 +54,14 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyFeedLike         : @YES,
         FBPKeyOLED             : @NO,
         FBPKeyDisableHDR       : @NO,
+        // Off by default: this unlocks Facebook's paid subscriber UI (and the
+        // Meta AI quotas) for preview, so it stays a deliberate opt-in rather
+        // than something installing the tweak silently switches on.
+        FBPKeyMetaPlus         : @NO,
+        // "direct" forces the reveal gate outright; "trial" makes the app believe
+        // an active Facebook Plus trial is running. Default direct — the most
+        // reliable reveal.
+        FBPKeyMetaPlusMode     : @"direct",
         FBPKeyLinksInSafari    : @YES,
         // The diagnostic log is kept across launches by default; everything the
         // tweak does is captured into it, so there are no per-feature log toggles.

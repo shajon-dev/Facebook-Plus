@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "預覽付費訂閱功能";
+"row.metaplus.title" = "啟用 Facebook Plus";
+"row.metaplus.desc" = "無需訂閱即可預覽所有付費功能。";
+"footer.metaplus" = "僅預覽——需要伺服器的功能實際不會生效。";
+"alert.metaplus.title" = "啟用 Facebook Plus？";
+"alert.metaplus.message" = "這只會為預覽解鎖付費功能。如果你使用會連到 Facebook 伺服器的功能——例如在限時動態使用鑽石或愛心心情——你的帳號可能會被停用。";
+"alert.metaplus.confirm" = "啟用";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "解鎖方式";
+"row.plusmode.desc" = "Plus 功能的解鎖方式——若其中一個無效，請試另一個。";
+"row.plusmode.direct" = "直接掛鉤";
+"row.plusmode.trial" = "試用";
+"footer.plusmode" = "「直接」立即開啟功能。\n「試用」讓應用程式模擬一個進行中的試用。";

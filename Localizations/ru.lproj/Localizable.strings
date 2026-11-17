@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "Предпросмотр платных функций подписки";
+"row.metaplus.title" = "Включить Facebook Plus";
+"row.metaplus.desc" = "Все платные функции для предпросмотра без подписки.";
+"footer.metaplus" = "Только предпросмотр — серверные функции на деле не заработают.";
+"alert.metaplus.title" = "Включить Facebook Plus?";
+"alert.metaplus.message" = "Это открывает платные функции только для предпросмотра. Если вы воспользуетесь функцией, которая обращается к серверам Facebook — например, реакцией «бриллиант» или «сердце» в истории — ваш аккаунт могут заблокировать.";
+"alert.metaplus.confirm" = "Включить";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "Способ разблокировки";
+"row.plusmode.desc" = "Как разблокируются функции Plus — если один способ не работает, попробуйте другой.";
+"row.plusmode.direct" = "Прямой хук";
+"row.plusmode.trial" = "Пробный";
+"footer.plusmode" = "«Прямой» сразу включает функции.\n«Пробный» заставляет приложение имитировать активный пробный период.";

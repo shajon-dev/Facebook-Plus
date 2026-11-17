@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "Prueba funciones de pago de suscriptores";
+"row.metaplus.title" = "Activar Facebook Plus";
+"row.metaplus.desc" = "Prueba todas las funciones de pago sin suscribirte.";
+"footer.metaplus" = "Solo vista previa; las funciones del servidor no funcionarán de verdad.";
+"alert.metaplus.title" = "¿Activar Facebook Plus?";
+"alert.metaplus.message" = "Esto desbloquea funciones de pago solo para vista previa. Si usas una que llega a los servidores de Facebook — por ejemplo, una reacción de diamante o corazón en una historia — tu cuenta podría ser suspendida.";
+"alert.metaplus.confirm" = "Activar";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "Método de desbloqueo";
+"row.plusmode.desc" = "Cómo se desbloquean las funciones Plus; si una no funciona, prueba la otra.";
+"row.plusmode.direct" = "Hook directo";
+"row.plusmode.trial" = "Prueba";
+"footer.plusmode" = "Directo activa las funciones de inmediato.\nPrueba hace que la app simule una prueba activa.";

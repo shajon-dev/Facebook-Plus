@@ -231,3 +231,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "পেইড সাবস্ক্রাইবার ফিচার প্রিভিউ করুন";
+"row.metaplus.title" = "Facebook Plus চালু করুন";
+"row.metaplus.desc" = "সাবস্ক্রাইব ছাড়াই সব পেইড ফিচার প্রিভিউ করুন।";
+"footer.metaplus" = "শুধু প্রিভিউ — সার্ভার লাগে এমন ফিচার আসলে কাজ করবে না।";
+"alert.metaplus.title" = "Facebook Plus চালু করবেন?";
+"alert.metaplus.message" = "এটি শুধু প্রিভিউয়ের জন্য পেইড ফিচার আনলক করে। সার্ভারে পৌঁছায় এমন কিছু ব্যবহার করলে — যেমন কোনো স্টোরিতে ডায়মন্ড বা হার্ট রিঅ্যাকশন দিলে — আপনার অ্যাকাউন্ট সাসপেন্ড হয়ে যেতে পারে।";
+"alert.metaplus.confirm" = "চালু করুন";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "আনলক পদ্ধতি";
+"row.plusmode.desc" = "Plus ফিচার কীভাবে আনলক হবে — একটা কাজ না করলে অন্যটা চেষ্টা করুন।";
+"row.plusmode.direct" = "ডিরেক্ট হুক";
+"row.plusmode.trial" = "ট্রায়াল";
+"footer.plusmode" = "ডিরেক্ট সরাসরি ফিচার চালু করে।\nট্রায়াল অ্যাপে একটা সক্রিয় ট্রায়াল সিমুলেট করে।";

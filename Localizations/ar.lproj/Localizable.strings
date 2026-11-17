@@ -229,3 +229,20 @@
 "logs.recordedlines" = "Recorded Lines";
 "row.logskeep.title" = "Keep Logs Across Launches";
 "row.logskeep.desc" = "Keep the diagnostic log when the app restarts.";
+
+/* Facebook Plus */
+"cat.plus.title" = "Facebook Plus";
+"cat.plus.summary" = "معاينة ميزات المشتركين المدفوعة";
+"row.metaplus.title" = "تفعيل Facebook Plus";
+"row.metaplus.desc" = "معاينة كل الميزات المدفوعة دون اشتراك.";
+"footer.metaplus" = "للمعاينة فقط — الميزات التي تحتاج الخادم لن تعمل فعليًا.";
+"alert.metaplus.title" = "تفعيل Facebook Plus؟";
+"alert.metaplus.message" = "هذا يفتح الميزات المدفوعة للمعاينة فقط. إذا استخدمت ميزة تصل إلى خوادم فيسبوك — مثل استخدام تفاعل الماسة أو القلب على قصة — فقد يتم تعليق حسابك.";
+"alert.metaplus.confirm" = "تفعيل";
+
+/* Facebook Plus — unlock method */
+"row.plusmode.title" = "طريقة الفتح";
+"row.plusmode.desc" = "كيفية فتح ميزات Plus — إذا لم تعمل إحداهما فجرّب الأخرى.";
+"row.plusmode.direct" = "ربط مباشر";
+"row.plusmode.trial" = "تجريبي";
+"footer.plusmode" = "المباشر يفعّل الميزات فورًا.\nالتجريبي يجعل التطبيق يحاكي نسخة تجريبية نشطة.";
