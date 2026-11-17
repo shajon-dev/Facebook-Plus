@@ -11,7 +11,7 @@ in **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**.
 **Downloads**
 - [x] **Multiple-quality** download picker for Reels & videos (choose resolution before saving)
 - [x] **Download manager** — per-download progress, cancel and retry, surviving the sheet being dismissed
-- [ ] **VP9** rungs, which hit the same Photos limitation as AV1 and have no borrowed decoder
+- [x] **VP9** rungs — the same Photos limitation as AV1, but decoded by Facebook's own bundled libavcodec (borrowed by `dlsym`, since VideoToolbox has no VP9 decoder) and re-encoded to HEVC/H.264 before the save
 - [ ] **Live videos** (`MPD@type="dynamic"`), which are segment-templated rather than single-file
 
 **Notifications**

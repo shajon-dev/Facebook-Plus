@@ -254,7 +254,7 @@ What this means for you:
 │   │   ├── Calls       # Incoming Call Blocker (PushKit & CallKit interceptors)
 │   │   ├── Confirmations # Opt-in commit-level confirmations (comment, share, post, friend, follow)
 │   │   ├── Downloads   # Quality picker, DASH manifest reader, two-stream fetch,
-│   │   │               # lossless mux, AV1→HEVC conversion, download manager
+│   │   │               # lossless mux, AV1/VP9→HEVC conversion, download manager
 │   │   ├── Feed        # Feed-related hooks (suggestions, Reels, Stories removal)
 │   │   ├── Fonts       # Custom UI font replacement (Core Text registration + picker)
 │   │   ├── Language    # UI language override hooks
