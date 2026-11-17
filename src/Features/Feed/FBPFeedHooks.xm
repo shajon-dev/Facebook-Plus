@@ -362,13 +362,31 @@ static BOOL FBPShouldFilterModel(id model) {
         if ([className containsString:@"SingleBucketInlineViewer"]) return YES;
     }
 
-    // The story-tray PYMK bucket is distinct from the feed-level one.
+    // The story-tray PYMK / suggested bucket, distinct from the feed-level one.
+    // The bucket carries its type as a Pando field, not an ObjC getter, so it is
+    // read by KVC — a respondsToSelector:@selector(storyBucketType) check is
+    // always NO on these models (nothing in the tray implements that getter), so
+    // the older selector-based check never fired. The tray tokens are
+    // PYMK_STORY_TRAY and PYMK_STORY_TRAY_PROFILE_FORWARD (the bare PYMK_STORY is
+    // the non-tray variant); any of them marks a suggestion.
+    //
+    // FBMemPymkStoryData is the leaf data sub-object of such a bucket and is
+    // never dropped here: removing a leaf risks a parent dereference, so only the
+    // bucket unit that owns the token is dropped. If a token is not present (the
+    // model has no such field, or the tray is materialised off this path), the
+    // KVC read simply yields nothing and nothing is dropped.
     if (FBPEnabled(FBPKeyNoStoryPYMK) &&
-        [model respondsToSelector:@selector(storyBucketType)]) {
-        NSString *bucket = [model storyBucketType];
-        if ([bucket isKindOfClass:NSString.class] &&
-            [bucket isEqualToString:@"PYMK_STORY"]) {
-            return YES;
+        ![NSStringFromClass([model class]) containsString:@"PymkStoryData"]) {
+        @try {
+            id raw = [model valueForKey:@"storyBucketType"];
+            NSString *bucket = [raw isKindOfClass:NSString.class] ? raw : nil;
+            if (bucket && ([bucket isEqualToString:@"PYMK_STORY"] ||
+                           [bucket hasPrefix:@"PYMK_STORY_TRAY"])) {
+                FBPTraceFire("feed.storyBucket.suggestionDropped");
+                return YES;
+            }
+        } @catch (__unused NSException *e) {
+            // Model has no storyBucketType field — not a tray bucket; ignore.
         }
     }
 
