@@ -21,51 +21,40 @@
 <table>
   <thead>
     <tr>
-      <th>Category</th>
-      <th>Features</th>
+      <th align="center">Category</th>
+      <th align="center">Features</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td nowrap>📰 <b>Feed</b></td>
-      <td>Remove ads &amp; sponsored posts — feed, video, Stories and Marketplace<br>Hide "People you may know", Group and Page suggestions<br>Hide the Reels carousel, Threads promo and Stories tray<br>Remove survey prompts ("Are you interested in this post?")</td>
-    </tr>
-    <tr>
-      <td nowrap>⬇️ <b>Downloads</b></td>
-      <td>Choose a quality before saving — every rung the video actually offers, not just HD/SD<br>Lossless merge of Facebook's separate video and audio streams<br>Download manager with progress, cancel and retry</td>
-    </tr>
-    <tr>
-      <td nowrap>✅ <b>Confirmations</b></td>
-      <td>Opt-in prompts that catch accidental taps, with Cancel to stop the action<br>Covers Like, Comment, Share, Post, Friend request and Follow / Join</td>
-    </tr>
-    <tr>
-      <td nowrap>🎬 <b>Reels</b></td>
-      <td>Cinema mode — one tap hides the overlay and the tab bar<br>Save Reels to Photos</td>
-    </tr>
-    <tr>
-      <td nowrap>📖 <b>Stories</b></td>
-      <td>Ghost Mode — watch without being seen<br>Disable auto-advance and hide Story suggestions<br>Save Stories, video or photo, to Photos</td>
-    </tr>
-    <tr>
-      <td nowrap>📞 <b>Calls</b></td>
-      <td>Silently block incoming VoIP and Messenger calls</td>
-    </tr>
-    <tr>
-      <td nowrap>🧭 <b>Links</b></td>
-      <td>Open external links in your default browser<br>"Open in Facebook" Safari extension — reopens facebook.com links in the app, at the exact destination</td>
-    </tr>
-    <tr>
-      <td nowrap>🎨 <b>Appearance</b></td>
-      <td>OLED dark mode (true black) that follows your iOS Light / Dark setting<br>Alternate app icons<br>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td>
-    </tr>
-    <tr>
-      <td nowrap>🔔 <b>Updates</b></td>
-      <td>In-app update checker with changelog and one-tap download</td>
-    </tr>
-    <tr>
-      <td nowrap>🩺 <b>Diagnostics</b></td>
-      <td>Exportable in-app activity log for bug reports — kept across launches, cleared daily<br>About card with the Facebook Plus, Facebook, iOS and device details</td>
-    </tr>
+    <tr><td nowrap rowspan="4">🎨 <b>Appearance</b></td><td>OLED dark mode (true black) that follows your iOS Light / Dark setting</td></tr>
+    <tr><td>Disable HDR — show photos and video in standard range, not extra-bright HDR</td></tr>
+    <tr><td>Alternate app icons</td></tr>
+    <tr><td>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td></tr>
+    <tr><td nowrap>📞 <b>Calls</b></td><td>Silently block incoming VoIP and Messenger calls</td></tr>
+    <tr><td nowrap rowspan="2">✅ <b>Confirmations</b></td><td>Opt-in prompts that catch accidental taps, with Cancel to stop the action</td></tr>
+    <tr><td>Covers Like, Comment, Share, Post, Friend request and Follow / Join</td></tr>
+    <tr><td nowrap rowspan="2">🩺 <b>Diagnostics</b></td><td>Exportable in-app activity log for bug reports — kept across launches, cleared daily</td></tr>
+    <tr><td>About card with the Facebook Plus, Facebook, iOS and device details</td></tr>
+    <tr><td nowrap rowspan="5">⬇️ <b>Downloads</b></td><td>Choose a quality before saving — every rung the video actually offers, not just HD/SD</td></tr>
+    <tr><td>Lossless merge of Facebook's separate video and audio streams</td></tr>
+    <tr><td>AV1 and VP9 qualities re-encoded on-device so Photos accepts them — no shipped FFmpeg</td></tr>
+    <tr><td>Save with add-only Photos access, without full-library permission (iOS 17+)</td></tr>
+    <tr><td>Download manager with progress, cancel and retry</td></tr>
+    <tr><td nowrap>👑 <b>Facebook Plus</b></td><td>Preview Meta's paid subscriber features without subscribing — including the Story diamond/heart reaction; Direct or Trial unlock, off by default with a warning</td></tr>
+    <tr><td nowrap rowspan="5">📰 <b>Feed</b></td><td>Remove ads &amp; sponsored posts — feed, video, Stories and Marketplace</td></tr>
+    <tr><td>Hide "People you may know", Group and Page suggestions</td></tr>
+    <tr><td>Hide the Reels carousel, Threads promo and Stories tray</td></tr>
+    <tr><td>Remove survey prompts ("Are you interested in this post?")</td></tr>
+    <tr><td>Remove the affiliate / product banner pinned in the comment sheet</td></tr>
+    <tr><td nowrap rowspan="2">🧭 <b>Links</b></td><td>Open external links in your default browser</td></tr>
+    <tr><td>"Open in Facebook" Safari extension — reopens facebook.com links in the app, at the exact destination</td></tr>
+    <tr><td nowrap rowspan="3">🎬 <b>Reels</b></td><td>Cinema mode — one tap hides the overlay and the tab bar</td></tr>
+    <tr><td>Hide the full-screen "Recommended" card shown between Reels</td></tr>
+    <tr><td>Save Reels to Photos</td></tr>
+    <tr><td nowrap rowspan="3">📖 <b>Stories</b></td><td>Ghost Mode — watch without being seen</td></tr>
+    <tr><td>Disable auto-advance and hide Story suggestions</td></tr>
+    <tr><td>Save Stories, video or photo, to Photos</td></tr>
+    <tr><td nowrap>🔔 <b>Updates</b></td><td>In-app update checker with changelog and one-tap download</td></tr>
   </tbody>
 </table>
 
@@ -197,45 +186,10 @@ This writes a per-machine `.clangd` (with your theos path and SDK baked in) and 
 
 ## 🔔 Notifications on sideloaded builds
 
-Sideloaded builds show *"You have a new notification"* instead of the real text.
-Facebook sends a stub payload and lets `NotificationServiceExtension.appex`
-expand it — but that extension can only do so if it can find your session, and
-on a re-signed build it cannot: the session lives in Meta's App Groups
-(`group.com.facebook.*`) and keychain group (`T84QZS65DQ.platformFamily`), and
-Apple will never authorize another team's identifiers for your certificate.
-
-The released IPA carries **`FBPNotifyBridge.dylib`** inside that extension: a
-~70 KB dylib that applies the same container and keychain redirects the main app
-already uses, so both processes read and write the same place.
-
-**Where this gets you today, honestly:**
-
-| | On a re-signed build |
-|---|---|
-| Messenger messages and calls | **Detailed.** Confirmed on device. |
-| Likes, comments, tags, friend requests | **Still generic, or no banner at all.** |
-
-The second half is not the bridge failing — those pushes never reach the
-extension in the first place. **Full write-up in
-[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**: the evidence, what
-has been ruled out, and what is being tried next.
-
-What this means for you:
-
-- **Your certificate needs at least one registered App Group.** Without one
-  there is no container to redirect into and the bridge does nothing at all.
-  **[Check your certificate in a minute](../../wiki/Check-App-Groups-Support)**
-  — sign and open a small checker app and it tells you outright, before you
-  sign anything else. Note that this is **necessary but not sufficient**: a
-  certificate granting five App Groups was used for the device capture above,
-  and Facebook's own notifications stayed broken regardless.
-- **Feather's "Merge Entitlements" is optional.** Messenger notifications are
-  confirmed detailed without it, and as of Feather v2.9.0 the switch is not in
-  any released build. Enable it if your build offers it; otherwise a certificate
-  with an App Group is enough. "Inject into app extensions" is not needed either
-  — the bridge already ships inside the IPA.
-- **TrollStore users need none of this** — it preserves the original
-  entitlements, so notifications already work in full.
+Whether a sideloaded build delivers real notifications or just
+*"You have a new notification"* depends on your signing certificate. The full
+explanation — how it works, what is confirmed today, and what to check on your
+certificate — lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
 
 ---
 
@@ -258,18 +212,20 @@ What this means for you:
 │   │   ├── AppChrome   # UI settings gesture (TabBar, Wordmark long-press & Settings Button)
 │   │   ├── AppIcons    # Custom app-icon picker logic
 │   │   ├── Calls       # Incoming Call Blocker (PushKit & CallKit interceptors)
-│   │   ├── Confirmations # Opt-in commit-level confirmations (comment, share, post, friend, follow)
-│   │   ├── Downloads   # Quality picker, DASH manifest reader, two-stream fetch,
-│   │   │               # lossless mux, AV1/VP9→HEVC conversion, download manager
+│   │   ├── Comments    # Remove the affiliate/product banner in the comment sheet
+│   │   ├── Confirmation # Opt-in confirmations — like/share/follow/friend (CK forwarder) & comment/post (swizzle)
+│   │   ├── Downloads   # Quality picker, DASH manifest reader, two-stream fetch, lossless
+│   │   │               # mux, AV1/VP9→HEVC conversion, add-only Photos save, download manager
+│   │   ├── FacebookPlus # Preview paid subscriber benefits (client-side gate override)
 │   │   ├── Feed        # Feed-related hooks (suggestions, Reels, Stories removal)
 │   │   ├── Fonts       # Custom UI font replacement (Core Text registration + picker)
+│   │   ├── HDR         # Force SDR rendering app-wide (Disable HDR)
 │   │   ├── Language    # UI language override hooks
-│   │   ├── LikeConfirmation # Confirm likes via the ComponentKit forwarder (feed & Reels)
 │   │   ├── Links       # Open external links in default browser & inbound link bridge
 │   │   ├── Notifications # Client-sync bridge for detailed push on sideloaded builds
 │   │   ├── OLED        # True black dark mode that follows the iOS system appearance
 │   │   ├── Onboarding  # Welcome screen controller
-│   │   ├── Reels       # Cinema mode (hide overlay/tab bar) & Reels download
+│   │   ├── Reels       # Cinema mode (hide overlay/tab bar), hide Recommended card & Reels download
 │   │   ├── Stories     # Story-related hooks (Ghost mode, auto-advance block)
 │   │   └── Update      # In-app update checker + update screen (GitHub Releases)
 │   ├── PluginsInject   # Sideload compatibility layer (Keychain / App-Group / CloudKit)

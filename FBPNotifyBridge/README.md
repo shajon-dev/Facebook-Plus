@@ -7,6 +7,13 @@
 | Messenger messages and calls | **Detailed.** Confirmed on device — content mutated and delivered in 165 ms. |
 | Likes, comments, replies, tags, mentions, friend requests | **Still generic, or no banner at all.** |
 
+> [!IMPORTANT]
+> **It comes down to your signing certificate.** If your developer certificate
+> supports push notifications — i.e. it grants at least one App Group — the
+> bridge has somewhere to work and you can receive notifications. If it does
+> not, you will not get them: the app only shows *"You have a new
+> notification"*.
+
 Everything this component was built to do, it does: the extension launches, the
 bridge loads into it, and it resolves the *same* App-Group container and the
 *same* keychain access group as the main app. The remaining failure is not in
