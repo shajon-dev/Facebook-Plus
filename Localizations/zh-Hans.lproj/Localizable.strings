@@ -26,6 +26,8 @@
 "row.norecs.desc" = "隐藏算法推荐的帖子。";
 "row.nopymk.title" = "移除“你可能认识的人”";
 "row.noreels.title" = "移除 Reels 轮播";
+"row.noreelsrecommended.title" = "移除 Reels 推荐卡片";
+"row.noreelsrecommended.desc" = "隐藏在 Reels 之间显示的全屏“推荐”卡片。";
 "row.nostories.title" = "移除快拍";
 "row.nostories.desc" = "隐藏信息流中的快拍栏和单个快拍卡片。";
 "row.nothreads.title" = "移除 Threads 推广";

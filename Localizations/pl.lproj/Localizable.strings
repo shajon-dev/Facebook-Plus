@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Ukrywa posty sugerowane algorytmicznie.";
 "row.nopymk.title" = "Usuń osoby, które możesz znać";
 "row.noreels.title" = "Usuń karuzelę rolek";
+"row.noreelsrecommended.title" = "Usuń kartę polecanych w Reels";
+"row.noreelsrecommended.desc" = "Ukrywa pełnoekranową kartę „Polecane” wyświetlaną między Reels.";
 "row.nostories.title" = "Usuń relacje";
 "row.nostories.desc" = "Ukrywa pasek relacji oraz pojedyncze karty relacji w aktualnościach.";
 "row.nothreads.title" = "Usuń promocję Threads";

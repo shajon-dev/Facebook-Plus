@@ -26,6 +26,8 @@
 "row.norecs.desc" = "アルゴリズムによるおすすめ投稿を非表示にします。";
 "row.nopymk.title" = "「知り合いかも」を削除";
 "row.noreels.title" = "リールのカルーセルを削除";
+"row.noreelsrecommended.title" = "Reels のおすすめカードを非表示";
+"row.noreelsrecommended.desc" = "Reels の間に表示される全画面の「おすすめ」カードを非表示にします。";
 "row.nostories.title" = "ストーリーズを削除";
 "row.nostories.desc" = "フィードからストーリーズの列と単体のストーリーズカードを非表示にします。";
 "row.nothreads.title" = "Threads の宣伝を削除";

@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Algoritmanın önerdiği gönderileri gizler.";
 "row.nopymk.title" = "«Tanıyor Olabileceğin Kişiler»i Kaldır";
 "row.noreels.title" = "Reels Şeridini Kaldır";
+"row.noreelsrecommended.title" = "Reels önerilen kartını kaldır";
+"row.noreelsrecommended.desc" = "Reels arasında görünen tam ekran «Önerilen» kartını gizler.";
 "row.nostories.title" = "Hikâyeleri Kaldır";
 "row.nostories.desc" = "Hikâye şeridini ve tekil hikâye kartlarını akıştan gizler.";
 "row.nothreads.title" = "Threads Tanıtımını Kaldır";

@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Blendet algorithmisch vorgeschlagene Beiträge aus.";
 "row.nopymk.title" = "„Personen, die du kennst“ entfernen";
 "row.noreels.title" = "Reels-Karussell entfernen";
+"row.noreelsrecommended.title" = "Reels-Empfehlungskarte entfernen";
+"row.noreelsrecommended.desc" = "Blendet die bildschirmfüllende „Empfohlen“-Karte zwischen Reels aus.";
 "row.nostories.title" = "Storys entfernen";
 "row.nostories.desc" = "Blendet die Story-Leiste und einzelne Story-Karten aus dem Feed aus.";
 "row.nothreads.title" = "Threads-Werbung entfernen";

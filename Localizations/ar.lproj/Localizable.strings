@@ -26,6 +26,8 @@
 "row.norecs.desc" = "يُخفي المنشورات المقترحة بواسطة الخوارزمية.";
 "row.nopymk.title" = "إزالة «أشخاص قد تعرفهم»";
 "row.noreels.title" = "إزالة شريط Reels";
+"row.noreelsrecommended.title" = "إزالة بطاقة Reels المقترحة";
+"row.noreelsrecommended.desc" = "يخفي بطاقة «المقترح» ملء الشاشة التي تظهر بين مقاطع Reels.";
 "row.nostories.title" = "إزالة القصص";
 "row.nostories.desc" = "يُخفي شريط القصص وبطاقات القصص الفردية من آخر الأخبار.";
 "row.nothreads.title" = "إزالة ترويج Threads";

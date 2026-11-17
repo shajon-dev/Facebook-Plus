@@ -410,6 +410,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyNoRecs, FBPL(@"row.norecs.title"), FBPL(@"row.norecs.desc"), @"magic"),
                 FBPSwitchRow(FBPKeyNoReels, FBPL(@"row.noreels.title"), nil, @"reels"),
+                FBPSwitchRow(FBPKeyNoReelsRecommended, FBPL(@"row.noreelsrecommended.title"), FBPL(@"row.noreelsrecommended.desc"), @"reels"),
                 FBPSwitchRow(FBPKeyNoStories, FBPL(@"row.nostories.title"), FBPL(@"row.nostories.desc"), @"incognito"),
                 FBPSwitchRow(FBPKeyNoThreads, FBPL(@"row.nothreads.title"), FBPL(@"row.nothreads.desc"), @"at"),
             ]),

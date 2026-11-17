@@ -26,6 +26,8 @@
 "row.norecs.desc" = "एल्गोरिद्म द्वारा सुझाई गई पोस्ट छिपाता है।";
 "row.nopymk.title" = "«जिन्हें आप जानते होंगे» हटाएँ";
 "row.noreels.title" = "Reels कैरोसेल हटाएँ";
+"row.noreelsrecommended.title" = "Reels का अनुशंसित कार्ड हटाएँ";
+"row.noreelsrecommended.desc" = "Reels के बीच दिखने वाला फ़ुल-स्क्रीन «अनुशंसित» कार्ड छिपाता है।";
 "row.nostories.title" = "स्टोरी हटाएँ";
 "row.nostories.desc" = "फ़ीड से स्टोरी पंक्ति और एकल स्टोरी कार्ड छिपाता है।";
 "row.nothreads.title" = "Threads प्रचार हटाएँ";

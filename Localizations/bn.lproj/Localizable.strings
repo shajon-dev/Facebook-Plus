@@ -26,6 +26,8 @@
 "row.norecs.desc" = "অ্যালগরিদমে সাজেস্ট করা পোস্ট লুকায়।";
 "row.nopymk.title" = "«আপনি চিনতে পারেন» সরান";
 "row.noreels.title" = "Reels ক্যারোসেল সরান";
+"row.noreelsrecommended.title" = "Reels-এর Recommended কার্ড সরান";
+"row.noreelsrecommended.desc" = "Reels-এর মাঝে দেখানো full-screen «Recommended» কার্ড লুকায়।";
 "row.nostories.title" = "স্টোরি সরান";
 "row.nostories.desc" = "ফিড থেকে স্টোরি সারি এবং একক স্টোরি কার্ড লুকায়।";
 "row.nothreads.title" = "Threads প্রোমো সরান";

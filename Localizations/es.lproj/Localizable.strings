@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Oculta las publicaciones sugeridas por el algoritmo.";
 "row.nopymk.title" = "Eliminar «Personas que quizá conozcas»";
 "row.noreels.title" = "Eliminar el carrusel de Reels";
+"row.noreelsrecommended.title" = "Quitar tarjeta recomendada de Reels";
+"row.noreelsrecommended.desc" = "Oculta la tarjeta «Recomendado» a pantalla completa que aparece entre Reels.";
 "row.nostories.title" = "Eliminar historias";
 "row.nostories.desc" = "Oculta la barra de historias y las tarjetas de historias individuales del feed.";
 "row.nothreads.title" = "Eliminar la promo de Threads";

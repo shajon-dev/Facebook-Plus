@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Nasconde i post suggeriti dall’algoritmo.";
 "row.nopymk.title" = "Rimuovi «Persone che potresti conoscere»";
 "row.noreels.title" = "Rimuovi il carosello Reels";
+"row.noreelsrecommended.title" = "Rimuovi la scheda consigliata dei Reels";
+"row.noreelsrecommended.desc" = "Nasconde la scheda «Consigliati» a schermo intero mostrata tra i Reels.";
 "row.nostories.title" = "Rimuovi le storie";
 "row.nostories.desc" = "Nasconde la barra delle storie e le singole schede storia dal feed.";
 "row.nothreads.title" = "Rimuovi la promo di Threads";

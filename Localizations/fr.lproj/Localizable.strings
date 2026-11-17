@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Masque les publications suggérées par l’algorithme.";
 "row.nopymk.title" = "Masquer « Connaissez-vous ? »";
 "row.noreels.title" = "Supprimer le carrousel Reels";
+"row.noreelsrecommended.title" = "Masquer la carte recommandée des Reels";
+"row.noreelsrecommended.desc" = "Masque la carte « Recommandé » plein écran affichée entre les Reels.";
 "row.nostories.title" = "Supprimer les stories";
 "row.nostories.desc" = "Masque le bandeau des stories et les cartes de story individuelles du fil.";
 "row.nothreads.title" = "Supprimer la promo Threads";

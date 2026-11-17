@@ -26,6 +26,8 @@
 "row.norecs.desc" = "알고리즘이 추천한 게시물을 숨깁니다.";
 "row.nopymk.title" = "'알 수도 있는 사람' 제거";
 "row.noreels.title" = "릴스 캐러셀 제거";
+"row.noreelsrecommended.title" = "Reels 추천 카드 제거";
+"row.noreelsrecommended.desc" = "Reels 사이에 표시되는 전체 화면 «추천» 카드를 숨깁니다.";
 "row.nostories.title" = "스토리 제거";
 "row.nostories.desc" = "피드에서 스토리 줄과 단일 스토리 카드를 숨깁니다.";
 "row.nothreads.title" = "스레드 홍보 제거";

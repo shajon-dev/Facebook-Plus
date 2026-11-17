@@ -36,6 +36,7 @@ FacebookPlus_FILES = \
 	src/Features/Ads/FBPAdsHooks.xm \
 	src/Features/Comments/FBPCommentHooks.xm \
 	src/Features/Reels/FBPReelsSurveyHooks.xm \
+	src/Features/Reels/FBPReelsMidCardHooks.xm \
 	src/Features/Stories/FBPStoryHooks.xm \
 	src/Features/LikeConfirmation/FBPConfirmHooks.xm \
 	src/Features/Confirmations/FBPActionConfirm.mm \

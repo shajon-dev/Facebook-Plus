@@ -67,6 +67,7 @@ extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should joi
 extern NSString *const FBPKeyNoSuggestedPages;  // Remove "suggested pages for you"
 extern NSString *const FBPKeyNoSurveys;         // Remove "are you interested in this post?" surveys
 extern NSString *const FBPKeyNoCommentProductBanner; // Remove the affiliate/product link banner in the comment sheet
+extern NSString *const FBPKeyNoReelsRecommended; // Remove the "Recommended" mid-card interstitial in Reels
 
 // Confirmations (opt-in: guard an action behind a prompt)
 extern NSString *const FBPKeyConfirmComment;    // Confirm before posting a comment

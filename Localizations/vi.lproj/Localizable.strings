@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Ẩn các bài viết được đề xuất theo thuật toán.";
 "row.nopymk.title" = "Xóa mục Người bạn có thể biết";
 "row.noreels.title" = "Xóa thanh cuộn Reels";
+"row.noreelsrecommended.title" = "Ẩn thẻ Đề xuất trong Reels";
+"row.noreelsrecommended.desc" = "Ẩn thẻ «Đề xuất» toàn màn hình hiển thị giữa các Reels.";
 "row.nostories.title" = "Xóa tin";
 "row.nostories.desc" = "Ẩn thanh tin và các thẻ tin đơn lẻ khỏi bảng tin.";
 "row.nothreads.title" = "Xóa quảng bá Threads";

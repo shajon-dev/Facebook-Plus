@@ -12,6 +12,7 @@ extern void FBPInitFeedSurveyHooks(void);
 extern void FBPInitAdsHooks(void);
 extern void FBPInitCommentHooks(void);
 extern void FBPInitReelsSurveyHooks(void);
+extern void FBPInitReelsMidCardHooks(void);
 extern void FBPInitStoryHooks(void);
 extern void FBPInitConfirmHooks(void);
 extern void FBPInitActionConfirm(void);
@@ -49,6 +50,7 @@ static void FBPInstallHooks(void) {
     FBPInitAdsHooks();
     FBPInitCommentHooks();
     FBPInitReelsSurveyHooks();
+    FBPInitReelsMidCardHooks();
     FBPInitStoryHooks();
     FBPInitConfirmHooks();
     FBPInitActionConfirm();

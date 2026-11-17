@@ -26,6 +26,8 @@
 "row.norecs.desc" = "隱藏演算法推薦的貼文。";
 "row.nopymk.title" = "移除「你可能認識的朋友」";
 "row.noreels.title" = "移除 Reels 輪播";
+"row.noreelsrecommended.title" = "移除 Reels 推薦卡片";
+"row.noreelsrecommended.desc" = "隱藏在 Reels 之間顯示的全螢幕「推薦」卡片。";
 "row.nostories.title" = "移除限時動態";
 "row.nostories.desc" = "隱藏動態消息中的限時動態列與單則限時動態卡片。";
 "row.nothreads.title" = "移除 Threads 推廣";

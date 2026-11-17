@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Скрывает посты, предложенные алгоритмом.";
 "row.nopymk.title" = "Убрать «Возможные друзья»";
 "row.noreels.title" = "Убрать карусель Reels";
+"row.noreelsrecommended.title" = "Убрать карточку рекомендаций в Reels";
+"row.noreelsrecommended.desc" = "Скрывает полноэкранную карточку «Рекомендованное» между роликами Reels.";
 "row.nostories.title" = "Убрать истории";
 "row.nostories.desc" = "Скрывает ленту историй и отдельные карточки историй из ленты.";
 "row.nothreads.title" = "Убрать промо Threads";

@@ -26,6 +26,8 @@
 "row.norecs.desc" = "Menyembunyikan postingan yang disarankan algoritma.";
 "row.nopymk.title" = "Hapus «Orang yang Mungkin Anda Kenal»";
 "row.noreels.title" = "Hapus Korsel Reels";
+"row.noreelsrecommended.title" = "Hapus kartu Rekomendasi Reels";
+"row.noreelsrecommended.desc" = "Menyembunyikan kartu «Rekomendasi» layar penuh di antara Reels.";
 "row.nostories.title" = "Hapus Story";
 "row.nostories.desc" = "Menyembunyikan baris Story dan kartu story tunggal dari feed.";
 "row.nothreads.title" = "Hapus Promo Threads";
