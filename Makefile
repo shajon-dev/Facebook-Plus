@@ -42,6 +42,7 @@ FacebookPlus_FILES = \
 	src/Features/Confirmations/FBPActionConfirm.mm \
 	src/Features/AppChrome/FBPChromeHooks.xm \
 	src/Features/OLED/FBPOLEDHooks.xm \
+	src/Features/HDR/FBPHDRHooks.xm \
 	src/Features/Fonts/FBPFontHooks.xm \
 	src/Features/Fonts/FBPFontController.m \
 	src/Features/Downloads/FBPDashManifest.m \

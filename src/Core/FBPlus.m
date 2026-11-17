@@ -45,6 +45,7 @@ NSString *const FBPKeyAnonymousStories = @"anonymousStories";
 NSString *const FBPKeyNoAutoNext       = @"noAutoNext";
 NSString *const FBPKeyFeedLike         = @"feedLike";
 NSString *const FBPKeyOLED             = @"oledMode";
+NSString *const FBPKeyDisableHDR       = @"disableHDR";
 NSString *const FBPKeyFont             = @"uiFont";
 NSString *const FBPKeyFontScale        = @"uiFontScale";
 NSString *const FBPKeyLinksInSafari    = @"linksInSafari";

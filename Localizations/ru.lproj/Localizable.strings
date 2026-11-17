@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Скрыть предложения в историях";
 "row.nostorypymk.desc" = "Убирает «возможные друзья» из ленты историй.";
 "row.oled.title" = "Тёмный режим OLED";
+"row.disablehdr.title" = "Отключить HDR";
+"row.disablehdr.desc" = "Показывает фото и видео в стандартном диапазоне вместо слишком яркого HDR.";
 "row.oled.desc" = "Делает всё приложение полностью чёрным.";
 "row.appicon.title" = "Значок приложения";
 "row.appicon.desc" = "Выбрать другой значок приложения.";

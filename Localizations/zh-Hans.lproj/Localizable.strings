@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "隐藏快拍推荐";
 "row.nostorypymk.desc" = "从快拍栏移除“你可能认识的人”。";
 "row.oled.title" = "OLED 深色模式";
+"row.disablehdr.title" = "关闭 HDR";
+"row.disablehdr.desc" = "以标准范围显示照片和视频，而非过亮的 HDR。";
 "row.oled.desc" = "将整个应用变为纯黑。";
 "row.appicon.title" = "应用图标";
 "row.appicon.desc" = "选择其他应用图标。";

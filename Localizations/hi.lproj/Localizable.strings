@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "स्टोरी सुझाव छिपाएँ";
 "row.nostorypymk.desc" = "स्टोरी ट्रे से «जिन्हें आप जानते होंगे» हटाता है।";
 "row.oled.title" = "OLED डार्क मोड";
+"row.disablehdr.title" = "HDR बंद करें";
+"row.disablehdr.desc" = "फ़ोटो और वीडियो को अतिरिक्त चमकीले HDR के बजाय स्टैंडर्ड रेंज में दिखाता है।";
 "row.oled.desc" = "पूरे ऐप को असली काला बनाता है।";
 "row.appicon.title" = "ऐप आइकन";
 "row.appicon.desc" = "कोई वैकल्पिक ऐप आइकन चुनें।";

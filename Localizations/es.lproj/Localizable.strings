@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Ocultar sugerencias de historias";
 "row.nostorypymk.desc" = "Quita «personas que quizá conozcas» de la barra de historias.";
 "row.oled.title" = "Modo oscuro OLED";
+"row.disablehdr.title" = "Desactivar HDR";
+"row.disablehdr.desc" = "Muestra fotos y vídeos en rango estándar en vez de HDR muy brillante.";
 "row.oled.desc" = "Pone toda la app en negro puro.";
 "row.appicon.title" = "Icono de la app";
 "row.appicon.desc" = "Elegir un icono de app alternativo.";

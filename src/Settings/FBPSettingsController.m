@@ -461,6 +461,9 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPSwitchRow(FBPKeyOLED, FBPL(@"row.oled.title"), nil, @"moon.fill"),
             ]),
             FBPSection(nil, @[
+                FBPSwitchRow(FBPKeyDisableHDR, FBPL(@"row.disablehdr.title"), FBPL(@"row.disablehdr.desc"), @"sun.max"),
+            ]),
+            FBPSection(nil, @[
                 FBPActionRow(kActionAppIcon, FBPL(@"row.appicon.title"), FBPL(@"row.appicon.desc"), @"app.badge.fill", NO),
                 FBPActionRow(kActionFonts, FBPL(@"row.fonts.title"), FBPL(@"row.fonts.desc"), @"textformat", NO),
             ]),

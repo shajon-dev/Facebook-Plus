@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Story-Vorschläge ausblenden";
 "row.nostorypymk.desc" = "Entfernt „Personen, die du kennst“ aus der Story-Leiste.";
 "row.oled.title" = "OLED-Dunkelmodus";
+"row.disablehdr.title" = "HDR deaktivieren";
+"row.disablehdr.desc" = "Zeigt Fotos und Videos im Standardbereich statt in extra hellem HDR.";
 "row.oled.desc" = "Macht die gesamte App komplett schwarz.";
 "row.appicon.title" = "App-Symbol";
 "row.appicon.desc" = "Ein alternatives App-Symbol wählen.";

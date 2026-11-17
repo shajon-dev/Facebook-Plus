@@ -53,6 +53,7 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyNoAutoNext       : @YES,
         FBPKeyFeedLike         : @YES,
         FBPKeyOLED             : @NO,
+        FBPKeyDisableHDR       : @NO,
         FBPKeyLinksInSafari    : @YES,
         // The diagnostic log is kept across launches by default; everything the
         // tweak does is captured into it, so there are no per-feature log toggles.

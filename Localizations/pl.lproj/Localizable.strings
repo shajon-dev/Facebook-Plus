@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Ukryj sugestie relacji";
 "row.nostorypymk.desc" = "Usuwa osoby, które możesz znać, z paska relacji.";
 "row.oled.title" = "Tryb ciemny OLED";
+"row.disablehdr.title" = "Wyłącz HDR";
+"row.disablehdr.desc" = "Pokazuje zdjęcia i filmy w standardowym zakresie zamiast bardzo jasnego HDR.";
 "row.oled.desc" = "Ustawia prawdziwą czerń w całej aplikacji.";
 "row.appicon.title" = "Ikona aplikacji";
 "row.appicon.desc" = "Wybierz alternatywną ikonę aplikacji.";

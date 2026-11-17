@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Ẩn đề xuất tin";
 "row.nostorypymk.desc" = "Xóa “những người bạn có thể biết” khỏi khay tin.";
 "row.oled.title" = "Chế độ tối OLED";
+"row.disablehdr.title" = "Tắt HDR";
+"row.disablehdr.desc" = "Hiển thị ảnh và video ở dải chuẩn thay vì HDR quá sáng.";
 "row.oled.desc" = "Chuyển toàn bộ ứng dụng sang màu đen thực sự.";
 "row.appicon.title" = "Biểu tượng ứng dụng";
 "row.appicon.desc" = "Chọn biểu tượng ứng dụng thay thế.";

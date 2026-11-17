@@ -18,6 +18,7 @@ extern void FBPInitConfirmHooks(void);
 extern void FBPInitActionConfirm(void);
 extern void FBPInitChromeHooks(void);
 extern void FBPInitOLEDHooks(void);
+extern void FBPInitHDRHooks(void);
 extern void FBPInitFontHooks(void);
 extern void FBPInitReelsDownloader(void);
 extern void FBPInitLinkHooks(void);
@@ -56,6 +57,7 @@ static void FBPInstallHooks(void) {
     FBPInitActionConfirm();
     FBPInitChromeHooks();
     FBPInitOLEDHooks();
+    FBPInitHDRHooks();
     FBPInitFontHooks();
     FBPInitReelsDownloader();
     FBPInitLinkHooks();

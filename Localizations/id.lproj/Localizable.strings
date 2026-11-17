@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Sembunyikan Saran Story";
 "row.nostorypymk.desc" = "Menghapus «orang yang mungkin Anda kenal» dari baris story.";
 "row.oled.title" = "Mode Gelap OLED";
+"row.disablehdr.title" = "Nonaktifkan HDR";
+"row.disablehdr.desc" = "Menampilkan foto dan video dalam rentang standar, bukan HDR yang terlalu terang.";
 "row.oled.desc" = "Membuat seluruh aplikasi benar-benar hitam.";
 "row.appicon.title" = "Ikon Aplikasi";
 "row.appicon.desc" = "Pilih ikon aplikasi alternatif.";
