@@ -67,6 +67,45 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 
 %end // FBPStorySeenLegacy
 
+#pragma mark - Incognito (server receipt)
+
+// FBSnacksBucketsSeenStateManager above drives local seen-state, but the receipt
+// that actually tells the author "you viewed this" is sent by
+// FBSnacksUnifiedSeenStateMutator. The impression tracker
+// (FBSnacksBucketSeenStateTracker) can drive that mutator directly, bypassing the
+// manager hook entirely — which is why blocking only the manager let views still
+// register. The mutator's two public send entry points are blocked here too, so
+// no receipt leaves the device whichever path triggered it.
+//
+// Both are fire-and-forget void methods, so returning early leaves no completion
+// dangling. The manual "mark as seen" drives the manager synchronously with
+// gAllowSeenPassthrough set, and the manager forwards to this mutator on the same
+// stack, so that one explicit receipt still flows through.
+
+%group FBPStorySeenMutator
+
+%hook FBSnacksUnifiedSeenStateMutator
+
+- (void)markUnifiedThreadsAsSeenForBucket:(id)threads
+                                   bucket:(id)bucket
+                         idempotenceToken:(id)token {
+    FBPTraceFire("story.FBSnacksUnifiedSeenStateMutator.markForBucket");
+    if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
+    %orig;
+}
+
+- (void)markUnifiedThreadsAsSeenForViewerSession:(id)session
+                                idempotenceToken:(id)token
+                      bucketToStoryCardIdFilters:(id)filters {
+    FBPTraceFire("story.FBSnacksUnifiedSeenStateMutator.markForViewerSession");
+    if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
+    %orig;
+}
+
+%end
+
+%end // FBPStorySeenMutator
+
 #pragma mark - Auto-advance
 
 %group FBPStoryAdvance
@@ -421,6 +460,19 @@ void FBPInitStoryHooks(void) {
         } else {
             FBPLog(@"no known _markThreadAsSeen: variant — incognito disabled");
         }
+    }
+
+    // The actual server-receipt chokepoint. Installed alongside the manager hook,
+    // not instead of it: the manager still gates the manual "mark as seen", while
+    // this closes the tracker-driven path that left views registering anyway.
+    Class seenMutator = objc_getClass("FBSnacksUnifiedSeenStateMutator");
+    if (seenMutator &&
+        [seenMutator instancesRespondToSelector:
+            @selector(markUnifiedThreadsAsSeenForBucket:bucket:idempotenceToken:)]) {
+        FBP_ONCE(gSeenMutator) { %init(FBPStorySeenMutator); }
+    } else {
+        FBPLog(@"FBSnacksUnifiedSeenStateMutator send methods not found — "
+               @"story seen receipt may not be fully suppressed");
     }
 
     if (objc_getClass("FBSnacksThreadSwitcherViewController")) {
