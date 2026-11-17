@@ -1,32 +1,35 @@
 // "Disable HDR" — force SDR rendering app-wide, so HDR photos and video stop
 // over-brightening the app (https://github.com/shajon-dev/Facebook-Plus/issues/4).
 //
-// Two public, app-wide, version-stable levers, neither tied to a Facebook class
-// name, so there is nothing to rename and break:
+// Three public, app-wide levers, none tied to a Facebook class name:
 //
-//   * UIImageView.preferredImageDynamicRange (iOS 17+). Facebook decodes HDR
-//     photos with gain maps and lets the image view render them above SDR;
-//     answering UIImageDynamicRangeStandard (0) from the getter clamps every
-//     image view to SDR regardless of what Facebook set on it.
-//   * CALayer.wantsExtendedDynamicRangeContent. Any layer that opts into the
-//     display's extended range — AVPlayerLayer for HDR video, CAMetalLayer for
-//     HDR-rendered content — is forced back to SDR by rewriting every set to NO.
+//   * CALayer.preferredDynamicRange — the current EDR control (iOS 17+). On
+//     iOS 17-26 wantsExtendedDynamicRangeContent is deprecated and, once
+//     preferredDynamicRange is set to anything other than Standard, no longer
+//     clamps — so this is the lever that actually matters on a modern build,
+//     and the one Facebook sets (setPreferredDynamicRange: is in its binary).
+//     Answering CADynamicRangeStandard (0) from the getter clamps the layer to
+//     SDR, which covers HDR video (AVPlayerLayer) and Metal content.
+//   * CALayer.wantsExtendedDynamicRangeContent — the older control, still set on
+//     some paths; every set is rewritten to NO as a backstop.
+//   * UIImageView.preferredImageDynamicRange — clamps HDR gain-map photos to SDR.
 //
-// WHY A GETTER AND A SETTER, NOT PER-CALL TRACING
-// ------------------------------------------------------------------------
-// Both are hot paths (the layer setter runs constantly while scrolling), so they
-// do no work and emit no trace when the toggle is off, and never log per call —
-// only the one-time install line below. The override only ever yields a value
-// the system already accepts (Standard / NO), so it cannot crash the host, and
-// each group installs only when its selector exists, so a platform without the
-// API is left untouched.
+// Each only ever yields a value the system already accepts (Standard / NO), so
+// it cannot crash the host, and each group installs only when its selector is
+// present. A one-time trace per lever (the first time it clamps) records that
+// the hook is live without logging on every frame.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
+#import "FBPTrace.h"
 
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
+
+// CADynamicRangeStandard / UIImageDynamicRangeStandard are both 0. Declared as a
+// plain constant so this builds against an SDK that predates either enum.
+static const NSInteger kFBPDynamicRangeStandard = 0;
 
 #pragma mark - Images
 
@@ -34,10 +37,12 @@
 
 %hook UIImageView
 
-// Declared NSInteger rather than UIImageDynamicRange so it builds against an SDK
-// older than iOS 17; the enum is NSInteger-backed and Standard == 0.
 - (NSInteger)preferredImageDynamicRange {
-    if (FBPEnabled(FBPKeyDisableHDR)) return 0; // UIImageDynamicRangeStandard
+    if (FBPEnabled(FBPKeyDisableHDR)) {
+        static BOOL traced = NO;
+        if (!traced) { traced = YES; FBPTraceFire("hdr.UIImageView.preferredImageDynamicRange.clamped"); }
+        return kFBPDynamicRangeStandard;
+    }
     return %orig;
 }
 
@@ -51,11 +56,37 @@
 
 %hook CALayer
 
+// The modern lever — overrides wantsExtendedDynamicRangeContent on iOS 17+.
+// Both the setter and getter are forced to Standard: the setter so the stored
+// value is SDR whether Core Animation later reads it via the ivar or the
+// accessor, the getter as a backstop for layers the app never set it on.
+- (void)setPreferredDynamicRange:(NSInteger)range {
+    NSInteger effective = range;
+    if (FBPEnabled(FBPKeyDisableHDR) && range != kFBPDynamicRangeStandard) {
+        effective = kFBPDynamicRangeStandard;
+        static BOOL traced = NO;
+        if (!traced) { traced = YES; FBPTraceFire("hdr.CALayer.setPreferredDynamicRange.forcedStandard"); }
+    }
+    %orig(effective);
+}
+
+- (NSInteger)preferredDynamicRange {
+    if (FBPEnabled(FBPKeyDisableHDR)) {
+        static BOOL traced = NO;
+        if (!traced) { traced = YES; FBPTraceFire("hdr.CALayer.preferredDynamicRange.clamped"); }
+        return kFBPDynamicRangeStandard;
+    }
+    return %orig;
+}
+
+// The deprecated lever — kept as a backstop for any path still setting it.
 - (void)setWantsExtendedDynamicRangeContent:(BOOL)wants {
-    // A local, not %orig(NO) inline: Logos mis-parses a literal argument to %orig
-    // ("Invalid argument structure"), but a plain identifier it forwards cleanly.
     BOOL effective = wants;
-    if (FBPEnabled(FBPKeyDisableHDR)) effective = NO;
+    if (FBPEnabled(FBPKeyDisableHDR) && wants) {
+        effective = NO;
+        static BOOL traced = NO;
+        if (!traced) { traced = YES; FBPTraceFire("hdr.CALayer.wantsExtendedDynamicRangeContent.forcedOff"); }
+    }
     %orig(effective);
 }
 
@@ -72,10 +103,15 @@ void FBPInitHDRHooks(void) {
             FBPLog(@"hdr: image dynamic-range clamp installed");
         }
     }
-    if ([CALayer instancesRespondToSelector:@selector(setWantsExtendedDynamicRangeContent:)]) {
+    // Install when either layer lever exists; the group hooks both, and a method
+    // the platform lacks is simply not swizzled.
+    if ([CALayer instancesRespondToSelector:@selector(preferredDynamicRange)] ||
+        [CALayer instancesRespondToSelector:@selector(setWantsExtendedDynamicRangeContent:)]) {
         FBP_ONCE(gHDRLayer) {
             %init(FBPHDRLayer);
-            FBPLog(@"hdr: layer EDR clamp installed");
+            FBPLog(@"hdr: layer EDR clamp installed (preferredDynamicRange=%d, wantsEDR=%d)",
+                   [CALayer instancesRespondToSelector:@selector(preferredDynamicRange)],
+                   [CALayer instancesRespondToSelector:@selector(setWantsExtendedDynamicRangeContent:)]);
         }
     }
 }
