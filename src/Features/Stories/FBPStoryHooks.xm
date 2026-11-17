@@ -110,12 +110,25 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 
 %group FBPStoryAdvance
 
-%hook FBSnacksThreadSwitcherViewController
+%hook FBSnacksBucketViewController
 
-/// Stops the viewer rolling into the next author's stories. Manual swipes use a
-/// different navigation action and are unaffected.
-- (void)_advanceToNextItemWithNavigationAction:(NSUInteger)action {
-    FBPTraceFire("story.FBSnacksThreadSwitcherViewController.advanceToNextItem");
+/// The per-author story-card controller owns the auto-advance machinery. When a
+/// card's photo timer elapses or its video plays to the end, the media view's
+/// completion delegate fires and advances — to the next card within the author,
+/// or, on the last card, rolling over to the next author. No-oping that one
+/// delegate stops every automatic advance while leaving manual navigation
+/// untouched: a tap goes through navigateToNextItem (a different navigation
+/// action) and a swipe through the bucket displayer's own scroll, neither of
+/// which routes through here. It is a void delegate the app itself already
+/// no-ops on several paths (VoiceOver, its own _autoForwardDisabled guard), so
+/// returning early is a state the app is built to handle — the card just holds
+/// on its last frame.
+///
+/// The previous target, FBSnacksThreadSwitcherViewController, does not implement
+/// this (nor _advanceToNextItemWithNavigationAction:), so that hook was installed
+/// as a dead new method and never fired — which is why auto-advance kept running.
+- (void)mediaViewDidPlayToEnd:(id)mediaView {
+    FBPTraceFire("story.FBSnacksBucketViewController.mediaViewDidPlayToEnd");
     if (FBPEnabled(FBPKeyNoAutoNext)) return;
     %orig;
 }
@@ -475,8 +488,12 @@ void FBPInitStoryHooks(void) {
                @"story seen receipt may not be fully suppressed");
     }
 
-    if (objc_getClass("FBSnacksThreadSwitcherViewController")) {
+    Class bucketVC = objc_getClass("FBSnacksBucketViewController");
+    if (bucketVC && [bucketVC instancesRespondToSelector:@selector(mediaViewDidPlayToEnd:)]) {
         FBP_ONCE(gAdvance) { %init(FBPStoryAdvance); }
+    } else {
+        FBPLog(@"story: FBSnacksBucketViewController mediaViewDidPlayToEnd: not found — "
+               @"auto-advance block inactive");
     }
     if (objc_getClass("FBSnacksTrayTileMenuConfiguration") &&
         objc_getClass("FBSnacksSettingsBottomSheetActionHandlerV2") &&
