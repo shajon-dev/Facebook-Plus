@@ -40,6 +40,15 @@ void FBPTraceEmit(NSString *line);
 /// How many lines the in-memory record currently holds.
 NSUInteger FBPLogLineCount(void);
 
+/// The file the mirror is writing to right now, or `(none)`.
+NSString *FBPTraceFilePath(void);
+
+/// YES once the mirror resolved the **shared** App-Group container, which is
+/// what lets the notification extension's lines reach the app's log. NO means
+/// this process is writing to its own private Caches directory and the two
+/// processes' logs will not meet.
+BOOL FBPTraceFileIsShared(void);
+
 /// Empties the in-memory record and truncates the file mirror.
 void FBPLogClear(void);
 

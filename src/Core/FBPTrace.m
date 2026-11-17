@@ -32,15 +32,23 @@ static NSString *FBPLogStamp(void) {
     return @(stamp);
 }
 
+static BOOL FBPTraceIsExtension(void);
+
 // The one place the line format lives. The tag bracket is dropped when tag is
 // nil, so a raw line reads as plain text.
+//
+// Lines written from the notification extension carry an extra [NSE] marker.
+// The app and the extension append to one shared file, and when the question is
+// "did the extension run at all" a line that cannot say which process wrote it
+// is worthless. The app's own lines are left exactly as they were.
 static NSString *FBPLogFormatLine(BOOL ok, NSString *_Nullable tag, NSString *message) {
+    NSString *process = FBPTraceIsExtension() ? @"[NSE] " : @"";
     if (tag.length) {
-        return [NSString stringWithFormat:@"[%@] [%@] [%@] %@",
-                                          FBPLogStamp(), ok ? @"+" : @"-", tag, message];
+        return [NSString stringWithFormat:@"[%@] [%@] %@[%@] %@",
+                                          FBPLogStamp(), ok ? @"+" : @"-", process, tag, message];
     }
-    return [NSString stringWithFormat:@"[%@] [%@] %@",
-                                      FBPLogStamp(), ok ? @"+" : @"-", message];
+    return [NSString stringWithFormat:@"[%@] [%@] %@%@",
+                                      FBPLogStamp(), ok ? @"+" : @"-", process, message];
 }
 
 #pragma mark - The log handle
@@ -79,30 +87,167 @@ static BOOL FBPLogsKeepAcrossLaunches(void) {
 static int gFBPTraceFD = -1;
 static os_unfair_lock gFBPTraceFileLock = OS_UNFAIR_LOCK_INIT;
 
-static NSString *FBPTracePath(void) {
-    NSString *caches = NSSearchPathForDirectoriesInDomains(
-        NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-    if (!caches.length) return nil;
-    return [caches stringByAppendingPathComponent:@"facebook-plus-trace.log"];
-}
-
-static void FBPTraceOpenFile(void) {
+// YES inside an app extension. The notification extension is a separate process
+// with its own containers and its own copy of this file, so its lines have to be
+// distinguishable from the app's in a log both of them write.
+static BOOL FBPTraceIsExtension(void) {
+    static BOOL isExtension;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        NSString *path = FBPTracePath();
-        if (!path.length) return;
-        // Append when the log is kept across launches; otherwise start fresh each
-        // launch. The daily auto-clear and the Clear action truncate it.
-        int flags = O_WRONLY | O_CREAT | (FBPLogsKeepAcrossLaunches() ? O_APPEND : O_TRUNC);
-        int fd = open(path.fileSystemRepresentation, flags, 0644);
-        if (fd >= 0) gFBPTraceFD = fd;
+        isExtension = [NSBundle.mainBundle.bundlePath hasSuffix:@".appex"];
     });
+    return isExtension;
+}
+
+// The log lives in the **shared App-Group container** whenever there is one, so
+// the app and the notification extension append to the same file and the Logs
+// page shows both. That matters because the extension is the half nobody can
+// see: it is not attached to a debugger, it runs for a few hundred milliseconds,
+// and on a re-signed build reading os_log off the device needs usbmux.
+//
+// -containerURLForSecurityApplicationGroupIdentifier: is the right way to ask
+// even though a re-signed build does not hold the Meta group: SideloadFix.xm in
+// the app and FBPNotifyBridge.mm in the extension both hook that selector and
+// answer with the signer's container, and both resolve the *same* one. On
+// TrollStore and jailbroken installs the group is real and the call answers with
+// Meta's own container, which is equally shared. Either way both processes land
+// on one file.
+//
+// Falls back to the process's own Caches directory, which is what an install
+// with no usable App Group gets — then the app still logs, the extension still
+// logs, and the two simply do not meet.
+// Resolved on first use and **cached only once the shared container answers**,
+// never on the fallback.
+//
+// dispatch_once here would be a bug, and the same bug this project has already
+// had to fix twice: getAppGroupPathIfExists() used to cache a failed lookup
+// forever, and so did the keychain access-group probe. The first line written in
+// a process is the launch trace, which runs very early — early enough that
+// LSBundleProxy may not have answered yet. Caching the Caches fallback at that
+// moment would send the rest of the process's lines to a private directory, and
+// the extension's lines would then never reach the app's log at all, which is
+// the one thing this move was for.
+//
+// So: a failed resolve returns the fallback for that line and is retried on the
+// next one. The log file mirror is opened once (FBPTraceOpenFile), so in the
+// worst case a handful of launch lines land in Caches before the shared path
+// takes over — acceptable, where a permanently wrong path is not.
+static NSString *gFBPTraceResolvedPath;
+static os_unfair_lock gFBPTracePathLock = OS_UNFAIR_LOCK_INIT;
+
+// The process's own Caches directory. Always available, never shared.
+static NSString *FBPTraceFallbackPath(void) {
+    NSString *caches = NSSearchPathForDirectoriesInDomains(
+        NSCachesDirectory, NSUserDomainMask, YES).firstObject;
+    return caches.length ? [caches stringByAppendingPathComponent:@"facebook-plus-trace.log"]
+                         : nil;
+}
+
+static NSString *FBPTracePath(void) {
+    os_unfair_lock_lock(&gFBPTracePathLock);
+    NSString *resolved = gFBPTraceResolvedPath;
+    os_unfair_lock_unlock(&gFBPTracePathLock);
+    if (resolved) return resolved;
+
+    // THE REENTRANCY GUARD IS NOT OPTIONAL.
+    //
+    // Asking NSFileManager for the App-Group container runs the tweak's own
+    // redirect hook, whose resolver (Paths.mm) emits a diagnostic line when it
+    // settles on a container — and emitting a line comes straight back here.
+    // That is unbounded recursion and a stack overflow on the first line a
+    // process logs, which is exactly how this crashed the app on device.
+    //
+    // Guarded, the inner call falls back to Caches for that one line while the
+    // outer call completes and caches the shared path, so every line after it
+    // lands in the shared file. One stray line in a private directory is a fair
+    // price; a recursive crash is not.
+    static _Thread_local BOOL resolving = NO;
+    if (resolving) return FBPTraceFallbackPath();
+
+    resolving = YES;
+    NSURL *shared = [NSFileManager.defaultManager
+        containerURLForSecurityApplicationGroupIdentifier:@"group.com.facebook.Facebook"];
+    resolving = NO;
+
+    if (!shared.path.length) return FBPTraceFallbackPath();
+
+    [NSFileManager.defaultManager createDirectoryAtURL:shared
+                           withIntermediateDirectories:YES
+                                            attributes:nil
+                                                 error:nil];
+    NSString *path = [shared.path stringByAppendingPathComponent:@"facebook-plus-trace.log"];
+
+    // Cached only on success, and only once: two threads racing here must not
+    // both publish, because the descriptor is keyed off this exact string.
+    os_unfair_lock_lock(&gFBPTracePathLock);
+    if (!gFBPTraceResolvedPath) gFBPTraceResolvedPath = [path copy];
+    NSString *result = gFBPTraceResolvedPath;
+    os_unfair_lock_unlock(&gFBPTracePathLock);
+    return result;
+}
+
+// The resolved path if one is already cached, otherwise the private fallback —
+// and never a resolve, so this cannot run the App-Group redirect hook and
+// cannot log. **Everything that runs while holding a lock must use this one.**
+// FBPTracePath() may call into tweak code that logs, and logging takes both of
+// this file's locks; os_unfair_lock is not recursive, so resolving under either
+// one deadlocks the process.
+static NSString *FBPTracePathNoResolve(void) {
+    os_unfair_lock_lock(&gFBPTracePathLock);
+    NSString *resolved = gFBPTraceResolvedPath;
+    os_unfair_lock_unlock(&gFBPTracePathLock);
+    return resolved ?: FBPTraceFallbackPath();
+}
+
+// Which file this process is actually writing to, and whether it is the shared
+// one. Reported into the log itself at launch, so a capture never leaves anyone
+// guessing whether the extension's lines could have arrived — the question that
+// cost an hour of pulling containers off a device with devicectl.
+NSString *FBPTraceFilePath(void) {
+    return FBPTracePath() ?: @"(none)";
+}
+
+BOOL FBPTraceFileIsShared(void) {
+    return gFBPTraceResolvedPath != nil;
+}
+
+// Opens the mirror, and re-opens it once if the path has since improved from the
+// private fallback to the shared container (see FBPTracePath). Without that
+// re-open an early launch line would pin the descriptor to the wrong file for
+// the rest of the process.
+static NSString *gFBPTraceOpenedPath;
+
+// Opens the mirror, re-opening it once if the path has improved from the private
+// fallback to the shared container. Call with gFBPTraceFileLock held: the
+// descriptor, the path it belongs to and the write all have to move together,
+// or one thread closes the file another is mid-write on.
+static void FBPTraceOpenFileLocked(NSString *path) {
+    if (!path.length) return;
+    if (gFBPTraceFD >= 0 && [gFBPTraceOpenedPath isEqualToString:path]) return;
+
+    // Append when the log is kept across launches; otherwise start fresh each
+    // launch. The daily auto-clear and the Clear action truncate it. A re-open
+    // always appends, so the handful of lines written before the shared path
+    // resolved are not what truncates it.
+    BOOL reopening = gFBPTraceFD >= 0;
+    int flags = O_WRONLY | O_CREAT |
+                ((FBPLogsKeepAcrossLaunches() || reopening) ? O_APPEND : O_TRUNC);
+    int fd = open(path.fileSystemRepresentation, flags, 0644);
+    if (fd < 0) return;
+
+    if (reopening) close(gFBPTraceFD);
+    gFBPTraceFD = fd;
+    gFBPTraceOpenedPath = [path copy];
 }
 
 // Writes one already-formatted line to the file mirror.
 static void FBPLogMirrorToFile(NSString *line) {
-    FBPTraceOpenFile();
-    if (gFBPTraceFD < 0) return;
+    // Never resolves: this runs under gFBPLogLock (FBPLogRecord flushes the
+    // pending line while holding it), and resolving there would re-enter
+    // FBPLogRecord through the redirect hook's own logging and deadlock.
+    // FBPLogRecord has already resolved the path before locking.
+    NSString *path = FBPTracePathNoResolve();
+    if (!path.length) return;
 
     NSString *withNewline = [line stringByAppendingString:@"\n"];
     const char *bytes = withNewline.UTF8String;
@@ -110,7 +255,8 @@ static void FBPLogMirrorToFile(NSString *line) {
     size_t remaining = strlen(bytes);
 
     os_unfair_lock_lock(&gFBPTraceFileLock);
-    while (remaining > 0) {
+    FBPTraceOpenFileLocked(path);
+    while (gFBPTraceFD >= 0 && remaining > 0) {
         ssize_t written = write(gFBPTraceFD, bytes, remaining);
         if (written <= 0) break;   // A failed mirror must not stall a hook.
         bytes += written;
@@ -133,7 +279,7 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
         // Kept across launches: seed the record from last launch's file so the
         // count and the export carry the history forward.
         if (FBPLogsKeepAcrossLaunches()) {
-            NSString *path = FBPTracePath();
+            NSString *path = FBPTracePathNoResolve();
             NSString *existing = path.length ? [NSString stringWithContentsOfFile:path
                                                                          encoding:NSUTF8StringEncoding
                                                                             error:nil]
@@ -147,6 +293,43 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
 }
 
 static os_unfair_lock gFBPLogLock = OS_UNFAIR_LOCK_INIT;
+
+// Pull the notification extension's lines in before anyone reads the record.
+//
+// The in-memory record only ever holds what *this* process wrote plus whatever
+// was seeded at launch. Once the mirror lives in the shared App-Group container
+// the extension is appending to it too, from its own short-lived process, and
+// those lines are exactly the ones worth reading — so the count and the export
+// have to come off the file rather than out of memory.
+//
+// Gated on the file having grown since the last read, because the Logs page
+// polls the count: an unchanged log costs one stat() and nothing else. The
+// record is replaced rather than appended to, which is correct because every
+// line this process wrote was mirrored to that same file.
+//
+// Call with gFBPLogLock held.
+static void FBPLogReloadIfChangedLocked(void) {
+    static off_t lastSize = -1;
+
+    NSString *path = FBPTracePathNoResolve();
+    if (!path.length) return;
+
+    struct stat info;
+    if (stat(path.fileSystemRepresentation, &info) != 0) return;
+    if (info.st_size == lastSize) return;
+    lastSize = info.st_size;
+
+    NSString *contents = [NSString stringWithContentsOfFile:path
+                                                   encoding:NSUTF8StringEncoding
+                                                      error:nil];
+    if (!contents) return;   // A torn read mid-append: keep what we have.
+
+    NSMutableArray<NSString *> *lines = FBPLogLines();
+    [lines removeAllObjects];
+    for (NSString *line in [contents componentsSeparatedByString:@"\n"]) {
+        if (line.length) [lines addObject:line];
+    }
+}
 
 // A run of consecutive identical lines (same ok / tag / message) collapses to one
 // entry with a count — "… x12" — instead of flooding the record. The in-memory
@@ -183,6 +366,13 @@ static void FBPLogFlushPendingLocked(void) {
 
 void FBPLogRecord(BOOL ok, NSString *_Nullable tag, NSString *message) {
     if (!message.length) return;
+
+    // Resolve the log's path here, in the one funnel every line passes through,
+    // and before any lock is taken. Resolving runs the App-Group redirect hook,
+    // which is tweak code that logs — so it has to happen where re-entering
+    // this function is harmless. Everything downstream then reads the cached
+    // value through FBPTracePathNoResolve() and never touches the hook again.
+    (void)FBPTracePath();
 
     os_unfair_lock_lock(&gFBPLogLock);
     NSMutableArray<NSString *> *lines = FBPLogLines();
@@ -223,6 +413,7 @@ void FBPTraceEmit(NSString *line) {
 
 NSUInteger FBPLogLineCount(void) {
     os_unfair_lock_lock(&gFBPLogLock);
+    FBPLogReloadIfChangedLocked();
     NSUInteger count = FBPLogLines().count;
     os_unfair_lock_unlock(&gFBPLogLock);
     return count;
@@ -245,7 +436,7 @@ void FBPLogClear(void) {
     if (gFBPTraceFD >= 0) {
         if (ftruncate(gFBPTraceFD, 0) == 0) lseek(gFBPTraceFD, 0, SEEK_SET);
     } else {
-        NSString *path = FBPTracePath();
+        NSString *path = FBPTracePathNoResolve();
         if (path.length) [[NSData data] writeToFile:path atomically:YES];
     }
     os_unfair_lock_unlock(&gFBPTraceFileLock);
@@ -444,6 +635,7 @@ static NSString *FBPLogHeader(NSUInteger lineCount) {
 
 NSString *FBPLogExportText(void) {
     os_unfair_lock_lock(&gFBPLogLock);
+    FBPLogReloadIfChangedLocked();
     NSArray<NSString *> *snapshot = [FBPLogLines() copy];
     os_unfair_lock_unlock(&gFBPLogLock);
 

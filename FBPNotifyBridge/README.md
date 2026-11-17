@@ -1,13 +1,22 @@
 # FBPNotifyBridge — the notification-service session bridge
 
-**Status: shipped and confirmed working on a device (2026-11-07).** Detailed
-notifications arrive on the lock screen on a re-signed build. The one hard
-requirement is that the signing certificate carries at least one registered App
-Group — see [Your signing certificate has to cooperate](#your-signing-certificate-has-to-cooperate)
-— without which the bridge has nowhere to redirect to and notifications stay
-generic.
+**Status: shipped, and half the job is done (last device capture 2026-11-08).**
 
-Tracks issues **#12** and **#13** ("You have a new notification").
+| | On a re-signed build |
+|---|---|
+| Messenger messages and calls | **Detailed.** Confirmed on device — content mutated and delivered in 165 ms. |
+| Likes, comments, replies, tags, mentions, friend requests | **Still generic, or no banner at all.** |
+
+Everything this component was built to do, it does: the extension launches, the
+bridge loads into it, and it resolves the *same* App-Group container and the
+*same* keychain access group as the main app. The remaining failure is not in
+this dylib — see [What is still missing](#what-is-still-missing).
+
+A signing certificate carrying at least one registered App Group is **necessary
+but not sufficient**: without one the bridge has nowhere to redirect and is inert
+(see [Your signing certificate has to cooperate](#your-signing-certificate-has-to-cooperate)),
+but a certificate that has five of them was used for the capture above and
+Facebook notifications stayed broken anyway.
 
 ## The problem
 
@@ -83,14 +92,25 @@ shared code the app uses, so the two processes converge on the same group.
 
 **This is the half that was broken, and it is why the bridge only ever half
 worked.** The rebind used to force `kSecAttrAccessGroup` on *every* `SecItem*`
-call in the process; it was then narrowed for issue #13, and the narrowing
-passed `kSecUseDataProtectionKeychain` queries through untouched — which in this
-binary is precisely Meta's own Swift keychain stores asking for
-`T84QZS65DQ.platformFamily`. The extension got a null token, so likes, comments
-and friend requests stayed generic while Messenger messages (container-backed)
-kept working. Fixed 2026-11-08; the reasoning and the disassembly that shows it
-are in
-[`.agent/notification-extension.md`](../.agent/notification-extension.md#root-cause-of-the-half-working-state-found-2026-11-08).
+call in the process; it was then narrowed to stop breaking system and auth
+frameworks, and the narrowing passed `kSecUseDataProtectionKeychain` queries
+through untouched — which in this binary is precisely Meta's own Swift keychain
+stores asking for `T84QZS65DQ.platformFamily`. The extension got a null token, so
+likes, comments and friend requests stayed generic while Messenger messages
+(container-backed) kept working.
+
+The evidence, from the 586.0.0 extension binary: `kSecAttrAccessControl` is not
+imported at all, so half that rule was dead code; `kSecUseDataProtectionKeychain`
+has exactly two load sites, both Swift global-accessor thunks, and at each of
+their four call sites the `kSecAttrAccessGroup` thunk is called four
+instructions earlier — i.e. both keys go into the same dictionary. That code
+region is `MetaPushEncryptionKeyStore` / `MetaHPKEManager` and the push-notif
+token store behind client sync.
+
+Fixed 2026-11-08: `SecRebinds.xm` now decides per query with three outcomes
+(`leave`, `pin`, `strip`) under one rule — *never leave a query asking for an
+access group this process cannot possibly hold, and never move a query that
+already asks for one it can.* `com.apple.*` groups stay untouched.
 
 **Known concern that remains:** fishhook rebinds the symbol process-wide, so
 these shims see every framework's keychain traffic, and in an NSE a crash costs
@@ -136,10 +156,11 @@ profile grants `<yourTeam>.*` as a wildcard, so `T84QZS65DQ.platformFamily` can
 be rewritten to `<yourTeam>.platformFamily`. Feather's **Merge Entitlements**
 option performs that rewrite.
 
-**It is not required.** Detailed notifications have been confirmed working
+**It is not required.** Messenger notifications have been confirmed detailed
 without it, on a certificate that carries App Groups. Treat it as belt-and-braces
 rather than a prerequisite: if your build of Feather offers the switch, turning
-it on costs nothing; if it does not, a certificate with an App Group is enough.
+it on costs nothing; if it does not, a certificate with an App Group is enough
+for everything this dylib can reach.
 
 Two practical notes:
 
@@ -152,17 +173,115 @@ Two practical notes:
 "Inject into app extensions" is **not** needed either: the released IPA already
 carries the bridge inside the appex. Enabling it is harmless.
 
-## What it does *not* fix
+## What is still missing
 
-- ~~**Messenger messages.**~~ **Corrected 2026-11-08: Messenger messages and
-  calls are the ones that *do* work.** They come out of the Msys store in the
-  redirected app-group container, so the container half already serves them. The
-  half that needed fixing was the **keychain**, which is what Facebook
-  notifications — likes, comments, tags, friend requests — depend on for the
-  client-sync token behind their GraphQL fetch.
-- **TrollStore installs.** They already work today, and this changes nothing for
-  them: TrollStore preserves the original entitlements, so Facebook's real App
-  Groups and keychain group are intact and no redirect is needed.
+Facebook expands a push along **two different paths**, and they fail for
+different reasons. This is the whole of the remaining problem.
+
+**Messenger messages and calls — these work.** The push carries real alert text
+plus `mutable-content: 1`, which is exactly what iOS requires before it will
+launch a notification service extension. The NSE then reads its content out of
+the Msys store in `group.com.facebook.msysstorage`, which the container redirect
+supplies.
+
+**Likes, comments, replies, tags, mentions, friend requests — these do not.**
+The push carries `content-available: 1`, a badge and a sound, but **no alert and
+no `mutable-content`**. iOS answers
+
+```
+Saving notification … NO [ hasAlertContent: NO, shouldPresentAlert: YES ]
+Error saving notification … "Repository could not save notification.
+                             No content that needs to alert."
+NOT delivering user visible push notification
+```
+
+and **never starts the extension at all**. It sets the badge and hands the push
+to DUET, which wakes the app in the background instead. The app does wake, and
+does read its keychain successfully — but it is suspended within about two
+seconds, before Facebook's own client-sync fetch can finish, so nothing is ever
+posted.
+
+So for this half, no change inside this dylib can help: the code never runs.
+Two things are being pursued instead, and neither belongs here —
+
+1. **`com.apple.developer.usernotifications.filtering`.** The extension's
+   original entitlements carry it; it is Apple-restricted (granted only by
+   request, and Apple's own rejection wording limits the categories to
+   messaging, emergency, education and healthcare), so no third-party profile
+   will ever have it, and re-signing replaces the whole entitlement dictionary.
+   It is the only plausible mechanism by which Meta's contentless pushes reach
+   the extension on an App Store build. Not yet confirmed on device.
+2. **Finishing the fetch in the main app.** The app is already awake and
+   Facebook's own machinery is already in that process —
+   `FBPushNotifClientSyncManager`, `FBPushNotifClientSyncGraphQLNetworker`,
+   `addNotificationRequest:withCompletionHandler:`, and a notification source
+   label named `DEFAULT__FROM_SILENT_PUSH_FALLBACK`. Holding a background task
+   assertion across `application:didReceiveRemoteNotification:fetchCompletionHandler:`
+   so the fetch can complete needs no entitlement and no server. That work lives
+   in the main tweak, not in this dylib.
+
+One thing worth stating plainly, because it is asked often: **a push server of
+our own is not an option.** APNs routes by `apns-topic`, which is the app's
+bundle identifier `com.facebook.Facebook`; pushing to that topic requires an
+APNs key belonging to the team that owns that App ID. A signing `.p12` is not an
+APNs credential, and `NEAppPushProvider` needs an `app-push-provider`
+entitlement that sideloading profiles do not grant.
+
+**TrollStore installs are unaffected by any of this.** They keep the original
+entitlements, so Facebook's real App Groups, its keychain group *and* the
+filtering entitlement are all intact, and notifications work with no bridge
+involvement.
+
+## What has already been ruled out
+
+Each of these was a live theory at some point, and each is closed with evidence
+rather than reasoning. Worth reading before proposing any of them again.
+
+| Suspect | Why it is not the cause |
+|---|---|
+| **The signing certificate** | `test/certificates/00008140-…` grants five App Groups, and that is the certificate the 2026-11-08 capture ran on (`from 5 candidates`, `resolved access group Y8BF277F4X.*`). The App-Group requirement is **met and still insufficient**. |
+| **The container redirect, the keychain rebind, the access-group resolution** | All three resolved correctly in that capture, and *identically* in both processes. Every Facebook keychain service came back `OSStatus 0` in both. |
+| **Extensions stripped at build time** | `build.py` passes cyan `-g` (`--remove-encrypted`), never `-e` (`--remove-extensions`), and the decrypted input IPA is `cryptid 0` throughout. The shipped IPA carries the appex with `FBPNotifyBridge.dylib` weak-linked — verified in the release artifact. |
+| **Notifications being switched off** | The same capture read back `authorization=authorized alert=on lockScreen=on notificationCenter=on badge=on sound=on`. |
+| **Running a push server of our own** | APNs routes by `apns-topic`, which is `com.facebook.Facebook`; pushing there needs an APNs key from the team owning that App ID. A signing `.p12` is not an APNs credential, and `NEAppPushProvider` needs an `app-push-provider` entitlement sideloading profiles do not grant. |
+| **Explicit (non-wildcard) App IDs, and whether the extension launches at all** | Settled on device — see [below](#explicit-app-ids-and-whether-the-nse-launches--settled). |
+
+One finding worth keeping in view, because it contradicts an earlier reading of
+the capture: the string *"You have a new notification"* is **nowhere in the app
+bundle** — a byte search in ASCII and UTF-16 across every binary, every
+`.lproj` and `Localizable.json` finds nothing. It is therefore server-supplied
+inside an `alert`, which means a push carrying it is *not* the contentless push
+the capture analysed. Both shapes are in play.
+
+## What happens next
+
+In order, because the first one decides the rest.
+
+1. **Capture, before anything else.** An `FBP_DIAG=1` build, recording per push:
+   `hasAlertContent` / `hasMutableContent` / `pushType`, the payload, whether the
+   extension launched, whether Facebook called `addNotificationRequest:`, and the
+   access group each process resolved. Trigger a like, a comment, a friend
+   request, a tag and a Messenger message deliberately. A push carrying
+   `mutable-content` means the extension runs and loses, which is a session
+   problem; one without means it never runs, which is not.
+2. **Finish the fetch in the main app.** Hook
+   `application:didReceiveRemoteNotification:fetchCompletionHandler:`, hold a
+   `beginBackgroundTaskWithExpirationHandler:` assertion, let Facebook's own
+   `FBPushNotifClientSyncManager` complete, then call the completion handler.
+   Force `FBMobileConfigSilentPushFallbackTable` if it turns out to gate the
+   fallback. This is main-tweak work, not bridge work.
+3. **Probe the filtering entitlement.** Add the key to the appex before signing
+   and see whether `installd` accepts it. Either answer is worth having — a
+   refusal closes the route for good and leaves TrollStore as the only one.
+   `build.py` already captures and re-applies the appex's original entitlements,
+   so this is a few lines.
+4. **Run one keychain implementation in both processes** — see the last entry
+   under [Still unverified](#still-unverified).
+5. **Wrap the content handler.** A once-only, exception- and expiry-safe wrapper
+   around `didReceiveNotificationRequest:withContentHandler:` that always calls
+   the handler exactly once, falling back to the original content. This does not
+   make notifications detailed; it removes the separate failure class where a
+   banner arrives ~30 s late or not at all.
 
 ## Build and injection
 
@@ -250,8 +369,17 @@ lines name keychain services and container paths.
   for the main app: an appex has its own preferences domain, so the read there
   finds nothing and falls back to on.
 - Behaviour on a certificate whose profile grants a *different* set of App
-  Groups, or more than one. The resolver sorts and picks the first that actually
-  resolves, so both processes converge, but only one certificate has been tested.
+  Groups. The resolver sorts and picks the first that actually resolves, so both
+  processes converge, but only one certificate has been tested — one granting
+  five groups, on which the container and the access group resolved identically
+  in both processes.
+- **Whether the app and the extension converge on a device.** They at least run
+  the same code now: the released IPA used to inject a vendored closed-source
+  keychain patch into the **main app**, where this project's own `SecRebinds`
+  stood down, so the two processes ran *different* keychain implementations.
+  That dylib was reversed, found to do nothing for Facebook's own keychain
+  traffic that `SecRebinds` does not, and removed — both processes share one
+  implementation again. The convergence itself still wants a device run.
 - Whether Facebook sends this build HPKE-encrypted payloads at all. The NSE has
   the machinery (`MetaPushEncryptionKeyStore`, `is_encrypted`), and its keychain
   queries were broken by the same rule and fixed by the same change, but nothing

@@ -36,6 +36,14 @@ FBPNotifyBridge_FILES = \
 	../../src/PluginsInject/SecRebinds.xm \
 	../../src/Core/fishhook/fishhook.c
 
+# Diagnostic builds also compile the tweak's own log record, so the extension
+# writes into the same file in the shared App-Group container that the app's
+# Settings → Logs page reads. It is Foundation-only and costs ~20 KB, and it is
+# the only way to see what this process did without a Mac attached over USB.
+ifeq ($(FBP_DIAG),1)
+FBPNotifyBridge_FILES += ../../src/Core/FBPTrace.m
+endif
+
 # FBP_NOTIFY_BRIDGE tells the shared src/PluginsInject sources they are being
 # compiled into this dylib, so they can stay inert outside an app extension.
 FBPNotifyBridge_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -I../../src/PluginsInject -DFBP_NOTIFY_BRIDGE=1

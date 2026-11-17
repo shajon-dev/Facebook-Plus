@@ -135,6 +135,7 @@
 
 @interface FBPDiagNotificationService: NSObject
 - (void)fbp_didReceiveNotificationRequest:(id)request withContentHandler:(void (^)(id))contentHandler;
+- (void)fbp_serviceExtensionTimeWillExpire;
 @end
 
 @implementation FBPDiagNotificationService
@@ -144,20 +145,48 @@
 - (void)fbp_didReceiveNotificationRequest:(id)request withContentHandler:(void (^)(id))contentHandler {
 	id content = [request valueForKey:@"content"];
 	NSDictionary *userInfo = [content valueForKey:@"userInfo"];
-	FBPDiagLog(@"didReceiveNotificationRequest: payload keys %@, incoming body %@",
-	           [[userInfo.allKeys sortedArrayUsingSelector:@selector(compare:)] componentsJoinedByString:@","]
-	               ?: @"(none)",
-	           [content valueForKey:@"body"] ?: @"(empty)");
+	NSString *identifier = [request valueForKey:@"identifier"] ?: @"(none)";
+
+	// The identifier is what ties this line to SpringBoard's own
+	// "Delivered user visible push notification <id>" (or its refusal to), so a
+	// capture can follow one push across both processes.
+	NSString *incomingTitle = [content valueForKey:@"title"] ?: @"";
+	NSString *incomingBody  = [content valueForKey:@"body"] ?: @"";
+	FBPDiagLog(@"NSE RAN for request %@ — incoming title '%@' body '%@'",
+	           identifier, incomingTitle, incomingBody);
+	FBPDiagLog(@"NSE payload keys: %@",
+	           [[userInfo.allKeys sortedArrayUsingSelector:@selector(compare:)]
+	               componentsJoinedByString:@","] ?: @"(none)");
 
 	NSDate *start = NSDate.date;
 	[self fbp_didReceiveNotificationRequest:request
 	                    withContentHandler:^(id finalContent) {
-		FBPDiagLog(@"contentHandler after %.2fs: title %@, body %@",
-		           -start.timeIntervalSinceNow,
-		           [finalContent valueForKey:@"title"] ?: @"(empty)",
-		           [finalContent valueForKey:@"body"] ?: @"(empty)");
+		NSString *finalTitle = [finalContent valueForKey:@"title"] ?: @"";
+		NSString *finalBody  = [finalContent valueForKey:@"body"] ?: @"";
+
+		// The one judgement that matters: Facebook's job here is to replace the
+		// stub with real text. If the body came back unchanged the extension ran
+		// and failed to resolve the notification, which is a session problem. If
+		// it changed, this path is working and whatever is still wrong is not
+		// here.
+		BOOL changed = ![finalBody isEqualToString:incomingBody] ||
+		               ![finalTitle isEqualToString:incomingTitle];
+		FBPDiagLog(@"NSE RESULT for %@ after %.2fs: %@ — title '%@' body '%@'",
+		           identifier, -start.timeIntervalSinceNow,
+		           changed ? @"CONTENT REPLACED" : @"UNCHANGED (expansion failed)",
+		           finalTitle, finalBody);
 		if (contentHandler) contentHandler(finalContent);
 	}];
+}
+
+// Reached when Facebook has not called the content handler in time and iOS is
+// about to deliver the unmodified payload. Silent otherwise, so a line here is
+// itself the finding: the extension started, did not finish, and the user got
+// the stub.
+- (void)fbp_serviceExtensionTimeWillExpire {
+	FBPDiagLog(@"NSE TIME EXPIRED — Facebook never called the content handler; "
+	           @"iOS will deliver the original payload");
+	[self fbp_serviceExtensionTimeWillExpire];
 }
 
 @end
@@ -212,19 +241,41 @@ __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 						@selector(initFBPWithSuiteName:container:));
 
 #if FBP_DIAG
-		// The trace lives on its own class, so graft its implementation onto
-		// FBNotificationService before exchanging — fbpExchange needs both
-		// methods on the same class, and it verifies they exist, so a Facebook
-		// that renames the principal class costs the trace and nothing else.
-		if (Class service = objc_getClass("FBNotificationService")) {
-			SEL replacement = @selector(fbp_didReceiveNotificationRequest:withContentHandler:);
-			Method donor = class_getInstanceMethod([FBPDiagNotificationService class], replacement);
-			if (donor) {
-				class_addMethod(service, replacement, method_getImplementation(donor),
-								method_getTypeEncoding(donor));
-				fbpExchange(service,
-							@selector(didReceiveNotificationRequest:withContentHandler:),
-							replacement);
+		// The extension's principal class comes out of its own Info.plist rather
+		// than being hardcoded, because that is where iOS itself reads it and a
+		// Facebook release is free to rename the class. "FBNotificationService"
+		// stays only as the fallback.
+		NSDictionary *extension = NSBundle.mainBundle.infoDictionary[@"NSExtension"];
+		NSString *principal = [extension isKindOfClass:NSDictionary.class]
+		                          ? extension[@"NSExtensionPrincipalClass"]
+		                          : nil;
+		Class service = principal.length ? NSClassFromString(principal) : Nil;
+		if (!service) service = objc_getClass("FBNotificationService");
+
+		FBPDiagLog(@"notification service class: %@ (from %@)",
+		           service ? NSStringFromClass(service) : @"(not found)",
+		           principal.length ? @"Info.plist" : @"fallback name");
+
+		// The traces live on their own class, so graft each implementation onto
+		// the principal class before exchanging — fbpExchange needs both methods
+		// on the same class, and it verifies they exist, so a Facebook that
+		// drops one of these selectors costs that trace and nothing else.
+		if (service) {
+			SEL replacements[2] = {
+				@selector(fbp_didReceiveNotificationRequest:withContentHandler:),
+				@selector(fbp_serviceExtensionTimeWillExpire),
+			};
+			SEL originals[2] = {
+				@selector(didReceiveNotificationRequest:withContentHandler:),
+				@selector(serviceExtensionTimeWillExpire),
+			};
+			for (size_t i = 0; i < 2; i++) {
+				Method donor = class_getInstanceMethod([FBPDiagNotificationService class],
+				                                       replacements[i]);
+				if (!donor) continue;
+				class_addMethod(service, replacements[i], method_getImplementation(donor),
+				                method_getTypeEncoding(donor));
+				fbpExchange(service, originals[i], replacements[i]);
 			}
 		}
 #endif

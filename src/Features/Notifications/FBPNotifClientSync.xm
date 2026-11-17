@@ -65,6 +65,35 @@
 // server-side and Facebook's own rate limiter sits behind it.
 static id gInFlightManager;
 
+// WHAT THE DEVICE SAID ABOUT THIS QUERY, 2026-11-16
+//
+// Splicing the push's own pnid into FBPushNotifClientSyncQueryBuilder's pnids
+// array was tried here and **made no difference**, so it was removed rather
+// than left in as decoration. Two captures, same outcome:
+//
+//   without the pnid : SUCCEEDED, -evaluatePush: never called, nothing posted
+//   with the pnid    : SUCCEEDED, -evaluatePush: never called, nothing posted
+//
+// Two things were learned, and both argue the app-side path is the wrong
+// engine for this job rather than a broken one:
+//
+//   * This builder is a *page* query — count, cursor and
+//     FBNotificationsPageConnectionExtraData alongside the pnids. The 175
+//     pnids it already carries are all notifications the client has seen, so
+//     the array reads far more like "these I already have" than "fetch these".
+//     If that is what it is, adding the new pnid told the server to skip
+//     exactly the one notification we wanted.
+//   * The pnid-*targeted* query is not in this binary at all.
+//     FBPushNotifClientSyncExtensionGraphQLNetworker / ...Query / ...QueryParams
+//     / ...Response exist only inside NotificationServiceExtension — the
+//     process iOS refuses to start for a contentless push.
+//
+// Also worth knowing before touching this hook again: `count` logs as a
+// different nonsense value on every call (20281400, 34027576, 93648952), which
+// suggests the declared signature does not match the real one. That is why the
+// hook calls bare `%orig` and never forwards the arguments it read — a misread
+// value passed on would corrupt the call.
+
 // The FBUserSession the client-sync networker needs. There is no global
 // accessor for it in the main binary, so it is taken from whichever of
 // Facebook's own objects is handed one first — both initialisers below take it,
@@ -278,6 +307,7 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
              extraData:(id)extraData
                  pnids:(id)pnids {
 	FBPTraceFire("notif.FBPushNotifClientSyncQueryBuilder.builderWithCount");
+
 	// One line: an NSArray description spans lines and a line-based log filter
 	// loses everything after the opening bracket.
 	NSString *ids = @"(nil)";

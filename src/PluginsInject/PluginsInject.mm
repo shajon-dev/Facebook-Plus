@@ -15,6 +15,20 @@ NSString *bundleId;
 #if FBP_DIAG
 #import <os/log.h>
 
+#import "../Core/FBPTrace.h"
+
+// Every diagnostic line goes to two places.
+//
+// os_log, as before, so `idevicesyslog | grep FBPDIAG` and Console.app still
+// work for anyone with a USB connection to the device.
+//
+// And the tweak's own record, which is what makes a capture practical: the
+// record is mirrored to a file in the shared App-Group container, so the
+// notification extension's lines land in the same log as the app's, and
+// Settings → Logs shows both with an Export button. Getting os_log off an
+// iPhone needs usbmux; reading the extension's side of a push otherwise means
+// keeping a Mac attached and catching a process that lives for a few hundred
+// milliseconds.
 void FBPDiagLogv(NSString *format, ...) {
 	static os_log_t log;
 	static dispatch_once_t onceToken;
@@ -28,6 +42,7 @@ void FBPDiagLogv(NSString *format, ...) {
 	va_end(args);
 
 	os_log(log, "[FBPDIAG] %{public}s", message.UTF8String ?: "(nil)");
+	FBPLogRecord(YES, @"diag", message);
 }
 #endif
 
@@ -109,4 +124,16 @@ __attribute__((constructor)) static void PluginsInjectInit() {
 	PILog(@"access group at launch: %@", group ?: @"(unresolved, will retry)");
 	FBPDiagLog(@"process %@: access group at launch %@", bundleId ?: @"(unknown)",
 	           group ?: @"(unresolved, will retry)");
+
+#if FBP_DIAG
+	// Say outright where this process's log is going. If it is not the shared
+	// container then the app and the extension are writing to separate files and
+	// no amount of reading one of them will show the other's side of a push —
+	// worth knowing from the log itself rather than by pulling containers off
+	// the device afterwards. Guarded because FBPTrace is only linked into a
+	// diagnostic build of the bridge.
+	FBPDiagLog(@"trace file: %@ (%@)", FBPTraceFilePath(),
+	           FBPTraceFileIsShared() ? @"SHARED app-group container"
+	                                  : @"private Caches — NOT shared with the other process");
+#endif
 }

@@ -90,6 +90,85 @@ static void fbpAddNotificationRequest(id self, SEL _cmd, UNNotificationRequest *
 	});
 }
 
+#pragma mark - The push shape, which is the whole question
+
+// iOS starts a notification service extension only for a push that carries BOTH
+// `mutable-content: 1` and user-visible alert content. Everything about this
+// investigation turns on which of those a given Facebook push actually has:
+//
+//   alert + mutable-content  → the extension runs. If the text is still generic
+//                              the extension ran and lost, which is a session
+//                              problem and fixable inside FBPNotifyBridge.
+//   content-available only   → the extension is never started at all. iOS sets
+//                              the badge, drops the notification, and wakes the
+//                              app in the background instead. Nothing in the
+//                              extension can help; the app has to finish
+//                              Facebook's own client-sync fetch itself.
+//
+// Messenger's pushes are known to be the first kind. Whether the pushes behind
+// likes, comments, tags and friend requests are the second is the one thing a
+// capture has to establish, so it gets its own line rather than being left for
+// someone to spot inside a JSON dump.
+static NSString *describeAlert(id alert) {
+    if ([alert isKindOfClass:NSString.class]) {
+        return ((NSString *)alert).length ? @"string" : @"empty-string";
+    }
+    if ([alert isKindOfClass:NSDictionary.class]) {
+        NSDictionary *dict = alert;
+        id titleValue = dict[@"title"];
+        id bodyValue  = dict[@"body"];
+        BOOL title = [titleValue isKindOfClass:NSString.class] && ((NSString *)titleValue).length > 0;
+        BOOL body  = [bodyValue isKindOfClass:NSString.class] && ((NSString *)bodyValue).length > 0;
+        BOOL loc   = dict[@"loc-key"] != nil || dict[@"title-loc-key"] != nil;
+        if (!title && !body && !loc) return @"dict-but-empty";
+        return [NSString stringWithFormat:@"dict(title=%d body=%d loc-key=%d)", title, body, loc];
+    }
+    return alert ? @"other" : @"none";
+}
+
+static void logPushShape(NSDictionary *userInfo) {
+    NSDictionary *aps = [userInfo[@"aps"] isKindOfClass:NSDictionary.class] ? userInfo[@"aps"] : nil;
+    if (!aps) {
+        FBPDiagLog(@"PUSH SHAPE: no aps dictionary — not an APNs payload");
+        return;
+    }
+
+    id alert = aps[@"alert"];
+    NSString *alertDesc = describeAlert(alert);
+    BOOL hasAlert = !([alertDesc isEqualToString:@"none"] ||
+                      [alertDesc isEqualToString:@"empty-string"] ||
+                      [alertDesc isEqualToString:@"dict-but-empty"]);
+    BOOL mutableContent  = [aps[@"mutable-content"] boolValue];
+    BOOL contentAvailable = [aps[@"content-available"] boolValue];
+
+    // The verdict, in the same terms iOS itself uses, so the capture does not
+    // need a second reading pass.
+    NSString *verdict;
+    if (hasAlert && mutableContent) {
+        verdict = @"NSE WILL RUN";
+    } else if (hasAlert) {
+        verdict = @"shown as-is, NSE SKIPPED (no mutable-content)";
+    } else if (contentAvailable) {
+        verdict = @"NO BANNER, app woken in background (contentless push)";
+    } else {
+        verdict = @"NO BANNER and no background wake";
+    }
+
+    FBPDiagLog(@"PUSH SHAPE: alert=%@ mutable-content=%d content-available=%d "
+               @"badge=%@ sound=%@ category=%@ → %@",
+               alertDesc, mutableContent, contentAvailable,
+               aps[@"badge"] ?: @"(none)",
+               aps[@"sound"] ?: @"(none)",
+               aps[@"category"] ?: @"(none)",
+               verdict);
+
+    // Which Facebook payload keys came along, without their values: the keys
+    // alone say which expansion path the server meant this push to take.
+    NSArray *keys = [[userInfo.allKeys valueForKey:@"description"]
+        sortedArrayUsingSelector:@selector(compare:)];
+    FBPDiagLog(@"PUSH KEYS: %@", [keys componentsJoinedByString:@","] ?: @"(none)");
+}
+
 // os_log drops a long message, and an NSDictionary description spans lines that
 // a line-based log filter loses. One line, JSON where possible, split into
 // chunks small enough to survive.
@@ -143,10 +222,36 @@ static void hookRemoteNotificationDelivery(void) {
 	__block IMP original = NULL;
 	IMP replacement = imp_implementationWithBlock(^(id receiver, UIApplication *application,
 	                                                NSDictionary *userInfo, id handler) {
+		// Background vs active decides how long this process has to live. A push
+		// that wakes a suspended app gets a few seconds unless something holds a
+		// background assertion, which is the suspected reason Facebook's own
+		// client-sync fetch never finishes on a re-signed build.
+		UIApplicationState state = application.applicationState;
+		NSString *stateName = state == UIApplicationStateActive     ? @"active"
+		                    : state == UIApplicationStateInactive   ? @"inactive"
+		                                                            : @"BACKGROUND";
+		FBPDiagLog(@"didReceiveRemoteNotification — app state %@", stateName);
+
+		logPushShape(userInfo);
 		logPayload(userInfo);
+
+		// Whether Facebook calls the fetch completion handler, and how long it
+		// takes to. Calling it immediately is what lets iOS suspend the process,
+		// so this is the measurement that says whether holding an assertion
+		// would actually buy the fetch any time.
+		NSDate *start = NSDate.date;
+		id tracedHandler = handler;
+		if (handler) {
+			tracedHandler = [^(NSUInteger result) {
+				FBPDiagLog(@"fetchCompletionHandler called after %.2fs with result %lu",
+				           -start.timeIntervalSinceNow, (unsigned long)result);
+				((void (^)(NSUInteger))handler)(result);
+			} copy];
+		}
+
 		if (original) {
 			((void (*)(id, SEL, UIApplication *, NSDictionary *, id))original)(
-				receiver, selector, application, userInfo, handler);
+				receiver, selector, application, userInfo, tracedHandler);
 		}
 	});
 

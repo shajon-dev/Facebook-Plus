@@ -197,39 +197,45 @@ This writes a per-machine `.clangd` (with your theos path and SDK baked in) and 
 
 ## 🔔 Notifications on sideloaded builds
 
-Sideloaded builds show *"You have a new notification"* instead of the real text
-(issues [#12](../../issues/12), [#13](../../issues/13)). Facebook sends a stub
-payload and lets `NotificationServiceExtension.appex` expand it — but that
-extension can only do so if it can find your session, and on a re-signed build it
-cannot: the session lives in Meta's App Groups (`group.com.facebook.*`) and
-keychain group (`T84QZS65DQ.platformFamily`), and Apple will never authorize
-another team's identifiers for your certificate.
+Sideloaded builds show *"You have a new notification"* instead of the real text.
+Facebook sends a stub payload and lets `NotificationServiceExtension.appex`
+expand it — but that extension can only do so if it can find your session, and
+on a re-signed build it cannot: the session lives in Meta's App Groups
+(`group.com.facebook.*`) and keychain group (`T84QZS65DQ.platformFamily`), and
+Apple will never authorize another team's identifiers for your certificate.
 
 The released IPA carries **`FBPNotifyBridge.dylib`** inside that extension: a
 ~70 KB dylib that applies the same container and keychain redirects the main app
-already uses, so both processes read and write the same place. Messenger messages
-and calls were confirmed on a device first; the keychain half that Facebook's own
-notifications depend on was found broken and fixed afterwards. Full write-up in
-**[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
+already uses, so both processes read and write the same place.
+
+**Where this gets you today, honestly:**
+
+| | On a re-signed build |
+|---|---|
+| Messenger messages and calls | **Detailed.** Confirmed on device. |
+| Likes, comments, tags, friend requests | **Still generic, or no banner at all.** |
+
+The second half is not the bridge failing — those pushes never reach the
+extension in the first place. **Full write-up in
+[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**: the evidence, what
+has been ruled out, and what is being tried next.
 
 What this means for you:
 
 - **Your certificate needs at least one registered App Group.** Without one
-  there is no container to redirect into and the bridge does nothing.
+  there is no container to redirect into and the bridge does nothing at all.
   **[Check your certificate in a minute](../../wiki/Check-App-Groups-Support)**
   — sign and open a small checker app and it tells you outright, before you
-  sign anything else.
-- **Feather's "Merge Entitlements" is optional.** Notifications are confirmed
-  working without it, and as of Feather v2.9.0 the switch is not in any released
-  build. Enable it if your build offers it; otherwise a certificate with an App
-  Group is enough. "Inject into app extensions" is not needed either — the
-  bridge already ships inside the IPA.
-- **Both kinds of notification go through the bridge**, by two different
-  routes: Messenger messages and calls come out of the redirected shared
-  container, while Facebook's own — likes, comments, tags, friend requests —
-  need the keychain, because the extension fetches their text itself.
+  sign anything else. Note that this is **necessary but not sufficient**: a
+  certificate granting five App Groups was used for the device capture above,
+  and Facebook's own notifications stayed broken regardless.
+- **Feather's "Merge Entitlements" is optional.** Messenger notifications are
+  confirmed detailed without it, and as of Feather v2.9.0 the switch is not in
+  any released build. Enable it if your build offers it; otherwise a certificate
+  with an App Group is enough. "Inject into app extensions" is not needed either
+  — the bridge already ships inside the IPA.
 - **TrollStore users need none of this** — it preserves the original
-  entitlements, so notifications already work.
+  entitlements, so notifications already work in full.
 
 ---
 
