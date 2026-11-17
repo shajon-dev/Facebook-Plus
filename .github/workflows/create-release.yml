@@ -1,0 +1,114 @@
+name: Create Draft Release
+
+# Manually build the tweak and open the v{version} GitHub release as a DRAFT,
+# where {version} is read from ./control.
+#
+# What it does, in order:
+#   1. Read Version from ./control (e.g. 1.0.7 -> tag v1.0.7).
+#   2. Fail if a release for that version already exists.
+#   3. Build the tweak the same way CI does (Theos + build.py --no-ipa).
+#   4. Open a DRAFT release carrying the .deb package(s) and the raw tweak
+#      .dylib (and the notification-bridge .dylib when it builds), with GitHub's
+#      automatically generated release notes.
+#
+# You then review the draft and publish it as the main release yourself from the
+# GitHub UI. It attaches no .ipa, so it stays within .github/RELEASE-POLICY.md
+# (no .ipa on a published release); the .deb and .dylib are the tweak itself and
+# carry none of Facebook's code.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  draft-release:
+    name: Build and open the draft release
+    # macOS so Theos uses Xcode's toolchain and iOS SDK directly, exactly like
+    # the Build Tweak (.deb) workflow.
+    runs-on: macos-latest
+    env:
+      THEOS: ${{ github.workspace }}/theos
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # Full history so the auto-generated notes can reach the last release.
+          fetch-depth: 0
+
+      - name: Read the version from control
+        id: meta
+        run: |
+          version=$(awk -F': ' '/^Version:/{print $2; exit}' control | tr -d '[:space:]')
+          if [ -z "$version" ]; then
+            echo "::error::Could not read 'Version:' from ./control"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Version from control: v$version"
+
+      - name: Fail if a release for this version already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.meta.outputs.tag }}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists — bump Version in ./control (or delete that release) before running this."
+            exit 1
+          fi
+          echo "No existing $tag release — proceeding to build."
+
+      - name: Install Theos build dependencies
+        run: brew install ldid dpkg xz
+
+      - name: Set up Theos
+        run: git clone --quiet --recursive https://github.com/theos/theos.git "$THEOS"
+
+      - name: Build the tweak (.deb + dylib)
+        run: python3 build.py --no-ipa
+
+      - name: Build the notification-bridge dylib (best effort)
+        continue-on-error: true
+        run: make -C FBPNotifyBridge/src FINALPACKAGE=1
+
+      - name: Collect release assets
+        id: assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          # The installable package(s) — rootless and, when built, rootfull.
+          cp packages/Facebook-Plus-v*.deb dist/ 2>/dev/null || true
+          # The raw tweak dylib, for manual injection into an IPA.
+          if [ -f .theos/obj/FacebookPlus.dylib ]; then
+            cp .theos/obj/FacebookPlus.dylib dist/FacebookPlus.dylib
+          fi
+          # The notification-service bridge dylib, when it built.
+          if [ -f FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib ]; then
+            cp FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib dist/FBPNotifyBridge.dylib
+          elif [ -f packages/FBPNotifyBridge.dylib ]; then
+            cp packages/FBPNotifyBridge.dylib dist/FBPNotifyBridge.dylib
+          fi
+          echo "Assets to attach:"
+          ls -la dist/
+          if [ -z "$(ls -A dist/)" ]; then
+            echo "::error::No build artifacts were produced."
+            exit 1
+          fi
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          gh release create "$tag" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --draft \
+            --title "Facebook Plus $tag" \
+            --generate-notes
+          echo "Draft release $tag created from ${GITHUB_SHA} with $(ls dist | wc -l | tr -d ' ') asset(s)."
+          echo "Review and publish it here: ${{ github.server_url }}/${{ github.repository }}/releases"
