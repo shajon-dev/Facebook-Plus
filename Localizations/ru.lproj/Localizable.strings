@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "Удалено из списка. Видео осталось в Фото.";
 "download.manager.source.reel" = "Reels";
 "download.manager.source.story" = "История";
+"download.permission.title" = "Запросить доступ";
+"download.permission.request" = "Запросить";
+"download.permission.granted" = "Разрешено";
 "download.job.stage.queued" = "Ожидание…";
 "download.job.stage.fetching" = "Загрузка…";
 "download.job.stage.fetchingBoth" = "Загрузка видео и звука…";

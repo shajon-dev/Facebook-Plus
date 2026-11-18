@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "Dihapus dari daftar. Foto masih menyimpan videonya.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
+"download.permission.title" = "Minta Izin";
+"download.permission.request" = "Minta";
+"download.permission.granted" = "Diizinkan";
 "download.job.stage.queued" = "Menunggu…";
 "download.job.stage.fetching" = "Mengunduh…";
 "download.job.stage.fetchingBoth" = "Mengunduh video dan audio…";

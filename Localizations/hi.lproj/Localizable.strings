@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "सूची से हटा दिया गया। Photos में वीडियो बना हुआ है।";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
+"download.permission.title" = "अनुमति का अनुरोध";
+"download.permission.request" = "अनुरोध";
+"download.permission.granted" = "स्वीकृत";
 "download.job.stage.queued" = "इंतज़ार में…";
 "download.job.stage.fetching" = "डाउनलोड हो रहा है…";
 "download.job.stage.fetchingBoth" = "वीडियो और ऑडियो डाउनलोड हो रहे हैं…";

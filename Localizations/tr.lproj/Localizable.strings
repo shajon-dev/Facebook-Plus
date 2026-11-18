@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "Listeden kaldırıldı. Fotoğraflar videoyu korudu.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Hikâye";
+"download.permission.title" = "İzin İste";
+"download.permission.request" = "İste";
+"download.permission.granted" = "Verildi";
 "download.job.stage.queued" = "Bekliyor…";
 "download.job.stage.fetching" = "İndiriliyor…";
 "download.job.stage.fetchingBoth" = "Görüntü ve ses indiriliyor…";

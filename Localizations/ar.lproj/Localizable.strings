@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "تمت الإزالة من القائمة، لكن الصور احتفظت بالفيديو.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "قصة";
+"download.permission.title" = "طلب الإذن";
+"download.permission.request" = "طلب";
+"download.permission.granted" = "مُفعّل";
 "download.job.stage.queued" = "في الانتظار…";
 "download.job.stage.fetching" = "جارٍ التنزيل…";
 "download.job.stage.fetchingBoth" = "جارٍ تنزيل الصورة والصوت…";

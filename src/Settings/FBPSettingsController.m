@@ -24,6 +24,7 @@
 
 #import <objc/runtime.h>
 #import <Security/Security.h>
+#import <Photos/Photos.h>
 
 // The tweak's version is injected from the control file at build time
 // (-DFBP_VERSION in the Makefile), so it is never hardcoded here.
@@ -52,6 +53,7 @@ static NSString *const kTypeSwitch   = @"switch";
 static NSString *const kTypeAction   = @"action";
 static NSString *const kTypeInfo     = @"info";
 static NSString *const kTypeCategory = @"catnav";
+static NSString *const kTypeButton   = @"button";  // title with a trailing pill button
 
 static NSString *const kSecRows   = @"rows";
 static NSString *const kSecFooter = @"footer";
@@ -305,6 +307,29 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         cell.selectionStyle = link.length ? UITableViewCellSelectionStyleDefault
                                           : UITableViewCellSelectionStyleNone;
 
+    } else if ([type isEqualToString:kTypeButton]) {
+        // A trailing pill: "Request" to ask for Photos access, or a green
+        // "Granted" once it is on. The button is the only control — the row
+        // itself does not select. Status is read live, so a reloadData (after a
+        // grant, or on the next -viewWillAppear) flips the pill with no stored
+        // state.
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        BOOL granted = [self fbpPhotosAddAccessGranted];
+
+        UIButton *pill = [UIButton buttonWithType:UIButtonTypeSystem];
+        [pill setTitle:(granted ? FBPL(@"download.permission.granted")
+                                 : FBPL(@"download.permission.request"))
+              forState:UIControlStateNormal];
+        [pill setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+        pill.titleLabel.font = FBPFont(14, UIFontWeightSemibold);
+        pill.backgroundColor = granted ? UIColor.systemGreenColor : FBPTintColor();
+        pill.layer.cornerRadius = 15.0;
+        pill.layer.cornerCurve = kCACornerCurveContinuous;
+        pill.contentEdgeInsets = UIEdgeInsetsMake(6, 16, 6, 16);
+        [pill addTarget:self action:@selector(fbpPhotoPermissionTapped:)
+       forControlEvents:UIControlEventTouchUpInside];
+        [self setAccessory:pill inCell:cell];
+
     } else {   // action / category — value and/or chevron
         cell.selectionStyle = UITableViewCellSelectionStyleDefault;
         NSMutableArray<UIView *> *pieces = [NSMutableArray array];
@@ -390,6 +415,50 @@ static UIImage *FBPSettingsIcon(NSString *name) {
     [FBPPrefs.shared commit];
 }
 
+#pragma mark Photos permission
+
+/// Add-only is all a download save needs; a full-access grant covers it too.
+- (BOOL)fbpPhotosAddAccessGranted {
+    if (@available(iOS 14.0, *)) {
+        PHAuthorizationStatus status =
+            [PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelAddOnly];
+        return (status == PHAuthorizationStatusAuthorized ||
+                status == PHAuthorizationStatusLimited);
+    }
+    return YES;
+}
+
+- (void)fbpPhotoPermissionTapped:(UIButton *)sender {
+    if (@available(iOS 14.0, *)) {
+        PHAuthorizationStatus status =
+            [PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelAddOnly];
+
+        // Never asked yet: let iOS show its "Add Photos Only" prompt in place,
+        // then reload so the pill flips to "Granted".
+        if (status == PHAuthorizationStatusNotDetermined) {
+            [PHPhotoLibrary requestAuthorizationForAccessLevel:PHAccessLevelAddOnly
+                                                       handler:^(__unused PHAuthorizationStatus granted) {
+                dispatch_async(dispatch_get_main_queue(), ^{ [self.tableView reloadData]; });
+            }];
+            return;
+        }
+
+        // Already granted: nothing to ask. The pill already reads "Granted".
+        if (status == PHAuthorizationStatusAuthorized ||
+            status == PHAuthorizationStatusLimited) {
+            return;
+        }
+    }
+
+    // Denied or restricted: iOS will not prompt again, so Settings is the only
+    // way back on. -viewWillAppear reloads on return, flipping the pill if it
+    // was changed there.
+    NSURL *settings = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+    if (settings && [UIApplication.sharedApplication canOpenURL:settings]) {
+        [UIApplication.sharedApplication openURL:settings options:@{} completionHandler:nil];
+    }
+}
+
 @end
 
 #pragma mark - Row builders (shared helpers)
@@ -430,6 +499,15 @@ static NSDictionary *FBPSection(NSString *footer, NSArray *rows) {
     NSMutableDictionary *s = [@{ kSecRows : rows } mutableCopy];
     if (footer.length) s[kSecFooter] = footer;
     return s;
+}
+
+/// The "Request Permission" row: a title with a trailing pill that asks for (or
+/// reports) add-only Photos access, so a save that Photos refused can be put
+/// right from the Downloads page itself.
+static NSDictionary *FBPPhotoPermissionRow(void) {
+    return @{ kRowType : kTypeButton,
+              kRowTitle : FBPL(@"download.permission.title"),
+              kRowIcon : @"photo.badge.plus" };
 }
 
 /// The download manager row, with the number of running downloads as its
@@ -514,6 +592,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             // here the user comes back to repeatedly rather than sets once.
             FBPSection(nil, @[
                 FBPDownloadManagerRow(),
+                FBPPhotoPermissionRow(),
             ]),
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyReelsDownloaderEnabled, FBPL(@"row.downloadreels.title"), FBPL(@"row.downloadreels.desc"), @"download"),

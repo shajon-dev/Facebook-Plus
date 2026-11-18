@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "已从列表移除，但“照片”中仍保留该视频。";
 "download.manager.source.reel" = "Reels";
 "download.manager.source.story" = "快拍";
+"download.permission.title" = "请求权限";
+"download.permission.request" = "请求";
+"download.permission.granted" = "已授权";
 "download.job.stage.queued" = "等待中…";
 "download.job.stage.fetching" = "正在下载…";
 "download.job.stage.fetchingBoth" = "正在下载画面和声音…";

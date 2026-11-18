@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "Retiré de la liste. Photos a conservé la vidéo.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
+"download.permission.title" = "Demander l’autorisation";
+"download.permission.request" = "Demander";
+"download.permission.granted" = "Autorisé";
 "download.job.stage.queued" = "En attente…";
 "download.job.stage.fetching" = "Téléchargement…";
 "download.job.stage.fetchingBoth" = "Téléchargement de l’image et du son…";

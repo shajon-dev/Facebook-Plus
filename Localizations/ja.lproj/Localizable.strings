@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "リストから削除しました。写真には動画が残っています。";
 "download.manager.source.reel" = "Reels";
 "download.manager.source.story" = "ストーリーズ";
+"download.permission.title" = "権限をリクエスト";
+"download.permission.request" = "リクエスト";
+"download.permission.granted" = "許可済み";
 "download.job.stage.queued" = "待機中…";
 "download.job.stage.fetching" = "ダウンロード中…";
 "download.job.stage.fetchingBoth" = "映像と音声をダウンロード中…";

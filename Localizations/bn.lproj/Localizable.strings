@@ -196,6 +196,9 @@
 "download.manager.deleteKept" = "তালিকা থেকে সরানো হয়েছে। Photos-এ ভিডিওটি রয়ে গেছে।";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Story";
+"download.permission.title" = "অনুমতির অনুরোধ";
+"download.permission.request" = "অনুরোধ";
+"download.permission.granted" = "অনুমোদিত";
 "download.job.stage.queued" = "অপেক্ষা করছে…";
 "download.job.stage.fetching" = "ডাউনলোড হচ্ছে…";
 "download.job.stage.fetchingBoth" = "ভিডিও আর অডিও ডাউনলোড হচ্ছে…";

@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "Đã gỡ khỏi danh sách. Ảnh vẫn giữ video.";
 "download.manager.source.reel" = "Reel";
 "download.manager.source.story" = "Tin";
+"download.permission.title" = "Yêu cầu quyền";
+"download.permission.request" = "Yêu cầu";
+"download.permission.granted" = "Đã cấp";
 "download.job.stage.queued" = "Đang chờ…";
 "download.job.stage.fetching" = "Đang tải…";
 "download.job.stage.fetchingBoth" = "Đang tải hình và tiếng…";

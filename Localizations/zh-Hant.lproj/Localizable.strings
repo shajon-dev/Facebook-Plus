@@ -194,6 +194,9 @@
 "download.manager.deleteKept" = "已從列表移除，但「照片」中仍保留該影片。";
 "download.manager.source.reel" = "Reels";
 "download.manager.source.story" = "限時動態";
+"download.permission.title" = "請求權限";
+"download.permission.request" = "請求";
+"download.permission.granted" = "已授權";
 "download.job.stage.queued" = "等待中⋯";
 "download.job.stage.fetching" = "正在下載⋯";
 "download.job.stage.fetchingBoth" = "正在下載畫面與聲音⋯";
