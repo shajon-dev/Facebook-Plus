@@ -52,6 +52,8 @@
 "row.nostorypymk.title" = "স্টোরি সাজেশন লুকান";
 "row.nostorypymk.desc" = "স্টোরি ট্রে থেকে «আপনি চিনতে পারেন» সরায়।";
 "row.oled.title" = "OLED ডার্ক মোড";
+"row.oleddividers.title" = "পোস্ট ডিভাইডার দেখাও";
+"row.oleddividers.desc" = "OLED মোডে পোস্টের মাঝের হালকা লাইনগুলো রাখে। বন্ধ করলে পুরো ফিড কালো হয়।";
 "row.disablehdr.title" = "HDR বন্ধ করুন";
 "row.disablehdr.desc" = "ছবি ও ভিডিও অতিরিক্ত উজ্জ্বল HDR-এর বদলে স্ট্যান্ডার্ড রেঞ্জে দেখায়।";
 "row.oled.desc" = "পুরো অ্যাপকে খাঁটি কালো করে।";

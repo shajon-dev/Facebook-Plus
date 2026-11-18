@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Story-Vorschläge ausblenden";
 "row.nostorypymk.desc" = "Entfernt „Personen, die du kennst“ aus der Story-Leiste.";
 "row.oled.title" = "OLED-Dunkelmodus";
+"row.oleddividers.title" = "Beitragstrennlinien anzeigen";
+"row.oleddividers.desc" = "Behält die feinen Linien zwischen Beiträgen im OLED-Modus. Aus für einen komplett schwarzen Feed.";
 "row.disablehdr.title" = "HDR deaktivieren";
 "row.disablehdr.desc" = "Zeigt Fotos und Videos im Standardbereich statt in extra hellem HDR.";
 "row.oled.desc" = "Macht die gesamte App komplett schwarz.";

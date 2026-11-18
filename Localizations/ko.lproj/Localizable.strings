@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "스토리 추천 숨기기";
 "row.nostorypymk.desc" = "스토리 트레이에서 '알 수도 있는 사람'을 제거합니다.";
 "row.oled.title" = "OLED 다크 모드";
+"row.oleddividers.title" = "게시물 구분선 표시";
+"row.oleddividers.desc" = "OLED 모드에서 게시물 사이의 옅은 선을 유지합니다. 끄면 피드가 완전히 검게 됩니다.";
 "row.disablehdr.title" = "HDR 끄기";
 "row.disablehdr.desc" = "사진과 동영상을 지
 ucuccd8나치게 밝은 HDR 대신 표준 범위로 표시합니다.";

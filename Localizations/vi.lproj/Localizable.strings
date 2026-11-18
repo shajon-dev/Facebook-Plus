@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Ẩn đề xuất tin";
 "row.nostorypymk.desc" = "Xóa “những người bạn có thể biết” khỏi khay tin.";
 "row.oled.title" = "Chế độ tối OLED";
+"row.oleddividers.title" = "Hiện đường phân cách bài viết";
+"row.oleddividers.desc" = "Giữ các đường mảnh giữa các bài viết ở chế độ OLED. Tắt để có bảng tin đen hoàn toàn.";
 "row.disablehdr.title" = "Tắt HDR";
 "row.disablehdr.desc" = "Hiển thị ảnh và video ở dải chuẩn thay vì HDR quá sáng.";
 "row.oled.desc" = "Chuyển toàn bộ ứng dụng sang màu đen thực sự.";

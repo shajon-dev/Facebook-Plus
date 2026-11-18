@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "إخفاء اقتراحات القصص";
 "row.nostorypymk.desc" = "يُزيل «أشخاص قد تعرفهم» من شريط القصص.";
 "row.oled.title" = "الوضع الداكن OLED";
+"row.oleddividers.title" = "إظهار فواصل المنشورات";
+"row.oleddividers.desc" = "يُبقي الخطوط الخفيفة بين المنشورات في وضع OLED. أوقِفها للحصول على خلاصة سوداء بالكامل.";
 "row.disablehdr.title" = "تعطيل HDR";
 "row.disablehdr.desc" = "يعرض الصور والفيديوهات بالنطاق القياسي بدل HDR الساطع.";
 "row.oled.desc" = "يجعل التطبيق بأكمله أسود بالكامل.";

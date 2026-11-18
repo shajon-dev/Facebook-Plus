@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "隱藏限時動態中的推薦朋友";
 "row.nostorypymk.desc" = "從限時動態列移除「你可能認識的朋友」。";
 "row.oled.title" = "OLED 純黑深色模式";
+"row.oleddividers.title" = "顯示貼文分隔線";
+"row.oleddividers.desc" = "在 OLED 模式下保留貼文之間的淺色分隔線。關閉則整個動態消息全黑。";
 "row.disablehdr.title" = "關閉 HDR";
 "row.disablehdr.desc" = "以標準範圍顯示相片和影片，而非過亮的 HDR。";
 "row.oled.desc" = "將整個 App 背景轉為純黑色。";

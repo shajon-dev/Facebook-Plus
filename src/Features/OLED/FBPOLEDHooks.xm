@@ -56,7 +56,15 @@
 /// path never touches NSUserDefaults.
 static BOOL gOLEDEnabled = NO;
 
-static void FBPRefreshOLED(void) { gOLEDEnabled = FBPEnabled(FBPKeyOLED); }
+/// Whether the faint post separators stay visible in OLED mode. On (default) the
+/// hairlines are kept so cards stay visually separated on black; off blacks them
+/// out too, for a seamless all-black feed. Only meaningful while OLED is active.
+static BOOL gOLEDDividers = YES;
+
+static void FBPRefreshOLED(void) {
+    gOLEDEnabled = FBPEnabled(FBPKeyOLED);
+    gOLEDDividers = FBPEnabled(FBPKeyOLEDDividers);
+}
 
 /// The app's current key window (never one of ours), or any app window as a
 /// fallback. Used to read the effective interface style.
@@ -406,6 +414,14 @@ static UIColor *FBPDividerColor(void) {
     return color;
 }
 
+/// What to paint a separator in OLED mode: the faint white when the "Show post
+/// dividers" toggle is on (cards stay separated), or solid black when it is off
+/// (the hairlines disappear into a seamless all-black feed). Either way the
+/// original is saved first, so turning OLED off restores Facebook's own line.
+static UIColor *FBPDividerPaint(void) {
+    return gOLEDDividers ? FBPDividerColor() : UIColor.blackColor;
+}
+
 /// YES for a separator line to lighten rather than blacken: Facebook's
 /// FBLineComponentInternalView, or a thin (≤2pt) neutral/near-black hairline. A
 /// *coloured* thin bar — a selected-tab underline, a progress bar — is not a
@@ -426,7 +442,7 @@ static BOOL FBPViewLooksLikeDivider(UIView *view) {
 /// view's background, its own layer, and any line-drawing sublayer — saving the
 /// original of each so it is restored when OLED turns off.
 static void FBPLightenDivider(UIView *view) {
-    UIColor *light = FBPDividerColor();
+    UIColor *light = FBPDividerPaint();
     FBPSaveViewBG(view, view.backgroundColor);
     FBPSaveLayerBG(view.layer);
     view.backgroundColor = light;
@@ -784,10 +800,11 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     FBPTraceFire("oled.UIView.setBackgroundColor");
     if (FBPOLEDActive() && !FBPOLEDSkip(self) && !FBPViewIsLight(self) &&
         [NSStringFromClass(self.class) containsString:@"LineComponent"]) {
-        // A separator line keeps a faint white instead of vanishing into black.
+        // A separator line keeps a faint white (toggle on) or is blacked out
+        // (toggle off) instead of taking Facebook's own colour.
         FBPSaveViewBG(self, color);
         FBPMarkTouched(self);
-        %orig(FBPDividerColor());
+        %orig(FBPDividerPaint());
         return;
     }
     UIColor *resolved = FBPBGForSet(self, color);

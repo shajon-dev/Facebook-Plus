@@ -52,6 +52,8 @@
 "row.nostorypymk.title" = "Hide Story Suggestions";
 "row.nostorypymk.desc" = "Removes “people you may know” from the story tray.";
 "row.oled.title" = "OLED Dark Mode";
+"row.oleddividers.title" = "Show Post Dividers";
+"row.oleddividers.desc" = "Keeps the faint lines between posts in OLED mode. Turn off for a fully black feed.";
 "row.disablehdr.title" = "Disable HDR";
 "row.disablehdr.desc" = "Shows photos and videos in standard range instead of extra-bright HDR.";
 "row.oled.desc" = "Turns the whole app true black.";

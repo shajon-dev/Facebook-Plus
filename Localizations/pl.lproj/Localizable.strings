@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Ukryj sugestie relacji";
 "row.nostorypymk.desc" = "Usuwa osoby, które możesz znać, z paska relacji.";
 "row.oled.title" = "Tryb ciemny OLED";
+"row.oleddividers.title" = "Pokaż separatory postów";
+"row.oleddividers.desc" = "Zachowuje cienkie linie między postami w trybie OLED. Wyłącz, aby uzyskać całkowicie czarny kanał.";
 "row.disablehdr.title" = "Wyłącz HDR";
 "row.disablehdr.desc" = "Pokazuje zdjęcia i filmy w standardowym zakresie zamiast bardzo jasnego HDR.";
 "row.oled.desc" = "Ustawia prawdziwą czerń w całej aplikacji.";

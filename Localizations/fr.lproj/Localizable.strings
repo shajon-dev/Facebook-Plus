@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Masquer les suggestions de stories";
 "row.nostorypymk.desc" = "Retire « connaissez-vous ? » du bandeau des stories.";
 "row.oled.title" = "Mode sombre OLED";
+"row.oleddividers.title" = "Afficher les séparateurs de publications";
+"row.oleddividers.desc" = "Garde les fines lignes entre les publications en mode OLED. Désactivez pour un fil entièrement noir.";
 "row.disablehdr.title" = "Désactiver le HDR";
 "row.disablehdr.desc" = "Affiche photos et vidéos en plage standard au lieu du HDR très lumineux.";
 "row.oled.desc" = "Rend toute l’app vraiment noire.";

@@ -50,6 +50,8 @@
 "row.nostorypymk.title" = "Ocultar sugerencias de historias";
 "row.nostorypymk.desc" = "Quita «personas que quizá conozcas» de la barra de historias.";
 "row.oled.title" = "Modo oscuro OLED";
+"row.oleddividers.title" = "Mostrar separadores de publicaciones";
+"row.oleddividers.desc" = "Mantiene las líneas tenues entre publicaciones en modo OLED. Desactívalo para un feed totalmente negro.";
 "row.disablehdr.title" = "Desactivar HDR";
 "row.disablehdr.desc" = "Muestra fotos y vídeos en rango estándar en vez de HDR muy brillante.";
 "row.oled.desc" = "Pone toda la app en negro puro.";

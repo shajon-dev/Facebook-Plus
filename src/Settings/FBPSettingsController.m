@@ -604,6 +604,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
            kRowIcon : @"magic", kRowCategory : @[
             FBPSection(FBPL(@"row.oled.desc"), @[
                 FBPSwitchRow(FBPKeyOLED, FBPL(@"row.oled.title"), nil, @"moon.fill"),
+                FBPSwitchRow(FBPKeyOLEDDividers, FBPL(@"row.oleddividers.title"), FBPL(@"row.oleddividers.desc"), @"rectangle.split.1x2"),
             ]),
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyDisableHDR, FBPL(@"row.disablehdr.title"), FBPL(@"row.disablehdr.desc"), @"sun.max"),
