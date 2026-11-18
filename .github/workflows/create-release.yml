@@ -7,9 +7,9 @@ name: Create Draft Release
 #   1. Read Version from ./control (e.g. 1.0.7 -> tag v1.0.7).
 #   2. Fail if a release for that version already exists.
 #   3. Build the tweak the same way CI does (Theos + build.py --no-ipa).
-#   4. Open a DRAFT release carrying the .deb package(s) and the raw tweak
-#      .dylib (and the notification-bridge .dylib when it builds), with GitHub's
-#      automatically generated release notes.
+#   4. Open a DRAFT release carrying the .deb package(s) and the
+#      notification-bridge .dylib (when it builds), with GitHub's automatically
+#      generated release notes.
 #
 # You then review the draft and publish it as the main release yourself from the
 # GitHub UI. It attaches no .ipa, so it stays within .github/RELEASE-POLICY.md
@@ -67,7 +67,7 @@ jobs:
       - name: Set up Theos
         run: git clone --quiet --recursive https://github.com/theos/theos.git "$THEOS"
 
-      - name: Build the tweak (.deb + dylib)
+      - name: Build the tweak package (.deb)
         run: python3 build.py --no-ipa
 
       - name: Build the notification-bridge dylib (best effort)
@@ -80,11 +80,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           # The installable package(s) — rootless and, when built, rootfull.
+          # The main tweak dylib (FacebookPlus.dylib) is deliberately NOT shipped
+          # loose: it already lives inside the .deb.
           cp packages/Facebook-Plus-v*.deb dist/ 2>/dev/null || true
-          # The raw tweak dylib, for manual injection into an IPA.
-          if [ -f .theos/obj/FacebookPlus.dylib ]; then
-            cp .theos/obj/FacebookPlus.dylib dist/FacebookPlus.dylib
-          fi
           # The notification-service bridge dylib, when it built.
           if [ -f FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib ]; then
             cp FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib dist/FBPNotifyBridge.dylib
