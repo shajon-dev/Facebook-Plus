@@ -65,6 +65,34 @@
 
 %end // FBPCommentProductBanner
 
+#pragma mark - Reels creator-storefront product tag
+
+// The same affiliate CTA also appears as an in-video product card ON a Reel (a
+// creator-storefront product tag: thumbnail, title, store name, "commission
+// eligible") — a surface separate from the comment sheet above, so the comment
+// hook never touched it. It is built from a Swift class,
+// FBShortsCreatorStorefrontProductTagResolver, whose @objc gate
+// +hasAnyPayloadWithFragment: answers whether a Reel carries a tag. Answering NO
+// is the state the app already renders for every untagged Reel, so the card is
+// never built — no empty slot, no reserved gap. Bound to the resolved Swift
+// runtime class in %init. Gated on the same toggle as the comment banner, since
+// to the user both are "the product/affiliate banner".
+%group FBPReelsProductTag
+
+%hook FBPShortsProductTagResolver
+
++ (BOOL)hasAnyPayloadWithFragment:(id)fragment {
+    if (FBPEnabled(FBPKeyNoCommentProductBanner)) {
+        FBPTraceFire("reels.CreatorStorefrontProductTag.hasAnyPayload.suppressed");
+        return NO;
+    }
+    return %orig;
+}
+
+%end
+
+%end // FBPReelsProductTag
+
 #pragma mark - Init
 
 void FBPInitCommentHooks(void) {
@@ -78,5 +106,16 @@ void FBPInitCommentHooks(void) {
         FBP_ONCE(gCommentProductBanner) { %init(FBPCommentProductBanner); }
     } else {
         FBPLog(@"FBCommentStreamRootComponentModel sticky-footer getters not found — comment product banner not hidden");
+    }
+
+    // The same affiliate card ON a Reel is a separate, Swift-backed surface.
+    Class resolver =
+        NSClassFromString(@"_TtC43FBShortsCreatorStorefrontProductTagResolver43FBShortsCreatorStorefrontProductTagResolver")
+        ?: objc_getClass("FBShortsCreatorStorefrontProductTagResolver");
+    if (resolver && [resolver respondsToSelector:@selector(hasAnyPayloadWithFragment:)]) {
+        FBP_ONCE(gReelsProductTag) { %init(FBPReelsProductTag, FBPShortsProductTagResolver = resolver); }
+        FBPLog(@"reels: creator-storefront product-tag gate installed");
+    } else {
+        FBPLog(@"reels: FBShortsCreatorStorefrontProductTagResolver not found");
     }
 }
