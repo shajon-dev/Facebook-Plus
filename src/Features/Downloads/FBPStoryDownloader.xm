@@ -144,9 +144,25 @@ static void FBPShowStoryMessage(NSString *message) {
         UIViewController *vc = gStoryController;
         if (!vc || !vc.view.window || vc.presentedViewController) return;
 
+        // A two-part message ("headline\ndetail", which the save-failed string is)
+        // becomes a bold, centred title over a smaller detail line — the alert's
+        // own hierarchy — rather than one flat block at message size. A single
+        // line stays a plain message with no title.
+        NSString *title = nil;
+        NSString *body = message;
+        NSRange nl = [message rangeOfString:@"\n"];
+        if (nl.location != NSNotFound) {
+            NSCharacterSet *trim = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+            NSString *head = [[message substringToIndex:nl.location]
+                                 stringByTrimmingCharactersInSet:trim];
+            NSString *rest = [[message substringFromIndex:NSMaxRange(nl)]
+                                 stringByTrimmingCharactersInSet:trim];
+            if (head.length && rest.length) { title = head; body = rest; }
+        }
+
         UIAlertController *alert =
-            [UIAlertController alertControllerWithTitle:nil
-                                                message:message
+            [UIAlertController alertControllerWithTitle:title
+                                                message:body
                                          preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.ok")
                                                   style:UIAlertActionStyleDefault
