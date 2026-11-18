@@ -699,6 +699,13 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
         // the same judgement the surfaces already made.
         if (job.stage == FBPDownloadJobStageCancelled) continue;
 
+        // A Story download reports its own outcome — the alert from
+        // FBPShowStoryMessage, plus the button's checkmark/cross flash — so a
+        // terminal toast here would show the same sentence twice (the
+        // save-permission card with this toast duplicating it underneath, as the
+        // reporter saw). Reels have no such alert, so they keep the toast.
+        if (job.surface == FBPDownloadJobSurfaceStory) continue;
+
         BOOL ok = (job.stage == FBPDownloadJobStageDone);
         NSString *message = ok
             ? FBPL(@"download.toast.finished")
