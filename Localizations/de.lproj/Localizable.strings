@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "Direkter Hook";
 "row.plusmode.trial" = "Test";
 "footer.plusmode" = "Direkt schaltet die Funktionen sofort frei.\nTest lässt die App eine aktive Testphase simulieren.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "Kommentar-Produktbanner entfernen";
+"row.nocommentbanner.desc" = "Blendet das im Kommentarbereich angeheftete Affiliate-/Produktlink-Banner aus.";

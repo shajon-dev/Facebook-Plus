@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "डायरेक्ट हुक";
 "row.plusmode.trial" = "ट्रायल";
 "footer.plusmode" = "डायरेक्ट सुविधाओं को तुरंत चालू करता है।\nट्रायल ऐप में एक सक्रिय ट्रायल सिमुलेट करता है।";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "कमेंट प्रोडक्ट बैनर हटाएँ";
+"row.nocommentbanner.desc" = "कमेंट शीट में पिन किया गया एफिलिएट / प्रोडक्ट लिंक बैनर छिपाता है।";

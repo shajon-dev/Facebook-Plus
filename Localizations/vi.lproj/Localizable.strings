@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "Hook trực tiếp";
 "row.plusmode.trial" = "Dùng thử";
 "footer.plusmode" = "Trực tiếp bật ngay các tính năng.\nDùng thử khiến ứng dụng mô phỏng một bản dùng thử đang hoạt động.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "Xóa biểu ngữ sản phẩm trong bình luận";
+"row.nocommentbanner.desc" = "Ẩn biểu ngữ liên kết tiếp thị / sản phẩm được ghim trong trang bình luận.";

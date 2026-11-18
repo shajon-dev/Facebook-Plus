@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "ربط مباشر";
 "row.plusmode.trial" = "تجريبي";
 "footer.plusmode" = "المباشر يفعّل الميزات فورًا.\nالتجريبي يجعل التطبيق يحاكي نسخة تجريبية نشطة.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "إزالة بانر منتج التعليقات";
+"row.nocommentbanner.desc" = "يخفي بانر الرابط التابع / المنتج المثبّت في ورقة التعليقات.";

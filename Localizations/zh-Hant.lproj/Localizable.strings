@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "直接掛鉤";
 "row.plusmode.trial" = "試用";
 "footer.plusmode" = "「直接」立即開啟功能。\n「試用」讓應用程式模擬一個進行中的試用。";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "移除留言商品橫幅";
+"row.nocommentbanner.desc" = "隱藏固定在留言面板中的聯盟 / 商品連結橫幅。";

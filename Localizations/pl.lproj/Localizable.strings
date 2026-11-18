@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "Bezpośredni hook";
 "row.plusmode.trial" = "Wersja próbna";
 "footer.plusmode" = "Bezpośredni od razu włącza funkcje.\nWersja próbna sprawia, że aplikacja symuluje aktywny okres próbny.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "Usuń baner produktu w komentarzach";
+"row.nocommentbanner.desc" = "Ukrywa baner z linkiem afiliacyjnym / produktem przypięty w arkuszu komentarzy.";

@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "直接フック";
 "row.plusmode.trial" = "トライアル";
 "footer.plusmode" = "「直接」は機能をすぐに有効化します。\n「トライアル」はアプリに有効なトライアルを模倣させます。";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "コメントの商品バナーを削除";
+"row.nocommentbanner.desc" = "コメントシートに固定されたアフィリエイト / 商品リンクのバナーを非表示にします。";

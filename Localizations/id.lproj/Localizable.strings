@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "Hook langsung";
 "row.plusmode.trial" = "Uji coba";
 "footer.plusmode" = "Langsung mengaktifkan fitur seketika.\nUji coba membuat aplikasi mensimulasikan uji coba aktif.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "Hapus Banner Produk Komentar";
+"row.nocommentbanner.desc" = "Menyembunyikan banner tautan afiliasi / produk yang disematkan di lembar komentar.";

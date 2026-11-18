@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "Doğrudan hook";
 "row.plusmode.trial" = "Deneme";
 "footer.plusmode" = "Doğrudan özellikleri hemen açar.\nDeneme, uygulamanın etkin bir denemeyi simüle etmesini sağlar.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "Yorum ürün afişini kaldır";
+"row.nocommentbanner.desc" = "Yorum sayfasına sabitlenen ortaklık / ürün bağlantısı afişini gizler.";

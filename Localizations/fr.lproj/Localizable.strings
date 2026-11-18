@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "Hook direct";
 "row.plusmode.trial" = "Essai";
 "footer.plusmode" = "Direct active les fonctions immédiatement.\nEssai fait simuler un essai actif à l'app.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "Supprimer la bannière produit des commentaires";
+"row.nocommentbanner.desc" = "Masque la bannière de lien affilié / produit épinglée dans la feuille de commentaires.";

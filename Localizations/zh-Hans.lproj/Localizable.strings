@@ -246,3 +246,7 @@
 "row.plusmode.direct" = "直接挂钩";
 "row.plusmode.trial" = "试用";
 "footer.plusmode" = "“直接”立即开启功能。\n“试用”让应用模拟一个进行中的试用。";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "移除评论商品横幅";
+"row.nocommentbanner.desc" = "隐藏固定在评论面板中的联盟 / 商品链接横幅。";

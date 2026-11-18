@@ -247,3 +247,7 @@ ucuccd8나치게 밝은 HDR 대신 표준 범위로 표시합니다.";
 "row.plusmode.direct" = "직접 후크";
 "row.plusmode.trial" = "체험판";
 "footer.plusmode" = "직접은 기능을 즉시 켭니다.\n체험판은 앱이 활성 체험을 시뮬레이션하게 합니다.";
+
+/* Comment product banner */
+"row.nocommentbanner.title" = "댓글 상품 배너 제거";
+"row.nocommentbanner.desc" = "댓글 시트에 고정된 제휴 / 상품 링크 배너를 숨깁니다.";
