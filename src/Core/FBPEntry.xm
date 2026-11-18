@@ -25,7 +25,6 @@ extern void FBPInitReelsDownloader(void);
 extern void FBPInitLinkHooks(void);
 extern void FBPInitLinkBridge(void);
 extern void FBPInitCallBlocker(void);
-extern void FBPInitLanguagePackHooks(void);
 
 /// Not a hook installer: settles off the main thread whether this device can
 /// decode AV1, which decides whether the download picker may offer AV1 quality
@@ -66,7 +65,6 @@ static void FBPInstallHooks(void) {
     FBPInitLinkHooks();
     FBPInitLinkBridge();
     FBPInitCallBlocker();
-    FBPInitLanguagePackHooks();
 }
 
 /// dyld calls this for every image already loaded, then again for each new one.
