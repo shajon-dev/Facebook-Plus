@@ -6,15 +6,17 @@ name: Create Draft Release
 # What it does, in order:
 #   1. Read Version from ./control (e.g. 1.0.7 -> tag v1.0.7).
 #   2. Fail if a release for that version already exists.
-#   3. Build the tweak the same way CI does (Theos + build.py --no-ipa).
-#   4. Open a DRAFT release carrying the .deb package(s) and the
+#   3. Build the tweak the same way CI does (Theos + build.py --no-ipa), which
+#      produces every variant: rootless, rootfull and roothide .deb, plus the
+#      TrollFools zip.
+#   4. Open a DRAFT release carrying those packages, the TrollFools zip and the
 #      notification-bridge .dylib (when it builds), with GitHub's automatically
 #      generated release notes.
 #
 # You then review the draft and publish it as the main release yourself from the
 # GitHub UI. It attaches no .ipa, so it stays within .github/RELEASE-POLICY.md
-# (no .ipa on a published release); the .deb and .dylib are the tweak itself and
-# carry none of Facebook's code.
+# (no .ipa on a published release); the .deb packages, the TrollFools zip and the
+# .dylib are the tweak itself and carry none of Facebook's code.
 
 on:
   workflow_dispatch:
@@ -79,10 +81,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          # The installable package(s) — rootless and, when built, rootfull.
-          # The main tweak dylib (FacebookPlus.dylib) is deliberately NOT shipped
-          # loose: it already lives inside the .deb.
+          # The installable packages (rootless, rootfull, roothide) and the
+          # TrollFools zip (our dylib + bundle, no Facebook code). The main tweak
+          # dylib (FacebookPlus.dylib) is deliberately NOT shipped loose: it
+          # already lives inside the .deb.
           cp packages/Facebook-Plus-v*.deb dist/ 2>/dev/null || true
+          cp packages/Facebook-Plus-v*.zip dist/ 2>/dev/null || true
           # The notification-service bridge dylib, when it built.
           if [ -f FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib ]; then
             cp FBPNotifyBridge/src/.theos/obj/FBPNotifyBridge.dylib dist/FBPNotifyBridge.dylib

@@ -26,8 +26,15 @@ anyone who sideloads can build their own IPA in about fifteen minutes.
 |---|---|
 | `Facebook-Plus-v<version>-rootless.deb` | any `.ipa` |
 | `Facebook-Plus-v<version>-rootfull.deb` | any archive containing an `.ipa` |
-| `FBPNotifyBridge.dylib` | a link in the release notes to an `.ipa` hosted anywhere |
+| `Facebook-Plus-v<version>-roothide.deb` | a link in the release notes to an `.ipa` hosted anywhere |
+| `Facebook-Plus-v<version>-TrollFools.zip` (our dylib + bundle only) | |
+| `FBPNotifyBridge.dylib` | |
 | release notes, checksums | |
+
+The TrollFools zip carries only our own code (the compiled dylib and its
+resource bundle) for the TrollFools app to inject into a user's own Facebook. It
+contains no Facebook binary and no `.ipa`, so it is allowed; a zip that bundled
+an `.ipa` would not be.
 
 ## How it is enforced
 

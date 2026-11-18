@@ -4,8 +4,9 @@ name: Build Tweak (.deb)
 # the project's own build.py.
 #
 # CI ships no decrypted Facebook IPA (it cannot, for legal reasons), so build.py
-# is run with --no-ipa: it builds the .deb and skips the cyan injection step. The
-# check therefore verifies that the package compiles cleanly; injection tooling
+# is run with --no-ipa: it builds every packaging variant (rootless, rootfull and
+# roothide .deb, plus the TrollFools zip) and skips the cyan injection step. The
+# check therefore verifies that the packages compile cleanly; injection tooling
 # (cyan) is not needed here.
 
 on:
@@ -57,6 +58,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Facebook-Plus
-          path: packages/Facebook-Plus-v*.deb
+          path: |
+            packages/Facebook-Plus-v*.deb
+            packages/Facebook-Plus-v*.zip
           if-no-files-found: error
           retention-days: 30

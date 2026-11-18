@@ -193,9 +193,18 @@ class IconPlist:
 
 class TweakBuilder:
     # Per-scheme `make package` + the versioned rename to
-    # packages/Facebook-Plus-v<version>-<label>.deb. rootfull is theos's empty
-    # scheme.
-    SCHEME_VALUES: ClassVar[dict] = {"rootless": "rootless", "rootfull": ""}
+    # packages/Facebook-Plus-v<version>-<label>.deb. Each entry is
+    # (THEOS_PACKAGE_SCHEME, Architecture-override): rootfull is theos's empty
+    # scheme; roothide is the rootless layout (/var/jb) repackaged as arm64e,
+    # which roothide's package manager expects. (A roothide-native build would
+    # need roothide's own theos fork; this theos has no "roothide" scheme, so the
+    # arch relabel is the portable approximation, matching how comparable projects
+    # ship a roothide .deb.)
+    SCHEME_VALUES: ClassVar[dict] = {
+        "rootless": ("rootless", None),
+        "rootfull": ("", None),
+        "roothide": ("", "iphoneos-arm64e"),
+    }
 
     def __init__(self, paths, control, debug):
         self.paths = paths
@@ -211,24 +220,32 @@ class TweakBuilder:
         # fresh one is how the wrong file ends up signed and shipped. Scoped to
         # packages/ — the input IPA in test/ is never touched.
         self.paths.packages.mkdir(parents=True, exist_ok=True)
-        for pattern in ("*.deb", "*.dylib", "*.ipa"):
+        for pattern in ("*.deb", "*.dylib", "*.ipa", "*.zip"):
             for stale in self.paths.packages.glob(pattern):
                 stale.unlink()
 
     def build_scheme(self, label):
-        scheme = self.SCHEME_VALUES[label]
+        scheme, arch = self.SCHEME_VALUES[label]
         out = self.output_deb(label)
         env = self.paths.make_env(self.debug)
         Log.section()
-        Log.info("Building " + label + " (THEOS_PACKAGE_SCHEME='" + scheme + "')")
+        Log.info("Building " + label + " (THEOS_PACKAGE_SCHEME='" + scheme + "'" +
+                 (", Architecture=" + arch if arch else "") + ")")
         subprocess.run(["make", "clean"], cwd=str(self.paths.root), env=env, check=True, stdout=subprocess.DEVNULL)
         # Clear any previous raw theos output so the freshest build is unambiguous.
         for stale in self.paths.packages.glob(self.control.package_id + "_*.deb"):
             stale.unlink()
-        subprocess.run(
-            ["make", "package", "FINALPACKAGE=1", "THEOS_PACKAGE_SCHEME=" + scheme],
-            cwd=str(self.paths.root), env=env, check=True,
-        )
+
+        # roothide is the default (rootful) layout under an arm64e arch label, the
+        # same way comparable projects ship one. theos writes the package's
+        # Architecture from THEOS_PACKAGE_ARCH (makefiles/package/deb.mk), and a
+        # command-line value overrides what it would otherwise read from control,
+        # so no file is touched.
+        cmd = ["make", "package", "FINALPACKAGE=1", "THEOS_PACKAGE_SCHEME=" + scheme]
+        if arch:
+            cmd.append("THEOS_PACKAGE_ARCH=" + arch)
+        subprocess.run(cmd, cwd=str(self.paths.root), env=env, check=True)
+
         produced = sorted(self.paths.packages.glob(self.control.package_id + "_*.deb"),
                           key=lambda p: p.stat().st_mtime, reverse=True)
         if not produced:
@@ -237,6 +254,39 @@ class TweakBuilder:
             out.unlink()
         produced[0].replace(out)
         Log.info(label + ": " + str(out))
+        return out
+
+    def build_trollfools(self):
+        # The TrollFools variant is just our own code — the compiled dylib and the
+        # resource bundle — zipped for the TrollFools app to inject into a
+        # user's own installed Facebook. No Facebook binary is involved, so unlike
+        # the injected .ipa this is safe to publish. The substrate the dylib links
+        # (@rpath/CydiaSubstrate.framework) is NOT shipped: theos only carries a
+        # link-time .tbd stub, and TrollFools supplies ElleKit itself at inject
+        # time. App extensions (Safari, the NSE bridge) cannot ride along this way
+        # — they live in the app's PlugIns — so this variant is tweak-only.
+        obj = self.paths.root / ".theos" / "obj"
+        dylib = obj / "FacebookPlus.dylib"
+        bundle = obj / "FacebookPlus.bundle"
+        if not dylib.is_file() or not bundle.is_dir():
+            raise SystemExit("error: .theos/obj/FacebookPlus.{dylib,bundle} missing — "
+                             "build a scheme before the TrollFools zip.")
+        out = self.paths.packages / ("Facebook-Plus-v" + self.version + "-TrollFools.zip")
+        if out.exists():
+            out.unlink()
+        Log.section()
+        Log.info("Packaging TrollFools (dylib + bundle)")
+        with tempfile.TemporaryDirectory() as td:
+            staged = Path(td)
+            shutil.copy2(dylib, staged / "FacebookPlus.dylib")
+            shutil.copytree(bundle, staged / "FacebookPlus.bundle", symlinks=True)
+            # The `zip` CLI keeps the bundle's symlinks intact, which a naive
+            # zipfile walk would flatten.
+            subprocess.run(
+                ["zip", "-qry", "-X", str(out), "FacebookPlus.dylib", "FacebookPlus.bundle"],
+                cwd=str(staged), check=True,
+            )
+        Log.info("TrollFools: " + str(out))
         return out
 
     def build(self, labels):
@@ -923,7 +973,9 @@ class FacebookPlus:
         print("Options:")
         print("  --rootless    Build rootless package only")
         print("  --rootfull    Build rootfull package only")
-        print("  --all         Build both rootless and rootfull packages (default)")
+        print("  --roothide    Build roothide package only (rootless layout, arm64e arch)")
+        print("  --trollfools  Build the TrollFools zip only (dylib + bundle)")
+        print("  --all         Build every variant: rootless, rootfull, roothide and TrollFools (default)")
         print("  --debug       Build with FBP_DIAG=1 (the [FBPDIAG] os_log trace); v" + version + ", names unchanged")
         print("  --ipa         Inject the rootless .deb into test/com.facebook.Facebook.ipa with cyan")
         print("  --no-ipa      Build the .deb package(s) only (skip IPA injection)")
@@ -965,6 +1017,8 @@ class FacebookPlus:
     def run(self, argv):
         build_rootless = False
         build_rootfull = False
+        build_roothide = False
+        build_trollfools = False
         skip_ipa = False
         force_ipa = False
         debug = False
@@ -985,9 +1039,15 @@ class FacebookPlus:
                 build_rootless = True
             elif arg in ("--rootfull", "--rootful"):
                 build_rootfull = True
+            elif arg == "--roothide":
+                build_roothide = True
+            elif arg == "--trollfools":
+                build_trollfools = True
             elif arg == "--all":
                 build_rootless = True
                 build_rootfull = True
+                build_roothide = True
+                build_trollfools = True
             elif arg == "--no-ipa":
                 skip_ipa = True
             elif arg == "--ipa":
@@ -1044,14 +1104,16 @@ class FacebookPlus:
 
         # --install given ALONE (no build/ipa/debug flag): don't build — just
         # install what is already sitting in packages/.
-        if do_install and not (build_rootless or build_rootfull or force_ipa or debug):
+        if do_install and not (build_rootless or build_rootfull or build_roothide
+                               or build_trollfools or force_ipa or debug):
             if ssh:
                 return self.install_existing_ssh(ssh)
             return self.install_existing_usb(device_sel, drop_nse)
 
-        if not build_rootless and not build_rootfull:
-            build_rootless = True
-            build_rootfull = True
+        # Nothing chosen → build the full release set (all three .deb schemes and
+        # the TrollFools zip), the same set a release ships.
+        if not (build_rootless or build_rootfull or build_roothide or build_trollfools):
+            build_rootless = build_rootfull = build_roothide = build_trollfools = True
         # Injection and a USB install both need the rootless build.
         if (force_ipa or (do_install and not use_ssh)) and not build_rootless:
             build_rootless = True
@@ -1061,9 +1123,17 @@ class FacebookPlus:
             labels.append("rootless")
         if build_rootfull:
             labels.append("rootfull")
+        if build_roothide:
+            labels.append("roothide")
+        # The TrollFools zip is cut from the compiled .theos/obj a scheme leaves
+        # behind; if it is the only thing asked for, build rootless to produce it.
+        if build_trollfools and not labels:
+            labels.append("rootless")
 
         builder = TweakBuilder(self.paths, self.control, debug)
         builder.build(labels)
+        if build_trollfools:
+            builder.build_trollfools()
 
         injected = None
         # SSH installs the raw .deb, so the sideload IPA step is skipped for it
