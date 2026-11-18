@@ -140,13 +140,46 @@ static CGFloat FBPFontScale(void) {
     return scale;
 }
 
+/// Sizes we have already emitted as scaled. The comment composer reads back its
+/// text view's current (already-scaled) point size and asks us for a font at
+/// that size on every keystroke; without remembering what we scaled, the scale
+/// would compound — size -> size*S -> size*S^2 -> … — growing the text with each
+/// character typed (and continuing from the inflated value after a backspace).
+/// Keyed to 0.1pt so a float round-trip still matches, bounded so it cannot grow
+/// without limit, and reset when the user changes the scale. Only consulted when
+/// a scale is actually in effect (S != 1.0), so the default path is unchanged.
+///
+/// Edge case (cosmetic, never growth or a crash): a label whose design size
+/// happens to equal a size we previously emitted as scaled renders unscaled.
+static NSMutableSet<NSNumber *> *gFBPScaledSizes;
+static CGFloat gFBPScaledForScale = 1.0;
+static dispatch_once_t gFBPScaledOnce;
+
+static inline NSNumber *FBPScaledSizeKey(CGFloat s) { return @(llround(s * 10.0)); }
+
 /// Builds the replacement face at the requested size and weight. Guarded by the
 /// scope latch so the UIFont calls here are not themselves replaced.
 static UIFont *FBPReplacementFont(CGFloat size, UIFontWeight weight) {
     NSString *family = FBPSelectedFontFamily();
     if (!family || size <= 0) return nil;
 
-    size *= FBPFontScale();
+    CGFloat scale = FBPFontScale();
+    CGFloat outSize = size;
+    if (scale != 1.0) {
+        dispatch_once(&gFBPScaledOnce, ^{ gFBPScaledSizes = [NSMutableSet set]; });
+        @synchronized (gFBPScaledSizes) {
+            if (gFBPScaledForScale != scale) {   // scale changed — old sizes are stale
+                [gFBPScaledSizes removeAllObjects];
+                gFBPScaledForScale = scale;
+            }
+            if ([gFBPScaledSizes containsObject:FBPScaledSizeKey(size)]) {
+                outSize = size;                  // already scaled once — do not scale again
+            } else {
+                outSize = size * scale;
+                if (gFBPScaledSizes.count < 512) [gFBPScaledSizes addObject:FBPScaledSizeKey(outSize)];
+            }
+        }
+    }
 
     FBPSetFontScopeActive(YES);
     UIFontDescriptor *descriptor =
@@ -154,7 +187,7 @@ static UIFont *FBPReplacementFont(CGFloat size, UIFontWeight weight) {
             UIFontDescriptorFamilyAttribute : family,
             UIFontDescriptorTraitsAttribute : @{ UIFontWeightTrait : @(weight) },
         }];
-    UIFont *font = [UIFont fontWithDescriptor:descriptor size:size];
+    UIFont *font = [UIFont fontWithDescriptor:descriptor size:outSize];
     FBPSetFontScopeActive(NO);
     return font;
 }
