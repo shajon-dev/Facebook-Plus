@@ -53,20 +53,14 @@ static void FBPRefreshPlus(void) {
 // enum (an NSInteger under the hood); every type is granted while the toggle is
 // on, which is exactly "preview all Facebook Plus features".
 - (BOOL)isBenefitActiveWithBenefitType:(NSInteger)benefitType {
-    if (gPlusEnabled) {
-        FBPTraceFire("plus.FBSubsBenefitStatusChecker.isBenefitActiveWithBenefitType.granted");
-        return YES;
-    }
+    if (gPlusEnabled) return YES;
     return %orig;
 }
 
 // A second entry point present on the class in some builds; hooked defensively.
 // If a build does not implement it, Logos simply does not install this one.
 - (BOOL)isBenefitActive:(NSInteger)benefitType {
-    if (gPlusEnabled) {
-        FBPTraceFire("plus.FBSubsBenefitStatusChecker.isBenefitActive.granted");
-        return YES;
-    }
+    if (gPlusEnabled) return YES;
     return %orig;
 }
 
@@ -88,10 +82,7 @@ static void FBPRefreshPlus(void) {
 %hook FBSnacksSuperReactionFeatureAccessController
 
 - (BOOL)hasFeatureAccess {
-    if (gPlusEnabled) {
-        FBPTraceFire("plus.FBSnacksSuperReactionFeatureAccessController.hasFeatureAccess.granted");
-        return YES;
-    }
+    if (gPlusEnabled) return YES;
     return %orig;
 }
 
@@ -108,10 +99,7 @@ static void FBPRefreshPlus(void) {
 // account as mid-trial and reveals the reaction via its normal logic rather than
 // a forced gate. Plain BOOL, crash-safe.
 - (BOOL)_hasValidConfirmedTrialAccess {
-    if (gPlusEnabled && gPlusTrial) {
-        FBPTraceFire("plus.FBSnacksSuperReactionFeatureAccessController.validConfirmedTrialAccess.granted");
-        return YES;
-    }
+    if (gPlusEnabled && gPlusTrial) return YES;
     return %orig;
 }
 
@@ -135,10 +123,7 @@ static void FBPRefreshPlus(void) {
 %hook FBSnacksComposerController
 
 - (BOOL)_isSuperReactionAvailableForCurrentThreadWithBucketPreview:(id)preview {
-    if (gPlusEnabled && !gPlusTrial) {
-        FBPTraceFire("plus.FBSnacksComposerController.isSuperReactionAvailable.forced");
-        return YES;
-    }
+    if (gPlusEnabled && !gPlusTrial) return YES;
     return %orig;
 }
 
@@ -176,10 +161,7 @@ static void FBPRefreshPlus(void) {
 %hook FBPStoryExtendHelper
 
 + (BOOL)isBenefitActiveWithSession:(id)session {
-    if (gPlusEnabled) {
-        FBPTraceFire("plus.FBStoryExtendHelper.isBenefitActiveWithSession.granted");
-        return YES;
-    }
+    if (gPlusEnabled) return YES;
     return %orig;
 }
 
