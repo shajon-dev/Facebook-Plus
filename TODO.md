@@ -6,7 +6,17 @@ in **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**.
 
 **Feed & Content**
 - [x] Hide **ads on Facebook Marketplace**
-- [x] Hide **survey prompts** — the "Are you interested in this post / Reel?" cards, in the feed and on both Reels surfaces
+- [x] Hide **survey prompts** in the **feed** — the "Are you interested in this post?" card
+- [ ] Hide the same **survey card on Reels** — no longer possible on build 587
+  <details><summary>why</summary>
+
+  In 587 the Reels card is a pure C++ ComponentKit component (`FBShortsModernizedSMSLComponent`) built from a GraphQL sub-fragment of the Reel — no Objective-C class, factory or accessor to hook, and the old injection-manager / helper-gate path is dormant. The only chokepoint is the C++ build function via `MSHookFunction`, which crashes on a sideloaded build (see the note at the bottom). The feed card is still removed.
+  </details>
+- [ ] Hide the **"Suggested for you"** groups/pages rail in the **Marketplace** tab
+  <details><summary>why</summary>
+
+  It is a React Native / Relay surface (Hermes `MARKETPLACE_*_GYSJ_MODULE`), not a native feed unit — the native feed filter never sees it and there is no class or gate to hook. A fix would need a JS/Relay-layer patch, out of scope for a native tweak.
+  </details>
 
 **Downloads**
 - [x] **Multiple-quality** download picker for Reels & videos (choose resolution before saving)
@@ -33,6 +43,16 @@ next — is in [`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md).**
 **Navigation**
 - [ ] Option to hide the **Reels / Video tab** from the bottom tab bar
 - [ ] Remove the **"Also from Meta"** section from the left sidebar
+
+**Localization**
+- [ ] Fix Facebook's **"… wasn't downloaded"** language wall on sideloaded builds
+  <details><summary>why</summary>
+
+  Facebook resolves UI strings from a *downloaded* language pack while `FBCoreLocaleIsDownloadableLanguagePackEnabled()` is on, with no fall-through to the bundled `languages.lgpk` (which already carries every locale). Forcing that C gate off needs `MSHookFunction`, which crashes on sideload; `fishhook` is safe but misses the intra-framework caller. Works on a jailbroken install, not a plain sideload.
+  </details>
+
+> [!IMPORTANT]
+> On a **sideloaded (non-jailbroken)** build, inline C/C++ function hooking (`MSHookFunction`) is not possible — it patches code-signed pages, so the kernel kills the app (`CODESIGNING` / "Invalid Page"). Only Objective-C `%hook` and `fishhook` are safe; a fix whose only chokepoint is a C/C++ function (the two above) can't be shipped for sideload.
 
 > [!NOTE]
 > This list tracks intended work; items are unchecked until shipped in a release.
