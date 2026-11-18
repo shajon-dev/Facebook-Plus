@@ -237,6 +237,22 @@ static BOOL FBPOLEDSkip(UIView *view) {
     return [NSStringFromClass([view class]) hasPrefix:@"FBP"];
 }
 
+/// YES when this view is actually being shown in LIGHT appearance, whatever the
+/// app window is doing. Facebook renders some cards with their own
+/// overrideUserInterfaceStyle = Light (a link/preview card, a light-locked unit):
+/// a light background with dark text. OLED resolves every background against a
+/// forced-dark trait collection, so such a card's *dark-mode* colour is judged
+/// dark and the real (light) background gets blackened — leaving the dark text
+/// stranded on black, which is the "some posts turn black on re-entry" report.
+/// OLED is meant to be inert in light appearance, so a view shown light is left
+/// entirely alone (keeping its light background and its readable dark text).
+static BOOL FBPViewIsLight(UIView *view) {
+    if (@available(iOS 13.0, *)) {
+        return view.traitCollection.userInterfaceStyle == UIUserInterfaceStyleLight;
+    }
+    return NO;
+}
+
 #pragma mark - Black that keeps alpha
 
 /// Black that keeps the source colour's alpha. A translucent scrim — an alert's
@@ -689,6 +705,19 @@ static void FBPApplyView(UIView *view, BOOL active) {
         return;
     }
 
+    // A surface shown in LIGHT appearance (a light-locked card: light background,
+    // dark text) is left alone — blackening its background would strand the dark
+    // text on black. If it was darkened before it became light, put it back.
+    if (FBPViewIsLight(view)) {
+        if (FBPWasTouched(view)) {
+            FBPRestoreViewBG(view);
+            FBPRestoreLayerBG(view.layer);
+            FBPApplySublayers(view.layer, NO);
+            FBPClearTouched(view);
+        }
+        return;
+    }
+
     // Dividers are lightened, not blackened, so posts/rows stay visually separated.
     if (FBPViewLooksLikeDivider(view)) {
         FBPLightenDivider(view);
@@ -731,7 +760,7 @@ static void FBPApplyView(UIView *view, BOOL active) {
 /// app's own colour passes through and any stash is dropped, so a later relayout
 /// does not put the black-era colour back over a freshly repainted view.
 static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
-    if (FBPOLEDActive() && !FBPOLEDSkip(self)) {
+    if (FBPOLEDActive() && !FBPOLEDSkip(self) && !FBPViewIsLight(self)) {
         if (FBPColorIsDark(FBPResolve(color))) {
             FBPSaveViewBG(self, color);
             FBPMarkTouched(self);
@@ -753,7 +782,7 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 - (void)setBackgroundColor:(UIColor *)color {
     FBPTraceFire("oled.UIView.setBackgroundColor");
-    if (FBPOLEDActive() && !FBPOLEDSkip(self) &&
+    if (FBPOLEDActive() && !FBPOLEDSkip(self) && !FBPViewIsLight(self) &&
         [NSStringFromClass(self.class) containsString:@"LineComponent"]) {
         // A separator line keeps a faint white instead of vanishing into black.
         FBPSaveViewBG(self, color);
