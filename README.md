@@ -26,7 +26,7 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td nowrap rowspan="4">🎨 <b>Appearance</b></td><td>OLED dark mode (true black) that follows your iOS Light / Dark setting</td></tr>
+    <tr><td nowrap rowspan="4">🎨 <b>Appearance</b></td><td>OLED dark mode (true black) that follows your iOS Light / Dark setting, with an option to hide the post dividers for a fully black feed</td></tr>
     <tr><td>Disable HDR — show photos and video in standard range, not extra-bright HDR</td></tr>
     <tr><td>Alternate app icons</td></tr>
     <tr><td>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td></tr>
@@ -45,7 +45,7 @@
     <tr><td>Hide "People you may know", Group and Page suggestions</td></tr>
     <tr><td>Hide the Reels carousel, Threads promo and Stories tray</td></tr>
     <tr><td>Remove survey prompts ("Are you interested in this post?")</td></tr>
-    <tr><td>Remove the affiliate / product banner pinned in the comment sheet</td></tr>
+    <tr><td>Remove the affiliate / product banner, in the comment sheet and on the Reel itself</td></tr>
     <tr><td nowrap rowspan="2">🧭 <b>Links</b></td><td>Open external links in your default browser</td></tr>
     <tr><td>"Open in Facebook" Safari extension — reopens facebook.com links in the app, at the exact destination</td></tr>
     <tr><td nowrap rowspan="3">🎬 <b>Reels</b></td><td>Cinema mode — one tap hides the overlay and the tab bar</td></tr>
@@ -72,9 +72,12 @@
 
 Pick whichever matches your device:
 
-- **Jailbroken, or TrollStore** — install the `.deb` for your packaging scheme
-  (`rootless` or `rootfull`) from the **[Releases](../../releases)** section with
+- **Jailbroken** — install the `.deb` for your packaging scheme (`rootless`,
+  `rootfull` or `roothide`) from the **[Releases](../../releases)** section with
   Sileo, Zebra or `dpkg -i`. Nothing else is needed.
+- **TrollStore** — grab the **TrollFools** zip from Releases (the tweak dylib and
+  its resource bundle, with no Facebook code) and inject it into your own installed
+  Facebook with TrollFools.
 - **Sideloading (Feather, Ksing, AltStore, SideStore, …)** — you need an injected
   IPA, so build one from **your own** copy of Facebook with the GitHub Actions
   workflow below. It takes about fifteen minutes and needs no Mac.
@@ -141,19 +144,22 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
    ```
 
 3. **Automated Pipeline (`build.py`)**:
-   - Run `python3 build.py` to build **every packaging scheme**, or narrow it
-     with `--rootless` / `--rootfull`. See `python3 build.py --help` for the full
-     set of flags (`--ipa`, `--install`, `--ssh`, `--clean`, …).
+   - Run `python3 build.py` to build **every variant**, or narrow it with
+     `--rootless` / `--rootfull` / `--roothide` / `--trollfools`. See
+     `python3 build.py --help` for the full set of flags (`--ipa`, `--install`,
+     `--ssh`, `--clean`, …).
    - To also produce an injected `.ipa`, place a decrypted Facebook `.ipa` at
      `test/com.facebook.Facebook.ipa` before running.
 
    **What `build.py` does:**
-   - Builds one versioned `.deb` per scheme into `packages/`:
+   - Builds each variant into `packages/`:
 
-     | Scheme | Output |
+     | Variant | Output |
      |---|---|
      | `rootless` | `Facebook-Plus-v<version>-rootless.deb` |
      | `rootfull` | `Facebook-Plus-v<version>-rootfull.deb` |
+     | `roothide` | `Facebook-Plus-v<version>-roothide.deb` (rootless layout, arm64e) |
+     | `trollfools` | `Facebook-Plus-v<version>-TrollFools.zip` (dylib + bundle) |
 
    - If a decrypted `.ipa` is present, injects the **rootless** build into it with
      `cyan` and writes `packages/Facebook-Plus-v<facebook-version>-rootless.ipa`.
