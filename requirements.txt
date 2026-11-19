@@ -1,2 +1,3 @@
 pipx
 Pillow
+python-dotenv

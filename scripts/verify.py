@@ -32,6 +32,14 @@ import tempfile
 import time
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # python-dotenv is a local-dev convenience for loading .env; CI has neither
+    # the package nor a .env, so fall back to a no-op there.
+    def load_dotenv(*_args, **_kwargs):
+        return False
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 THEOS = os.environ.get("THEOS", os.path.expanduser("~/theos"))
 LOGOS = os.path.join(THEOS, "bin", "logos.pl")
@@ -1079,11 +1087,14 @@ class Verify:
         p.add_argument("--all", action="store_true", help="Run check + test (default when no group is given)")
         sub = p.add_subparsers(dest="group")
 
-        pd = sub.add_parser("device", help="On-device operations over SSH (USB via iproxy)")
+        pd = sub.add_parser("device", help="On-device operations over SSH (USB via iproxy, or --host over Wi-Fi)")
         pd.add_argument("--port", type=int, default=2222, help="Local iproxy port forwarded to device :22 (default: 2222)")
-        pd.add_argument("--key", default="~/.ssh/id_ed25519", help="SSH private key (default: ~/.ssh/id_ed25519)")
-        pd.add_argument("--host", "--ip", dest="host", help="SSH directly to this device IP over Wi-Fi (skips iproxy)")
-        pd.add_argument("--udid", help="Device UDID passed to iproxy -u / idevicesyslog -u")
+        pd.add_argument("--key", default=os.environ.get("SSH_KEY", "~/.ssh/id_ed25519"),
+                        help="SSH private key (default: $SSH_KEY from .env, else ~/.ssh/id_ed25519)")
+        pd.add_argument("--host", "--ip", dest="host", default=os.environ.get("SSH_HOST"),
+                        help="SSH directly to this device IP over Wi-Fi (default: $SSH_HOST from .env; skips iproxy)")
+        pd.add_argument("--udid", default=os.environ.get("JAILBROKEN_UUID"),
+                        help="Device UUID for iproxy -u / idevicesyslog -u (default: $JAILBROKEN_UUID from .env)")
         pd.add_argument("--rebuild", action="store_true", help="Always rebuild before installing")
         dsub = pd.add_subparsers(dest="device_action", required=True)
         pdi = dsub.add_parser("install", help="Push .deb, install with dpkg, verify and restart Facebook")
@@ -1126,6 +1137,7 @@ class Verify:
 
 
 def main():
+    load_dotenv(os.path.join(REPO_ROOT, ".env"))
     sys.exit(Verify(REPO_ROOT).run())
 
 

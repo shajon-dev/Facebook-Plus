@@ -39,6 +39,14 @@ import zipfile
 from pathlib import Path
 from typing import ClassVar
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # python-dotenv is a local-dev convenience for loading .env; CI has neither
+    # the package nor a .env, so fall back to a no-op there.
+    def load_dotenv(*_args, **_kwargs):
+        return False
+
 ROOT = str(Path(__file__).resolve().parent)
 
 # Simulator UUID, physical iPhone id, and the legacy 40-hex form.
@@ -861,9 +869,9 @@ class SSHInstaller:
     def __init__(self, paths, control, host="", port=2222, key="", udid="", no_restart=False):
         self.paths = paths
         self.control = control
-        self.host = host or os.environ.get("FBP_SSH_HOST", "")
+        self.host = host or os.environ.get("SSH_HOST", "")
         self.port = port
-        self.key = key or os.environ.get("FBP_SSH_KEY", "~/.ssh/id_ed25519")
+        self.key = key or os.environ.get("SSH_KEY", "~/.ssh/id_ed25519")
         self.udid = udid
         self.no_restart = no_restart
         self.iproxy = None
@@ -1002,8 +1010,13 @@ class FacebookPlus:
         print("  BUNDLE_ID            Override CFBundleIdentifier for the injected IPA")
         print("  NSE_BRIDGE           Set 0 to build the IPA without the NSE session bridge")
         print("  FBP_CERT_PASSWORD    Password for the signing .p12 (else test/certificate/password.txt, default '1')")
-        print("  FBP_SSH_HOST         Default device IP for --ssh (same as --host)")
-        print("  FBP_SSH_KEY          Default SSH private key for --ssh (same as --key)")
+        print("  SSH_HOST             Default device IP for --ssh (same as --host)")
+        print("  SSH_KEY              Default SSH private key for --ssh (same as --key)")
+        print("  JAILBROKEN_UUID      Default device for an SSH install when -u is omitted")
+        print("  SIDELOAD_UUID        Default device for a USB/IPA install when -u is omitted")
+        print()
+        print("  These are read from a .env file in the project root automatically")
+        print("  (copy .env.example to .env), so the flags above can be left off.")
 
     def clean(self):
         env = self.paths.make_env()
@@ -1099,6 +1112,12 @@ class FacebookPlus:
                 print("Run 'build.py --help' for usage.", file=sys.stderr)
                 return 1
             index += 1
+
+        # Fall back to the UUID in .env when none was given: the jailbroken
+        # device for an SSH install, the sideload device for a USB install.
+        if not device_sel:
+            device_sel = os.environ.get(
+                "JAILBROKEN_UUID" if use_ssh else "SIDELOAD_UUID", "")
 
         ssh = SSHInstaller(self.paths, self.control, host=ssh_host, port=ssh_port, key=ssh_key, udid=device_sel, no_restart=ssh_no_restart) if use_ssh else None
 
@@ -1231,4 +1250,5 @@ class FacebookPlus:
 
 
 if __name__ == "__main__":
+    load_dotenv(os.path.join(ROOT, ".env"))
     sys.exit(FacebookPlus().run(sys.argv[1:]))

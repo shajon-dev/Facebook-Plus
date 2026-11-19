@@ -76,6 +76,13 @@ draft/
 AGENT.md
 preview/
 # ---------------------------------------------------------------------------
+# Local device/build config
+#   .env carries this machine's device IPs, UDIDs and SSH key path — local only,
+#   never commit it. .env.example is the tracked, placeholder-only template.
+# ---------------------------------------------------------------------------
+.env
+
+# ---------------------------------------------------------------------------
 # OS cruft
 # ---------------------------------------------------------------------------
 .DS_Store
