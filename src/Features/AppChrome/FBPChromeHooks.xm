@@ -156,31 +156,59 @@ static void FBPInterceptSettingsButton(UIView *root) {
 
 #pragma mark - Top "facebook" wordmark
 
-/// The blue "facebook" wordmark in the top navigation bar. It renders as a
-/// UIImageView carrying the "…view selector" accessibility label (its normal tap
-/// opens Facebook's feed/view selector). Found by that label rather than a class
-/// name, so an app update degrades this one entry point instead of crashing.
-static UIImageView *FBPFindNavLogo(UIView *root) {
+/// Breadth-first search under @c root for the first view the block accepts,
+/// bounded so a layout pass never walks an unbounded tree.
+static UIView *FBPFirstViewWhere(UIView *root, BOOL (^test)(UIView *candidate)) {
     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
     NSInteger visited = 0;
-    while (queue.count && visited < 300) {
+    while (queue.count && visited < 600) {
         UIView *candidate = queue.firstObject;
         [queue removeObjectAtIndex:0];
         visited += 1;
-        if ([candidate isKindOfClass:UIImageView.class]) {
-            NSString *label = candidate.accessibilityLabel.lowercaseString;
-            if ([label containsString:@"view selector"]) {
-                return (UIImageView *)candidate;
-            }
-        }
+        if (test(candidate)) return candidate;
         [queue addObjectsFromArray:candidate.subviews];
     }
     return nil;
 }
 
-/// Long press on the "facebook" wordmark opens Facebook Plus settings. The
-/// wordmark's normal tap (the view selector) is left untouched: the long-press
-/// recognizer does not cancel touches, so a quick tap still reaches Facebook.
+/// Long press on the top "facebook" wordmark opens Facebook Plus settings.
+///
+/// Ground truth from the live app (observed with Frida on device):
+///   * The wordmark is a @c UIImageView whose @c accessibilityIdentifier is
+///     "facebook-wordmark" — a developer string Facebook does not translate — and
+///     whose @c accessibilityLabel is just "Facebook". It is NOT the "…view
+///     selector" element older versions searched for; that label does not exist
+///     on current builds, which is why matching it failed on every phone.
+///   * It is decorative: it has no tap action and sits userInteractionEnabled =
+///     NO, inside a ComponentKit top bar (CKComponentHostingView) under
+///     FBNavigationBar, wrapped by a plain UIView that does carry interaction.
+///
+/// So match the image view by its identifier and attach the gesture to its
+/// wrapping superview, which is already interactive and sized to the wordmark.
+/// ComponentKit re-mounts that subtree, so the search runs on every
+/// FBNavigationBar layout; FBPAttachSettingsGesture skips a view that already
+/// carries the gesture, and re-attaches to the fresh view after a re-mount.
+static void FBPAttachWordmarkGesture(UIView *bar) {
+    UIView *logo = FBPFirstViewWhere(bar, ^BOOL(UIView *candidate) {
+        return [candidate isKindOfClass:UIImageView.class] &&
+               [candidate.accessibilityIdentifier.lowercaseString
+                   containsString:@"wordmark"];
+    });
+    if (!logo) return;
+    // The image view is non-interactive; its wrapper carries touches and is sized
+    // to the wordmark. Fall back to the image view itself if it has no superview.
+    UIView *target = logo.superview ?: logo;
+    target.userInteractionEnabled = YES;
+    FBPAttachSettingsGesture(target);
+    static BOOL logged = NO;
+    if (!logged) {
+        logged = YES;
+        FBPTraceLine(@"wordmark attached · %@ · id=%@",
+                     NSStringFromClass(target.class),
+                     logo.accessibilityIdentifier ?: @"(nil)");
+    }
+}
+
 %group FBPNavLogo
 
 %hook FBNavigationBar
@@ -189,12 +217,9 @@ static UIImageView *FBPFindNavLogo(UIView *root) {
     FBPTraceFire("chrome.FBNavigationBar.layoutSubviews");
     %orig;
     // FBNavigationBar is not declared as a UIView subclass in the tweak's
-    // headers, so cast to reach the view-tree helpers.
-    UIImageView *logo = FBPFindNavLogo((UIView *)self);
-    if (logo) {
-        logo.userInteractionEnabled = YES;
-        FBPAttachSettingsGesture(logo);
-    }
+    // headers, so cast to reach the view-tree helpers. The hook also runs for the
+    // KVO subclass (NSKVONotifying_FBNavigationBar), the live instance on device.
+    FBPAttachWordmarkGesture((UIView *)self);
 }
 
 %end
@@ -274,7 +299,9 @@ void FBPInitChromeHooks(void) {
         FBP_ONCE(gAppDelegate) { %init(FBPAppDelegate); }
     }
 
-    // Long-press the top "facebook" wordmark to open Facebook Plus settings.
+    // Long-press the top "facebook" wordmark to open Facebook Plus settings. The
+    // wordmark is a ComponentKit image view inside FBNavigationBar, so re-scan on
+    // that bar's layout (it also fires for the NSKVONotifying_ KVO subclass).
     if (objc_getClass("FBNavigationBar")) {
         FBP_ONCE(gNavLogo) { %init(FBPNavLogo); }
     }
