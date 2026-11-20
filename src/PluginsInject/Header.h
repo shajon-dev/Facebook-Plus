@@ -64,6 +64,17 @@ extern BOOL createDirectoryIfNotExists(NSString *path);
 extern BOOL prepareDefaultsContainer(NSURL *container);
 extern NSURL *getAppGroupPathIfExists();
 
+// Does this signature really grant what Facebook is asking for? On a re-signed
+// build the answer is always no and the redirects below are the whole reason
+// this layer exists; on a jailbroken App Store install or a TrollStore install
+// the original entitlements are intact, and redirecting then moves Facebook's
+// session somewhere the notification extension never looks. See the comment
+// block in Paths.mm.
+extern BOOL fbpProcessHoldsAppGroup(NSString *group);
+extern BOOL fbpProcessHoldsKeychainGroup(NSString *group);
+extern BOOL fbpProcessHasOriginalEntitlements(void);
+extern BOOL fbpShouldLeaveAppGroupAlone(NSString *group);
+
 @interface LSBundleProxy: NSObject
 @property(nonatomic, assign, readonly) NSDictionary *entitlements;
 @property(nonatomic, assign, readonly) NSDictionary *groupContainerURLs;

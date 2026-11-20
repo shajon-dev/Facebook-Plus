@@ -22,6 +22,19 @@
 
 %hook NSFileManager
 - (NSURL *)containerURLForSecurityApplicationGroupIdentifier:(NSString *)groupIdentifier {
+	// A group this process really holds needs nothing from us, and redirecting
+	// it is destructive rather than merely pointless: on a jailbroken App Store
+	// install or a TrollStore install Facebook's own groups are intact, the
+	// notification extension carries no tweak and reads the real container, and
+	// moving the app's side of it writes the session where the extension never
+	// looks. The Documents fallback below makes that worse, because
+	// getAppGroupPathIfExists() skips Meta-owned ids and so returns nil exactly
+	// on those installs.
+	if (fbpShouldLeaveAppGroupAlone(groupIdentifier)) {
+		PILog(@"app group '%@' is held by this signature — leaving it alone", groupIdentifier);
+		return %orig;
+	}
+
 	if (NSURL *ourAppGroupURL = getAppGroupPathIfExists()) {
 		NSURL *fakeAppGroupURL = [ourAppGroupURL URLByAppendingPathComponent:groupIdentifier];
 		createDirectoryIfNotExists(fakeAppGroupURL.path);
@@ -39,6 +52,13 @@
 %hook NSUserDefaults
 - (id)_initWithSuiteName:(NSString *)suiteName container:(NSURL *)container {
 	PILog(@"hooking NSUserDefaults init...");
+
+	// Same rule as the container redirect above: a group suite this process is
+	// entitled to already resolves to the directory both processes share.
+	if (fbpShouldLeaveAppGroupAlone(suiteName)) {
+		PILog(@"suite '%@' is held by this signature — leaving it alone", suiteName);
+		return %orig(suiteName, container);
+	}
 
 	NSURL *appGroupURL = getAppGroupPathIfExists();
 	if (!appGroupURL) {

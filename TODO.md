@@ -28,8 +28,13 @@ in **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**.
 - [x] **Messenger messages and calls** — carried end to end by
       **[`FBPNotifyBridge`](FBPNotifyBridge/README.md)**, the session bridge
       injected into `NotificationServiceExtension.appex`
+- [x] **Jailbroken / TrollStore installs** — the sideload compatibility layer
+      no longer runs where Facebook's own entitlements are intact. It used to
+      redirect the real App-Group container into `Documents/`, which broke
+      notifications on an App Store Facebook purely by installing the `.deb`
 - [ ] **Likes, comments, replies, tags, mentions, friend requests** — still
-      generic, or no banner at all. The bridge is not what is failing here
+      generic, or no banner at all, **on a re-signed (sideloaded) build**. The
+      bridge is not what is failing here
 
 Facebook expands a push along two different paths. Messenger's carries real
 alert text, so iOS launches the extension and the bridge serves it. The rest

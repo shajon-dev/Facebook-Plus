@@ -112,6 +112,16 @@ __attribute__((constructor)) static void PluginsInjectInit() {
 
 	bundleId = [[NSBundle mainBundle] bundleIdentifier];
 
+	// Settle this before the rebinds are installed. The SecItem shims consult
+	// it on every call, and it reads the entitlements through LSBundleProxy —
+	// an XPC round trip to lsd, which is not something to start from inside a
+	// keychain call. Warmed here it is a cached load from then on.
+	//
+	// It also decides whether this layer does anything at all: on a jailbroken
+	// App Store install or a TrollStore install Facebook's own entitlements are
+	// intact and every redirect here is destructive.
+	__attribute__((unused)) BOOL original = fbpProcessHasOriginalEntitlements();
+
 	// Must come first: the access-group probe calls the *original* SecItem*
 	// functions, which only exist once the rebinds have been installed.
 	rebindSecFuncs();

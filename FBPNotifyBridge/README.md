@@ -234,10 +234,32 @@ APNs key belonging to the team that owns that App ID. A signing `.p12` is not an
 APNs credential, and `NEAppPushProvider` needs an `app-push-provider`
 entitlement that sideloading profiles do not grant.
 
-**TrollStore installs are unaffected by any of this.** They keep the original
-entitlements, so Facebook's real App Groups, its keychain group *and* the
-filtering entitlement are all intact, and notifications work with no bridge
-involvement.
+**An original-entitlements install needs none of this — and used to be broken
+by it.** A TrollStore install, and the `.deb` injected into an App Store
+Facebook on a jailbroken device, keep Facebook's real App Groups, its keychain
+group *and* the filtering entitlement, so the whole pipeline works natively.
+Until 2026-11-21 this layer ran there anyway and destroyed it:
+`getAppGroupPathIfExists` deliberately skips Meta-owned group ids when choosing
+somewhere to redirect *into*, so on those installs it found no candidate,
+returned nil, and the container hook fell through to its
+`Documents/<group id>` fallback — the app wrote its session and its Msys store
+into its own Documents while the extension, carrying no tweak at all on a
+jailbroken install, read the real container. Reported from a device: notifications
+broke on a jailbroken App Store Facebook purely by installing the `.deb`.
+
+The redirects now ask a separate question first — *does this process actually
+hold the entitlement it is asking about?* — rather than inferring it from
+whether a redirect target exists. `fbpProcessHoldsAppGroup`,
+`fbpProcessHoldsKeychainGroup` and `fbpProcessHasOriginalEntitlements` in
+`Paths.mm` read the live entitlements through `LSBundleProxy`; a group the
+signature holds is handed to the original implementation untouched, and
+Facebook's own app group standing in the list stands the whole layer down. The
+keychain rule gained the same correction: it compared a requested group against
+the *one* group the probe resolved, so on an install holding several of Meta's
+groups every one but the probed default was pinned away from a query that would
+have succeeded — the stated rule ("never move a query that already asks for one
+it can") now actually checks the entitlement. Keychain wildcards are expanded,
+so `T84QZS65DQ.*` covers `T84QZS65DQ.platformFamily`.
 
 ## What has already been ruled out
 

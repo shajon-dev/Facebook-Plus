@@ -276,6 +276,13 @@ static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query, BOOL 
 	if (!gKeychainRebindEnabled) return FBPAccessGroupLeave;
 	if (![query isKindOfClass:NSDictionary.class]) return FBPAccessGroupLeave;
 
+	// Facebook's own entitlements are intact — a jailbroken App Store install,
+	// or TrollStore. Every group it asks for is one it holds, so the whole
+	// rewrite stands down. Resolved and cached in the constructor, before any
+	// shim is reachable, so this costs a load and never calls out to lsd from
+	// inside a keychain call.
+	if (fbpProcessHasOriginalEntitlements()) return FBPAccessGroupLeave;
+
 	id group = query[(__bridge NSString *)kSecAttrAccessGroup];
 
 	// Present but not a usable group name: leave it as it
@@ -289,6 +296,15 @@ static FBPAccessGroupAction accessGroupActionForQuery(NSDictionary *query, BOOL 
 
 		// A system or auth framework asking for a group it is entitled to.
 		if ([requested hasPrefix:@"com.apple."]) return FBPAccessGroupLeave;
+
+		// A group this process is actually granted — by an exact entry or by a
+		// "<TeamID>.*" wildcard. The probe resolves ONE group, so comparing
+		// against it alone is not the stated rule ("never move a query that
+		// already asks for one it can"): a jailbroken App Store install holds
+		// several of Facebook's own groups, and every one of them except the
+		// probed default was being pinned away from a query that would have
+		// succeeded. Checking the entitlement is the real test.
+		if (fbpProcessHoldsKeychainGroup(requested)) return FBPAccessGroupLeave;
 
 		NSString *ours = fbpResolvedAccessGroup();
 

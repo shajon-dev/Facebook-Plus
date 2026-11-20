@@ -58,6 +58,15 @@
 // SideloadFix.xm: never defers to the original, because the original returns nil
 // for a group this build does not hold.
 - (NSURL *)fbp_containerURLForSecurityApplicationGroupIdentifier:(NSString *)groupIdentifier {
+	// Mirrors the gate in SideloadFix.xm. This dylib is injected into the appex
+	// of the shipped IPA, which TrollStore installs with Facebook's original
+	// entitlements — there the real container exists and is shared with the
+	// app, so the redirect would break the one thing it exists to fix.
+	if (fbpShouldLeaveAppGroupAlone(groupIdentifier)) {
+		FBPDiagLog(@"containerURL for %@ -> original (group is held)", groupIdentifier);
+		return [self fbp_containerURLForSecurityApplicationGroupIdentifier:groupIdentifier];
+	}
+
 	if (NSURL *ourAppGroupURL = getAppGroupPathIfExists()) {
 		NSURL *fakeAppGroupURL = [ourAppGroupURL URLByAppendingPathComponent:groupIdentifier];
 		createDirectoryIfNotExists(fakeAppGroupURL.path);
@@ -96,6 +105,12 @@
 // implementation, so calling it on self is the %orig equivalent.
 - (instancetype)initFBPWithSuiteName:(NSString *)suiteName container:(NSURL *)container {
 	PILog(@"hooking NSUserDefaults init...");
+
+	// Mirrors the gate in SideloadFix.xm — see the container method above.
+	if (fbpShouldLeaveAppGroupAlone(suiteName)) {
+		FBPDiagLog(@"defaults suite %@ -> original (group is held)", suiteName);
+		return [self initFBPWithSuiteName:suiteName container:container];
+	}
 
 	NSURL *appGroupURL = getAppGroupPathIfExists();
 	if (!appGroupURL) {
