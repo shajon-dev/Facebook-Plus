@@ -701,9 +701,10 @@ static BOOL FBPRowGatesOtherRows(NSString *key) {
 
 #pragma mark - Category definitions
 
-/// The categories; each has a title, summary, menu glyph, and the grouped
-/// sections shown on its own page.
-static NSArray<NSDictionary *> *FBPCategories(void) {
+/// The categories as written: each has a title, summary, menu glyph, and the
+/// grouped sections shown on its own page. Read through FBPCategories(), which
+/// decides the order they are shown in.
+static NSArray<NSDictionary *> *FBPCategoryCatalog(void) {
     return @[
         @{ kRowTitle : FBPL(@"cat.ads.title"), kRowDesc : FBPL(@"cat.ads.summary"),
            kRowIcon : @"ads", kRowCategory : @[
@@ -830,6 +831,28 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             ]),
         ]},
     ];
+}
+
+/// The categories in the order the menu shows them: alphabetical by the title
+/// the user is actually reading, rather than the order they happen to be
+/// written in above.
+///
+/// Sorted here and not by reordering the catalog, because the catalog is
+/// written in the order the features were built and the titles are translated:
+/// A to Z in English is not A to Z in Arabic or Japanese, so the order has to
+/// be decided after the strings are resolved. -localizedStandardCompare: is the
+/// comparison the Finder sorts filenames with, which is the one that treats
+/// case, accents and digits the way the current language expects.
+///
+/// Nothing depends on the position: a pushed page is matched back to its
+/// category by glyph (see -reloadCurrentCategory), never by index.
+static NSArray<NSDictionary *> *FBPCategories(void) {
+    return [FBPCategoryCatalog() sortedArrayUsingComparator:
+        ^NSComparisonResult(NSDictionary *first, NSDictionary *second) {
+        NSString *left = first[kRowTitle];
+        NSString *right = second[kRowTitle];
+        return [left localizedStandardCompare:right];
+    }];
 }
 
 #pragma mark - Category detail page
