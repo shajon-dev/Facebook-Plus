@@ -52,6 +52,11 @@
 "row.oled.title" = "الوضع الداكن OLED";
 "row.oleddividers.title" = "إظهار فواصل المنشورات";
 "row.oleddividers.desc" = "يُبقي الخطوط الخفيفة بين المنشورات في وضع OLED. أوقِفها للحصول على خلاصة سوداء بالكامل.";
+
+"cat.sidebar.title" = "القائمة الجانبية";
+"cat.sidebar.summary" = "ترتيب قائمة الاختصارات";
+"row.hidesidebarupgrades.title" = "إخفاء «الترقيات»";
+"row.hidesidebaralsometa.title" = "إخفاء «أيضًا من Meta»";
 "row.disablehdr.title" = "تعطيل HDR";
 "row.disablehdr.desc" = "يعرض الصور والفيديوهات بالنطاق القياسي بدل HDR الساطع.";
 "row.oled.desc" = "يجعل التطبيق بأكمله أسود بالكامل.";

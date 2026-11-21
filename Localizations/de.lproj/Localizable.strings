@@ -52,6 +52,11 @@
 "row.oled.title" = "OLED-Dunkelmodus";
 "row.oleddividers.title" = "Beitragstrennlinien anzeigen";
 "row.oleddividers.desc" = "Behält die feinen Linien zwischen Beiträgen im OLED-Modus. Aus für einen komplett schwarzen Feed.";
+
+"cat.sidebar.title" = "Seitenmenü";
+"cat.sidebar.summary" = "Das linke Menü aufräumen";
+"row.hidesidebarupgrades.title" = "„Upgrades“ ausblenden";
+"row.hidesidebaralsometa.title" = "„Auch von Meta“ ausblenden";
 "row.disablehdr.title" = "HDR deaktivieren";
 "row.disablehdr.desc" = "Zeigt Fotos und Videos im Standardbereich statt in extra hellem HDR.";
 "row.oled.desc" = "Macht die gesamte App komplett schwarz.";

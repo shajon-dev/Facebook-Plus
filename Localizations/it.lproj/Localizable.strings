@@ -52,6 +52,11 @@
 "row.oled.title" = "Modalità scura OLED";
 "row.oleddividers.title" = "Mostra separatori dei post";
 "row.oleddividers.desc" = "Mantiene le linee sottili tra i post in modalità OLED. Disattiva per un feed completamente nero.";
+
+"cat.sidebar.title" = "Menu laterale";
+"cat.sidebar.summary" = "Riordina il menu a sinistra";
+"row.hidesidebarupgrades.title" = "Nascondi «Upgrade»";
+"row.hidesidebaralsometa.title" = "Nascondi «Anche da Meta»";
 "row.disablehdr.title" = "Disattiva HDR";
 "row.disablehdr.desc" = "Mostra foto e video in gamma standard invece dell'HDR molto luminoso.";
 "row.oled.desc" = "Rende tutta l’app completamente nera.";

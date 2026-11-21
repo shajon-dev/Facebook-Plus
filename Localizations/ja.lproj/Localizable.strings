@@ -52,6 +52,11 @@
 "row.oled.title" = "OLED ダークモード";
 "row.oleddividers.title" = "投稿の区切り線を表示";
 "row.oleddividers.desc" = "OLEDモードで投稿間の薄い線を残します。オフにするとフィード全体が黒になります。";
+
+"cat.sidebar.title" = "サイドメニュー";
+"cat.sidebar.summary" = "左のメニューを整える";
+"row.hidesidebarupgrades.title" = "「アップグレード」を非表示";
+"row.hidesidebaralsometa.title" = "「Meta のその他」を非表示";
 "row.disablehdr.title" = "HDR を無効化";
 "row.disablehdr.desc" = "写真や動画を明るすぎる HDR ではなく標準範囲で表示します。";
 "row.oled.desc" = "アプリ全体を真っ黒にします。";

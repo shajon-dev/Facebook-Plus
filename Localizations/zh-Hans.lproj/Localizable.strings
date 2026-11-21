@@ -52,6 +52,11 @@
 "row.oled.title" = "OLED 深色模式";
 "row.oleddividers.title" = "显示帖子分隔线";
 "row.oleddividers.desc" = "在 OLED 模式下保留帖子之间的浅色分隔线。关闭则整个信息流全黑。";
+
+"cat.sidebar.title" = "侧边菜单";
+"cat.sidebar.summary" = "整理左侧菜单";
+"row.hidesidebarupgrades.title" = "隐藏“升级”";
+"row.hidesidebaralsometa.title" = "隐藏“Meta 旗下其他应用”";
 "row.disablehdr.title" = "关闭 HDR";
 "row.disablehdr.desc" = "以标准范围显示照片和视频，而非过亮的 HDR。";
 "row.oled.desc" = "将整个应用变为纯黑。";
