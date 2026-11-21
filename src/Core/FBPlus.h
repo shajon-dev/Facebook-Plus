@@ -97,6 +97,8 @@ extern NSString *const FBPKeyFeedLike;          // Confirm every like (feed + Re
 // Appearance
 extern NSString *const FBPKeyOLED;              // True-black background in dark mode
 extern NSString *const FBPKeyOLEDDividers;      // Show the faint post separators in OLED mode (off = fully black feed)
+extern NSString *const FBPKeyHideSidebarUpgrades;     // Hide the "Upgrades" row in the left menu
+extern NSString *const FBPKeyHideSidebarAlsoFromMeta; // Hide the "Also from Meta" row in the left menu
 extern NSString *const FBPKeyDisableHDR;        // Force SDR rendering (clamp HDR photos and video)
 extern NSString *const FBPKeyFont;              // Chosen UI font family ("" / unset = original)
 extern NSString *const FBPKeyFontScale;         // Custom-font size multiplier ("" / unset = 1.0)

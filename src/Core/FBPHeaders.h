@@ -153,4 +153,28 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBNewsFeedCollectionView : UICollectionView
 @end
 
+#pragma mark - Left menu (ComponentKit rendering)
+
+/// The chain a side-menu row's model is read through. The ComponentKit list
+/// keeps one immutable model per index path, which is what tells its rows apart:
+/// a cell is reused and can still carry the previous row's content.
+///
+///   UICollectionView.dataSource  FBComponentCollectionViewDataSource
+///     -dataSourceState           CKDataSourceState
+///     -objectAtIndexPath:        CKDataSourceItem
+///     -model                     FBSectionComponentDataSourceModel
+///     -model                     FBBookmarkDropdownButtonModel (a menu section)
+///     -identifier                e.g. "dropdown_section_name-upsell"
+///
+/// The identifiers are developer strings Facebook does not translate, so they
+/// hold in every language. The log-out row is an FBBookmarkModel and the rules
+/// between rows are _FBBookmarksSeparatorModel, so neither can be mistaken for
+/// a section.
+@interface FBPBookmarksModelChain : NSObject
+- (nullable id)dataSourceState;
+- (nullable id)objectAtIndexPath:(NSIndexPath *)indexPath;
+- (nullable id)model;
+- (nullable NSString *)identifier;
+@end
+
 NS_ASSUME_NONNULL_END
