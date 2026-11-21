@@ -10,15 +10,19 @@
 //           plain UICollectionView on FBBookmarksMasonryGridCollectionViewLayout,
 //           rows are FBComponentHostingCollectionViewCell.
 //
-// Both are handled. A Bloks cell sizes itself, so a hidden row collapses itself
-// to zero height there. A cell in the CK list cannot — that layout reports
-// estimatedItemSize zero — so a hidden row is taken out of the layout instead,
-// along with the hairline drawn at its top, and everything below it moves up.
+// The tweak's own row is added to both. Hiding a row is done in the CK menu
+// only: a hidden row is taken out of the layout, along with the hairline drawn
+// at its top, and everything below it moves up. A row there is identified by
+// its model rather than by its cell, because FBBookmarkDropdownButtonModel.identifier
+// names each section in a string Facebook does not translate while a reused
+// cell can still carry the previous row's content. See FBPBookmarksModelChain
+// in FBPHeaders.h.
 //
-// In the CK menu a row is identified by its model, not by its cell:
-// FBBookmarkDropdownButtonModel.identifier names each section in a string
-// Facebook does not translate, while a reused cell can still carry the previous
-// row's content. See FBPBookmarksModelChain in FBPHeaders.h.
+// The Bloks menu carries no such identifier, and the only per-row signal there
+// was the accessibility label of the cell's Bloks content, which meant matching
+// the English words "Upgrades" and "Also from Meta" and missing both in every
+// other language. That is gone: the hide switches act on the CK menu and leave
+// the Bloks one as Facebook draws it.
 //
 // Neither list's model is touched. The tweak's row is a plain UIControl added as
 // a subview of the list, and the space for it is opened in the layout: it
@@ -33,31 +37,6 @@
 #import "FBPSettingsController.h"
 
 #import <objc/runtime.h>
-
-// YES when @c cell is one of the side-menu rows the user has chosen to hide.
-// Matches the row by the accessibility label Facebook puts on its Bloks content
-// ("Upgrades", "Also from Meta"), which is the only stable per-row signal.
-static BOOL FBPSidebarCellShouldHide(UIView *cell) {
-    BOOL hideUpgrades = FBPEnabled(FBPKeyHideSidebarUpgrades);
-    BOOL hideAlsoMeta = FBPEnabled(FBPKeyHideSidebarAlsoFromMeta);
-    if (!hideUpgrades && !hideAlsoMeta) return NO;
-
-    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:cell];
-    NSInteger visited = 0;
-    while (queue.count && visited < 400) {
-        UIView *view = queue.firstObject;
-        [queue removeObjectAtIndex:0];
-        visited += 1;
-        NSString *label = view.accessibilityLabel.lowercaseString;
-        if (label.length) {
-            if (hideUpgrades && [label containsString:@"upgrades"]) return YES;
-            if (hideAlsoMeta && [label containsString:@"also from meta"]) return YES;
-        }
-        [queue addObjectsFromArray:view.subviews];
-    }
-    return NO;
-}
-
 
 #pragma mark - Facebook Plus row
 
@@ -385,29 +364,59 @@ static NSUInteger FBPSidebarHideMask(void) {
     return mask;
 }
 
-/// The identifier Facebook gives the menu section at @c indexPath, or nil when
-/// that row is not one of its dropdown sections.
+/// What kind of row sits at @c indexPath.
+///
+/// Only two kinds need naming, because only two of them bound a section. Read
+/// off a live menu, the list serves: BKModel for the profile block at the top,
+/// FBBookmarksSettingsItemModel for each shortcut, _FBBookmarksFDSButtonModel
+/// for "See more", _FBBookmarksSeparatorModel for the rules, one
+/// FBBookmarkDropdownButtonModel per collapsible section, and a single
+/// FBBookmarkModel at the very bottom, which is log out.
+typedef NS_ENUM(NSUInteger, FBPSidebarRowKind) {
+    /// Anything else: a shortcut, a rule, a promo card, an app row. Which
+    /// section it belongs to, if any, is decided by what came before it.
+    FBPSidebarRowOther = 0,
+    /// A collapsible section's own header. @c identifier names which one.
+    FBPSidebarRowSection,
+    /// A plain bookmark, which in this menu means the log-out row. It is the
+    /// one row known to come after every section, so it ends the last one.
+    FBPSidebarRowBookmark,
+};
+
+/// Classifies the row at @c indexPath and, for a section header, hands back the
+/// identifier Facebook gives it.
 ///
 /// Read from the data source's model, never from the cell — see
 /// FBPBookmarksModelChain for the chain and for why the cell cannot be trusted.
-static NSString *FBPSidebarRowIdentifier(UICollectionView *list, NSIndexPath *indexPath) {
-    Class dropdown = objc_getClass("FBBookmarkDropdownButtonModel");
-    if (!dropdown) return nil;
+static FBPSidebarRowKind FBPSidebarRowKindAt(UICollectionView *list,
+                                             NSIndexPath *indexPath,
+                                             NSString **identifier) {
+    if (identifier) *identifier = nil;
 
     FBPBookmarksModelChain *source = (FBPBookmarksModelChain *)list.dataSource;
-    if (![source respondsToSelector:@selector(dataSourceState)]) return nil;
+    if (![source respondsToSelector:@selector(dataSourceState)]) return FBPSidebarRowOther;
     FBPBookmarksModelChain *state = [source dataSourceState];
-    if (![state respondsToSelector:@selector(objectAtIndexPath:)]) return nil;
+    if (![state respondsToSelector:@selector(objectAtIndexPath:)]) return FBPSidebarRowOther;
     FBPBookmarksModelChain *item = [state objectAtIndexPath:indexPath];
-    if (![item respondsToSelector:@selector(model)]) return nil;
+    if (![item respondsToSelector:@selector(model)]) return FBPSidebarRowOther;
     FBPBookmarksModelChain *wrapper = [item model];
-    if (![wrapper respondsToSelector:@selector(model)]) return nil;
+    if (![wrapper respondsToSelector:@selector(model)]) return FBPSidebarRowOther;
     FBPBookmarksModelChain *model = [wrapper model];
-    if (![model isKindOfClass:dropdown]) return nil;
-    if (![model respondsToSelector:@selector(identifier)]) return nil;
+    if (!model) return FBPSidebarRowOther;
 
-    NSString *identifier = [model identifier];
-    return [identifier isKindOfClass:NSString.class] ? identifier : nil;
+    Class dropdown = objc_getClass("FBBookmarkDropdownButtonModel");
+    if (dropdown && [model isKindOfClass:dropdown]) {
+        if (identifier && [model respondsToSelector:@selector(identifier)]) {
+            NSString *name = [model identifier];
+            if ([name isKindOfClass:NSString.class]) *identifier = name;
+        }
+        return FBPSidebarRowSection;
+    }
+
+    Class bookmark = objc_getClass("FBBookmarkModel");
+    if (bookmark && [model isKindOfClass:bookmark]) return FBPSidebarRowBookmark;
+
+    return FBPSidebarRowOther;
 }
 
 static BOOL FBPSidebarIdentifierIsHidden(NSString *identifier, NSUInteger mask) {
@@ -480,17 +489,63 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
     CGFloat collapsed = 0.0;
     CGFloat anchor = -1.0;
 
-    for (UICollectionViewLayoutAttributes *attributes in items) {
+    // In document order. The walk below carries a running state down the list,
+    // and layoutAttributesForElementsInRect: promises no order at all.
+    NSArray<UICollectionViewLayoutAttributes *> *ordered =
+        [items sortedArrayUsingComparator:^NSComparisonResult(UICollectionViewLayoutAttributes *a,
+                                                              UICollectionViewLayoutAttributes *b) {
+        CGFloat left = CGRectGetMinY(a.frame), right = CGRectGetMinY(b.frame);
+        if (left < right) return NSOrderedAscending;
+        if (left > right) return NSOrderedDescending;
+        return NSOrderedSame;
+    }];
+
+    // A section is its header AND the rows under it, so both go.
+    //
+    // Cutting the header alone was enough for as long as the sections were
+    // shut, which is how they come on a small screen. Open one and Facebook
+    // puts its contents in the list as rows of their own: on an iPhone 16 Pro
+    // Max with "Also from Meta" open, hiding the header left the Meta Verified
+    // card and the Meta AI, Edits, Threads, Instagram and WhatsApp rows behind,
+    // with no heading above them.
+    //
+    // Nothing on those rows says which section they belong to, so position
+    // decides it: a section runs from its header to the next header, or to the
+    // log-out row, and everything in between goes with it. The rules in between
+    // go too, which is what keeps two of them from meeting where the section
+    // used to be. A shut section has nothing in between, so this still cuts the
+    // header alone and the menu looks exactly as it did.
+    //
+    // Collapsing the section instead, by answering NO from
+    // FBBookmarkDropdownButtonModel.isExpanded, does not work: the contents are
+    // already in the data source and that flag does not put them there.
+    BOOL insideHidden = NO;
+    for (UICollectionViewLayoutAttributes *attributes in ordered) {
         if (attributes.representedElementCategory != UICollectionElementCategoryCell) continue;
         CGFloat height = CGRectGetHeight(attributes.frame);
         CGFloat top = CGRectGetMinY(attributes.frame);
         if (height >= kFBPSidebarMinRowHeight && top > anchor) anchor = top;
-        if (height <= kFBPSidebarRuleMaxHeight || !list) continue;
-        if (!FBPSidebarIdentifierIsHidden(FBPSidebarRowIdentifier(list, attributes.indexPath), mask)) {
-            continue;
+        if (!list) continue;
+
+        BOOL isRule = height <= kFBPSidebarRuleMaxHeight;
+        if (!isRule) {
+            NSString *identifier = nil;
+            switch (FBPSidebarRowKindAt(list, attributes.indexPath, &identifier)) {
+                case FBPSidebarRowSection:
+                    insideHidden = FBPSidebarIdentifierIsHidden(identifier, mask);
+                    break;
+                case FBPSidebarRowBookmark:
+                    // The log-out row: past the last section.
+                    insideHidden = NO;
+                    break;
+                case FBPSidebarRowOther:
+                    break;
+            }
         }
+        if (!insideHidden || height <= 0.0) continue;
+
         [cuts addObject:[NSValue valueWithCGPoint:CGPointMake(top, height)]];
-        [cutTops addObject:@(top)];
+        if (!isRule) [cutTops addObject:@(top)];
         collapsed += height;
     }
 
@@ -501,6 +556,14 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
         CGFloat height = CGRectGetHeight(attributes.frame);
         if (height <= 0.0 || height > kFBPSidebarRuleMaxHeight) continue;
         CGFloat top = CGRectGetMinY(attributes.frame);
+        // A rule inside a hidden section was taken by the walk above. Counting
+        // it again here would subtract its height from the content size twice
+        // and pull everything below the section up too far.
+        BOOL already = NO;
+        for (NSValue *cut in cuts) {
+            if (fabs(cut.CGPointValue.x - top) < 0.5) { already = YES; break; }
+        }
+        if (already) continue;
         for (NSNumber *cutTop in cutTops) {
             if (fabs(top - cutTop.doubleValue) > kFBPSidebarRuleMaxHeight) continue;
             [cuts addObject:[NSValue valueWithCGPoint:CGPointMake(top, height)]];
@@ -725,24 +788,6 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
 
 %group FBPSidebar
 
-%hook BKBloksCollectionCell_SyncUpdates
-
-- (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:
-        (UICollectionViewLayoutAttributes *)attributes {
-    UICollectionViewLayoutAttributes *attrs = %orig;
-    BOOL hide = FBPSidebarCellShouldHide((UIView *)self);
-    // Set it both ways so a reused cell is restored, not left collapsed.
-    ((UIView *)self).hidden = hide;
-    if (hide) {
-        CGRect frame = attrs.frame;
-        frame.size.height = 0;
-        attrs.frame = frame;
-    }
-    return attrs;
-}
-
-%end
-
 // The menu list's layout. Hooking it — rather than nudging cell frames after
 // the fact — is what keeps the row's slot stable: the collection view positions
 // every cell from these answers itself, so nothing has to be re-corrected on each
@@ -848,8 +893,7 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
 void FBPInitSidebarHooks(void) {
     // Generic Bloks classes plus the ComponentKit menu's own: a launch gets one
     // rendering or the other, and the group covers both.
-    if (objc_getClass("BKBloksCollectionCell_SyncUpdates") ||
-        objc_getClass("BKCollectionView") ||
+    if (objc_getClass("BKCollectionView") ||
         objc_getClass("BKCollectionViewLayout") ||
         objc_getClass("FBBookmarksMasonryGridCollectionViewLayout") ||
         objc_getClass("FBComponentHostingCollectionViewCell")) {
