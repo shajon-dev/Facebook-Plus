@@ -177,4 +177,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSString *)identifier;
 @end
 
+/// The "<language> wasn't downloaded" screen's own retry, so the tweak can
+/// press it once at first launch rather than leave the user to (see
+/// FBPLanguagePackHooks.xm). Declared rather than guessed: it is
+/// -_didTapRetryButton on FBDownloadLanguagePackInterstitialViewController in
+/// Facebook 588, beside _didTapUseInEnglishButton and _dismissLanguagePackView.
+@interface FBPLanguagePackInterstitial : UIViewController
+- (void)_didTapRetryButton;
+@end
+
 NS_ASSUME_NONNULL_END
