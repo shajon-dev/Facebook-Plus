@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Chọn biểu tượng ứng dụng thay thế.";
 "row.appicon.title" = "Biểu tượng ứng dụng";
 "row.autoclear.title" = "Xóa bộ nhớ đệm khi khởi chạy";
+"row.cacheschedule.12h" = "12 giờ";
+"row.cacheschedule.24h" = "24 giờ";
+"row.cacheschedule.desc" = "Xoá bộ nhớ đệm trong lần mở đầu tiên sau mỗi mốc giờ đã định.";
+"row.cacheschedule.off" = "Tắt";
+"row.cacheschedule.title" = "Dọn theo lịch mỗi";
 "row.checkupdate.desc" = "Xem có phiên bản mới hơn không.";
 "row.checkupdate.title" = "Kiểm tra cập nhật";
 "row.clearcache.title" = "Xóa bộ nhớ đệm ngay";

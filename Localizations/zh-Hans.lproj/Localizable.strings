@@ -163,6 +163,11 @@
 "row.appicon.desc" = "选择其他应用图标。";
 "row.appicon.title" = "应用图标";
 "row.autoclear.title" = "启动时清理缓存";
+"row.cacheschedule.12h" = "12 小时";
+"row.cacheschedule.24h" = "24 小时";
+"row.cacheschedule.desc" = "在每个设定时间之后首次启动时清除缓存。";
+"row.cacheschedule.off" = "关闭";
+"row.cacheschedule.title" = "定时清理间隔";
 "row.checkupdate.desc" = "查看是否有更新的版本。";
 "row.checkupdate.title" = "检查更新";
 "row.clearcache.title" = "立即清理缓存";

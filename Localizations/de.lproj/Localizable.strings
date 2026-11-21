@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Ein alternatives App-Symbol wählen.";
 "row.appicon.title" = "App-Symbol";
 "row.autoclear.title" = "Cache beim Start leeren";
+"row.cacheschedule.12h" = "12 Stunden";
+"row.cacheschedule.24h" = "24 Stunden";
+"row.cacheschedule.desc" = "Leert den Cache beim ersten Start nach dem jeweiligen Zeitpunkt.";
+"row.cacheschedule.off" = "Aus";
+"row.cacheschedule.title" = "Geplante Bereinigung alle";
 "row.checkupdate.desc" = "Prüfen, ob eine neuere Version verfügbar ist.";
 "row.checkupdate.title" = "Nach Update suchen";
 "row.clearcache.title" = "Cache jetzt leeren";

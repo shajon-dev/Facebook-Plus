@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Pilih ikon aplikasi alternatif.";
 "row.appicon.title" = "Ikon Aplikasi";
 "row.autoclear.title" = "Bersihkan Cache saat Dibuka";
+"row.cacheschedule.12h" = "12 jam";
+"row.cacheschedule.24h" = "24 jam";
+"row.cacheschedule.desc" = "Menghapus cache saat aplikasi pertama dibuka setelah waktu yang dijadwalkan.";
+"row.cacheschedule.off" = "Nonaktif";
+"row.cacheschedule.title" = "Pembersihan terjadwal setiap";
 "row.checkupdate.desc" = "Lihat apakah ada versi yang lebih baru.";
 "row.checkupdate.title" = "Periksa Pembaruan";
 "row.clearcache.title" = "Bersihkan Cache Sekarang";

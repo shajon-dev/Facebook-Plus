@@ -163,6 +163,11 @@
 "row.appicon.desc" = "कोई वैकल्पिक ऐप आइकन चुनें।";
 "row.appicon.title" = "ऐप आइकन";
 "row.autoclear.title" = "शुरू होने पर कैश साफ़ करें";
+"row.cacheschedule.12h" = "12 घंटे";
+"row.cacheschedule.24h" = "24 घंटे";
+"row.cacheschedule.desc" = "हर निर्धारित समय के बाद पहली बार ऐप खोलने पर कैश साफ़ करता है।";
+"row.cacheschedule.off" = "बंद";
+"row.cacheschedule.title" = "निर्धारित सफ़ाई हर";
 "row.checkupdate.desc" = "देखें कि कोई नया संस्करण उपलब्ध है या नहीं।";
 "row.checkupdate.title" = "अपडेट जाँचें";
 "row.clearcache.title" = "अभी कैश साफ़ करें";

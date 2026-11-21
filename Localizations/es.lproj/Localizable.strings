@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Elegir un icono de app alternativo.";
 "row.appicon.title" = "Icono de la app";
 "row.autoclear.title" = "Vaciar caché al iniciar";
+"row.cacheschedule.12h" = "12 horas";
+"row.cacheschedule.24h" = "24 horas";
+"row.cacheschedule.desc" = "Borra la caché al abrir la app por primera vez después de cada hora prevista.";
+"row.cacheschedule.off" = "Desactivada";
+"row.cacheschedule.title" = "Limpieza programada cada";
 "row.checkupdate.desc" = "Comprueba si hay una versión más reciente.";
 "row.checkupdate.title" = "Buscar actualización";
 "row.clearcache.title" = "Vaciar caché ahora";
