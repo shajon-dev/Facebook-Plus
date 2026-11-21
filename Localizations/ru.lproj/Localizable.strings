@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Выбрать другой значок приложения.";
 "row.appicon.title" = "Значок приложения";
 "row.autoclear.title" = "Очищать кэш при запуске";
+"row.cacheschedule.12h" = "12 часов";
+"row.cacheschedule.24h" = "24 часа";
+"row.cacheschedule.desc" = "Очищает кэш при первом запуске после назначенного времени.";
+"row.cacheschedule.off" = "Выключено";
+"row.cacheschedule.title" = "Очистка по расписанию каждые";
 "row.checkupdate.desc" = "Проверьте, доступна ли более новая версия.";
 "row.checkupdate.title" = "Проверить обновление";
 "row.clearcache.title" = "Очистить кэш сейчас";

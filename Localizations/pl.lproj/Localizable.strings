@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Wybierz alternatywną ikonę aplikacji.";
 "row.appicon.title" = "Ikona aplikacji";
 "row.autoclear.title" = "Czyść pamięć podręczną przy uruchomieniu";
+"row.cacheschedule.12h" = "12 godzin";
+"row.cacheschedule.24h" = "24 godziny";
+"row.cacheschedule.desc" = "Czyści pamięć podręczną przy pierwszym uruchomieniu po wyznaczonej godzinie.";
+"row.cacheschedule.off" = "Wyłączone";
+"row.cacheschedule.title" = "Zaplanowane czyszczenie co";
 "row.checkupdate.desc" = "Sprawdź, czy jest dostępna nowsza wersja.";
 "row.checkupdate.title" = "Sprawdź dostępność aktualizacji";
 "row.clearcache.title" = "Wyczyść pamięć podręczną";

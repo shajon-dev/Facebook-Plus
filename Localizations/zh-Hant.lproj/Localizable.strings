@@ -163,6 +163,11 @@
 "row.appicon.desc" = "選擇替換的 App 圖示。";
 "row.appicon.title" = "App 圖示";
 "row.autoclear.title" = "啟動時清除快取";
+"row.cacheschedule.12h" = "12 小時";
+"row.cacheschedule.24h" = "24 小時";
+"row.cacheschedule.desc" = "在每個設定時間之後首次啟動時清除快取。";
+"row.cacheschedule.off" = "關閉";
+"row.cacheschedule.title" = "定時清理間隔";
 "row.checkupdate.desc" = "查看是否有新版本可供使用。";
 "row.checkupdate.title" = "檢查更新";
 "row.clearcache.title" = "立即清除快取";

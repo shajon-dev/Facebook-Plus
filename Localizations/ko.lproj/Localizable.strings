@@ -163,6 +163,11 @@
 "row.appicon.desc" = "다른 앱 아이콘을 선택합니다.";
 "row.appicon.title" = "앱 아이콘";
 "row.autoclear.title" = "실행 시 캐시 지우기";
+"row.cacheschedule.12h" = "12시간";
+"row.cacheschedule.24h" = "24시간";
+"row.cacheschedule.desc" = "예약된 시각이 지난 뒤 처음 실행할 때 캐시를 지웁니다.";
+"row.cacheschedule.off" = "끄기";
+"row.cacheschedule.title" = "예약 정리 주기";
 "row.checkupdate.desc" = "최신 버전이 있는지 확인합니다.";
 "row.checkupdate.title" = "업데이트 확인";
 "row.clearcache.title" = "지금 캐시 지우기";

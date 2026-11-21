@@ -163,6 +163,11 @@
 "row.appicon.desc" = "বিকল্প একটি অ্যাপ আইকন বেছে নিন।";
 "row.appicon.title" = "অ্যাপ আইকন";
 "row.autoclear.title" = "চালু হলে ক্যাশ পরিষ্কার করুন";
+"row.cacheschedule.12h" = "১২ ঘণ্টা";
+"row.cacheschedule.24h" = "২৪ ঘণ্টা";
+"row.cacheschedule.desc" = "প্রতিটি নির্ধারিত সময়ের পর প্রথমবার অ্যাপ খুললে ক্যাশ মুছে ফেলে।";
+"row.cacheschedule.off" = "বন্ধ";
+"row.cacheschedule.title" = "নির্ধারিত পরিষ্কার প্রতি";
 "row.checkupdate.desc" = "নতুন সংস্করণ আছে কিনা দেখুন।";
 "row.checkupdate.title" = "আপডেট চেক করুন";
 "row.clearcache.title" = "এখনই ক্যাশ পরিষ্কার করুন";

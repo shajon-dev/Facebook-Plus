@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Alternatif bir uygulama simgesi seç.";
 "row.appicon.title" = "Uygulama Simgesi";
 "row.autoclear.title" = "Açılışta Önbelleği Temizle";
+"row.cacheschedule.12h" = "12 saat";
+"row.cacheschedule.24h" = "24 saat";
+"row.cacheschedule.desc" = "Belirlenen saatten sonraki ilk açılışta önbelleği temizler.";
+"row.cacheschedule.off" = "Kapalı";
+"row.cacheschedule.title" = "Zamanlanmış temizlik her";
 "row.checkupdate.desc" = "Daha yeni bir sürüm olup olmadığını kontrol et.";
 "row.checkupdate.title" = "Güncelleme denetle";
 "row.clearcache.title" = "Önbelleği Şimdi Temizle";

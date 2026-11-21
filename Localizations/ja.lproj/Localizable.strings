@@ -163,6 +163,11 @@
 "row.appicon.desc" = "別のアプリアイコンを選びます。";
 "row.appicon.title" = "アプリアイコン";
 "row.autoclear.title" = "起動時にキャッシュを消去";
+"row.cacheschedule.12h" = "12時間";
+"row.cacheschedule.24h" = "24時間";
+"row.cacheschedule.desc" = "予定時刻を過ぎて最初に起動したときにキャッシュを消去します。";
+"row.cacheschedule.off" = "オフ";
+"row.cacheschedule.title" = "定期クリーンアップの間隔";
 "row.checkupdate.desc" = "新しいバージョンがあるか確認します。";
 "row.checkupdate.title" = "アップデートを確認";
 "row.clearcache.title" = "今すぐキャッシュを消去";

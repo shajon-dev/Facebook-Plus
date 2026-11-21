@@ -163,6 +163,11 @@
 "row.appicon.desc" = "اختيار أيقونة تطبيق بديلة.";
 "row.appicon.title" = "أيقونة التطبيق";
 "row.autoclear.title" = "مسح ذاكرة التخزين عند التشغيل";
+"row.cacheschedule.12h" = "12 ساعة";
+"row.cacheschedule.24h" = "24 ساعة";
+"row.cacheschedule.desc" = "يمسح الذاكرة المؤقتة عند أول تشغيل بعد كل موعد.";
+"row.cacheschedule.off" = "إيقاف";
+"row.cacheschedule.title" = "تنظيف مجدول كل";
 "row.checkupdate.desc" = "تحقّق مما إذا كان هناك إصدار أحدث.";
 "row.checkupdate.title" = "التحقق من وجود تحديث";
 "row.clearcache.title" = "مسح ذاكرة التخزين الآن";

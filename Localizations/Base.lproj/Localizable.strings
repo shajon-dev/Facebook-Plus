@@ -163,6 +163,11 @@
 "row.appicon.desc" = "Choose an alternate app icon.";
 "row.appicon.title" = "App Icon";
 "row.autoclear.title" = "Clear Cache on Launch";
+"row.cacheschedule.12h" = "12 hours";
+"row.cacheschedule.24h" = "24 hours";
+"row.cacheschedule.desc" = "Clears the cache on the first launch after each scheduled time.";
+"row.cacheschedule.off" = "Off";
+"row.cacheschedule.title" = "Scheduled Cleanup Every";
 "row.checkupdate.desc" = "See if a newer version is available.";
 "row.checkupdate.title" = "Check for Update";
 "row.clearcache.title" = "Clear Cache Now";
