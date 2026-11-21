@@ -208,9 +208,16 @@ void FBPInitPlusHooks(void) {
     if (checker &&
         [checker instancesRespondToSelector:@selector(isBenefitActive:)]) {
         FBP_ONCE(gMetaPlus) { %init(FBPMetaPlus, FBPSubsBenefitStatusChecker = checker); }
-        FBPLog(@"plus: subscription benefit gate installed on %@", NSStringFromClass(checker));
+        // "installed" is not "active", and the toggle is named here so the log
+        // stops reading as though the feature were on. Every gate in this file
+        // is installed whatever the preference says, because the preference is
+        // live: it is re-read on FBPSettingsDidChangeNotification and has to
+        // take effect without relaunching the app, which a hook that was never
+        // installed cannot do. Each gate consults gPlusEnabled when it fires.
+        FBPLogOnce(@"plus: subscription benefit gate installed on %@ (toggle=%d)",
+                   NSStringFromClass(checker), gPlusEnabled);
     } else {
-        FBPLog(@"plus: FBSubsBenefitStatusChecker not found — "
+        FBPLogOnce(@"plus: FBSubsBenefitStatusChecker not found — "
                @"subscription unlock inactive");
     }
 
@@ -221,9 +228,9 @@ void FBPInitPlusHooks(void) {
     if (superReaction &&
         [superReaction instancesRespondToSelector:@selector(hasFeatureAccess)]) {
         FBP_ONCE(gSuperReaction) { %init(FBPSuperReaction); }
-        FBPLog(@"plus: story super-reaction access gate installed");
+        FBPLogOnce(@"plus: story super-reaction access gate installed (toggle=%d)", gPlusEnabled);
     } else {
-        FBPLog(@"plus: FBSnacksSuperReactionFeatureAccessController not found");
+        FBPLogOnce(@"plus: FBSnacksSuperReactionFeatureAccessController not found");
     }
 
     // DIRECT-mode master reveal gate on the composer.
@@ -231,9 +238,9 @@ void FBPInitPlusHooks(void) {
     if (composer && [composer instancesRespondToSelector:
             @selector(_isSuperReactionAvailableForCurrentThreadWithBucketPreview:)]) {
         FBP_ONCE(gSRReveal) { %init(FBPSuperReactionReveal); }
-        FBPLog(@"plus: super-reaction reveal gate installed");
+        FBPLogOnce(@"plus: super-reaction reveal gate installed (toggle=%d)", gPlusEnabled);
     } else {
-        FBPLog(@"plus: FBSnacksComposerController reveal gate not found");
+        FBPLogOnce(@"plus: FBSnacksComposerController reveal gate not found");
     }
 
     // DIRECT-mode teaser (reveal animation).
@@ -252,8 +259,9 @@ void FBPInitPlusHooks(void) {
     if (storyExtend &&
         [storyExtend respondsToSelector:@selector(isBenefitActiveWithSession:)]) {
         FBP_ONCE(gStoryExtend) { %init(FBPStoryExtend, FBPStoryExtendHelper = storyExtend); }
-        FBPLog(@"plus: story-extend diamond gate installed on %@", NSStringFromClass(storyExtend));
+        FBPLogOnce(@"plus: story-extend diamond gate installed on %@ (toggle=%d)",
+                   NSStringFromClass(storyExtend), gPlusEnabled);
     } else {
-        FBPLog(@"plus: FBStoryExtendHelper not found");
+        FBPLogOnce(@"plus: FBStoryExtendHelper not found");
     }
 }

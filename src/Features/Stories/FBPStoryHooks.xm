@@ -471,7 +471,7 @@ void FBPInitStoryHooks(void) {
         } else if ([seenManager instancesRespondToSelector:FBPMarkSeenLegacySelector()]) {
             FBP_ONCE(gSeenLegacy) { %init(FBPStorySeenLegacy); }
         } else {
-            FBPLog(@"no known _markThreadAsSeen: variant — incognito disabled");
+            FBPLogOnce(@"no known _markThreadAsSeen: variant — incognito disabled");
         }
     }
 
@@ -484,7 +484,7 @@ void FBPInitStoryHooks(void) {
             @selector(markUnifiedThreadsAsSeenForBucket:bucket:idempotenceToken:)]) {
         FBP_ONCE(gSeenMutator) { %init(FBPStorySeenMutator); }
     } else {
-        FBPLog(@"FBSnacksUnifiedSeenStateMutator send methods not found — "
+        FBPLogOnce(@"FBSnacksUnifiedSeenStateMutator send methods not found — "
                @"story seen receipt may not be fully suppressed");
     }
 
@@ -492,7 +492,7 @@ void FBPInitStoryHooks(void) {
     if (bucketVC && [bucketVC instancesRespondToSelector:@selector(mediaViewDidPlayToEnd:)]) {
         FBP_ONCE(gAdvance) { %init(FBPStoryAdvance); }
     } else {
-        FBPLog(@"story: FBSnacksBucketViewController mediaViewDidPlayToEnd: not found — "
+        FBPLogOnce(@"story: FBSnacksBucketViewController mediaViewDidPlayToEnd: not found — "
                @"auto-advance block inactive");
     }
     if (objc_getClass("FBSnacksTrayTileMenuConfiguration") &&
@@ -500,7 +500,7 @@ void FBPInitStoryHooks(void) {
         objc_getClass("FBSnacksBucketViewController")) {
         FBP_ONCE(gStoryMenu) { %init(FBPStoryMenu); }
     } else {
-        FBPLog(@"story bottom-sheet classes not found — story menu disabled");
+        FBPLogOnce(@"story bottom-sheet classes not found — story menu disabled");
     }
 
     if (objc_getClass("FBSnacksBucketViewController")) {

@@ -457,14 +457,14 @@ void FBPInitAdsHooks(void) {
     if (videoPool && [videoPool instancesRespondToSelector:@selector(insertedItems)]) {
         FBP_ONCE(gVideoAds) { %init(FBPVideoAds); }
     } else {
-        FBPLog(@"FBVideoFeedAdsPool not found — video ad blocking disabled");
+        FBPLogOnce(@"FBVideoFeedAdsPool not found — video ad blocking disabled");
     }
 
     Class storyFetcher = objc_getClass("FBSnacksAdsPaginatingFetcher");
     if (storyFetcher) {
         FBP_ONCE(gStoryAds) { %init(FBPStoryAds); }
     } else {
-        FBPLog(@"FBSnacksAdsPaginatingFetcher not found — story ad blocking disabled");
+        FBPLogOnce(@"FBSnacksAdsPaginatingFetcher not found — story ad blocking disabled");
     }
 
     // RCTNetworking lives in FBReactNativeProductsFramework, which Facebook dlopens
