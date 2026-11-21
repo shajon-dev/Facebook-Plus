@@ -614,6 +614,13 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPActionRow(kActionFonts, FBPL(@"row.fonts.title"), FBPL(@"row.fonts.desc"), @"textformat", NO),
             ]),
         ]},
+        @{ kRowTitle : FBPL(@"cat.sidebar.title"), kRowDesc : FBPL(@"cat.sidebar.summary"),
+           kRowIcon : @"line.3.horizontal", kRowCategory : @[
+            FBPSection(nil, @[
+                FBPSwitchRow(FBPKeyHideSidebarUpgrades, FBPL(@"row.hidesidebarupgrades.title"), nil, @"line.3.horizontal"),
+                FBPSwitchRow(FBPKeyHideSidebarAlsoFromMeta, FBPL(@"row.hidesidebaralsometa.title"), nil, @"line.3.horizontal"),
+            ]),
+        ]},
         @{ kRowTitle : FBPL(@"cat.plus.title"), kRowDesc : FBPL(@"cat.plus.summary"),
            kRowIcon : @"crown.fill", kRowCategory : @[
             FBPSection(FBPL(@"footer.metaplus"), @[
