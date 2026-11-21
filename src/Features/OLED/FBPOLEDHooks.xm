@@ -124,6 +124,10 @@ static BOOL FBPOLEDActive(void) {
     return gOLEDEnabled && FBPSystemIsDark();
 }
 
+/// Defined below, beside the relayout it drives: a window's layout pass is
+/// where a Light<->Dark switch is noticed.
+static void FBPTrackWindowStyle(UIWindow *window);
+
 #pragma mark - Diagnostics
 
 /// Human name for an interface style, for the diagnostic log.
@@ -275,6 +279,39 @@ static UIColor *FBPBlackKeepingAlpha(UIColor *color) {
 static CGColorRef FBPBlackCGKeepingAlpha(CGColorRef cg) {
     CGFloat alpha = cg ? CGColorGetAlpha(cg) : 1.0;
     return [UIColor colorWithWhite:0.0 alpha:alpha].CGColor;
+}
+
+/// Black while the appearance is Dark, and @c original again the moment it is
+/// not.
+///
+/// This is the difference between a surface that comes back and one that does
+/// not. Facebook hands its views a dynamic colour, which resolves itself per
+/// appearance; writing a flat black over it threw that away, and when iOS went
+/// back to Light the view had nothing left to resolve. Facebook does not repaint
+/// a container it believes is unchanged, so the black stayed, and on a device
+/// where UIKit no longer calls -traitCollectionDidChange: nothing else put it
+/// right either. That is issue #10: part of the app light, part still black.
+///
+/// A dynamic colour needs no bookkeeping, no restore pass and no notification.
+/// It is the same object before and after the switch; only its answer changes.
+/// @c original is captured as given, so a colour Facebook had already resolved
+/// to a flat value still comes back as that value rather than as black.
+static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
+    if (@available(iOS 13.0, *)) {
+        return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+            if (!gOLEDEnabled || traits.userInterfaceStyle != UIUserInterfaceStyleDark) {
+                return original ?: UIColor.clearColor;
+            }
+            UIColor *resolved = original;
+            @try {
+                resolved = [original resolvedColorWithTraitCollection:traits] ?: original;
+            } @catch (__unused NSException *e) {}
+            // Only a genuinely dark surface is blackened, the same test the
+            // caller made: a light-locked card keeps its own colour.
+            return FBPColorIsDark(resolved) ? FBPBlackKeepingAlpha(resolved) : resolved;
+        }];
+    }
+    return FBPBlackKeepingAlpha(original);
 }
 
 #pragma mark - Save / restore
@@ -756,7 +793,7 @@ static void FBPApplyView(UIView *view, BOOL active) {
         if (FBPColorIsDark(FBPResolve(bg))) {
             FBPSaveViewBG(view, bg);
             FBPMarkTouched(view);
-            view.backgroundColor = FBPBlackKeepingAlpha(bg);
+            view.backgroundColor = FBPBlackFollowingAppearance(bg);
         }
     } else if (FBPCGColorIsDark(view.layer.backgroundColor)) {
         // ComponentKit cards that paint straight onto their own layer.
@@ -778,9 +815,11 @@ static void FBPApplyView(UIView *view, BOOL active) {
 static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     if (FBPOLEDActive() && !FBPOLEDSkip(self) && !FBPViewIsLight(self)) {
         if (FBPColorIsDark(FBPResolve(color))) {
+            // Still saved and flagged, because the layer and sublayer paths
+            // below have no dynamic equivalent and the restore pass walks both.
             FBPSaveViewBG(self, color);
             FBPMarkTouched(self);
-            return FBPBlackKeepingAlpha(color);
+            return FBPBlackFollowingAppearance(color);
         }
         return color;
     }
@@ -837,6 +876,16 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     }
 }
 
+%end
+
+// UIWindow overrides -layoutSubviews, so the UIView hook above never runs for
+// one: this is the only place a window's own layout is seen. Every pass after
+// a change costs one integer comparison.
+%hook UIWindow
+- (void)layoutSubviews {
+    %orig;
+    FBPTrackWindowStyle(self);
+}
 %end
 
 %hook UITableView
@@ -908,6 +957,18 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 /// Marks the whole FB window tree for relayout so the layout hooks re-run and
 /// blacken/revert for the current state right away — used when the toggle changes
 /// (no trait change fires then) and on returning from the background.
+/// Re-applies the current appearance to a whole view tree.
+///
+/// FBPApplyView is normally reached from each view's own -layoutSubviews, which
+/// covers everything that is about to be drawn. It does not cover a view that
+/// is mounted and settled, and after a Light<->Dark switch those are exactly
+/// the ones holding the wrong colour.
+static void FBPApplyTree(UIView *view, BOOL active, int depth) {
+    if (!view || depth > 40) return;
+    FBPApplyView(view, active);
+    for (UIView *sub in [view.subviews copy]) FBPApplyTree(sub, active, depth + 1);
+}
+
 static void FBPNudgeLayout(UIView *view, int depth) {
     if (!view || depth > 40) return;
     [view setNeedsLayout];
@@ -921,6 +982,46 @@ static void FBPNudgeOLEDRelayout(void) {
             if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
             FBPNudgeLayout(window, 0);
         }
+    }
+}
+
+/// Catches a Light<->Dark switch from the window's own layout pass.
+///
+/// -traitCollectionDidChange: used to carry this and no longer does: iOS 17
+/// deprecated it, and on iOS 18.6 with Facebook 588 UIKit never calls it. The
+/// cached style stayed on Dark through a live switch to Light, FBPOLEDActive
+/// kept answering YES, and the feed stayed black until the app was backgrounded
+/// and brought back, which was the one path that re-seeded it. That is issue
+/// #10.
+///
+/// A window lays out when its appearance changes, so comparing the style on the
+/// way through costs one integer read and needs no registration, no deprecated
+/// callback and nothing version-specific.
+static void FBPTrackWindowStyle(UIWindow *window) {
+    if (@available(iOS 13.0, *)) {
+        if (!window || [NSStringFromClass(window.class) hasPrefix:@"FBP"]) return;
+
+        UIUserInterfaceStyle style = window.traitCollection.userInterfaceStyle;
+        if (style == UIUserInterfaceStyleUnspecified || style == gFBPSystemStyle) return;
+
+        FBPUpdateSystemStyle(style);
+        FBPOLEDLogState("window-style-changed");
+
+        // Apply the new appearance to what is already on screen, rather than
+        // waiting for each view to lay out again. -setNeedsLayout alone was not
+        // enough: a view Facebook has already mounted and will not touch again
+        // never gets another -layoutSubviews, so the blackened feed stayed
+        // black in Light even though OLED had correctly disengaged. This is the
+        // same call that pass would have made, made now.
+        BOOL active = FBPOLEDActive();
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if (![scene isKindOfClass:UIWindowScene.class]) continue;
+            for (UIWindow *each in ((UIWindowScene *)scene).windows) {
+                if ([NSStringFromClass(each.class) hasPrefix:@"FBP"]) continue;
+                FBPApplyTree(each, active, 0);
+            }
+        }
+        FBPNudgeOLEDRelayout();
     }
 }
 
@@ -958,6 +1059,12 @@ void FBPInitOLEDHooks(void) {
             if (@available(iOS 13.0, *)) {
                 FBPUpdateSystemStyle(
                     FBPAppKeyWindow().traitCollection.userInterfaceStyle);
+            }
+            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+                if (![scene isKindOfClass:UIWindowScene.class]) continue;
+                for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                    FBPTrackWindowStyle(window);
+                }
             }
             FBPOLEDLogState("became-active");
             FBPNudgeOLEDRelayout();
