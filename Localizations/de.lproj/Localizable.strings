@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Das linke Menü aufräumen";
 "cat.sidebar.title" = "Seitenmenü";
-"cat.stories.summary" = "Privat ansehen, kein Auto-Weiterblättern";
+"cat.stories.summary" = "Leiste ausblenden, privat ansehen";
 "cat.stories.title" = "Storys";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "„Personen, die du vielleicht kennst“ entfernen";
 "row.norecs.desc" = "Blendet algorithmisch vorgeschlagene Beiträge aus.";
 "row.norecs.title" = "Empfehlungen entfernen";
-"row.noreels.title" = "Reels-Karussell entfernen";
+"row.noreels.title" = "Reels aus dem Feed entfernen";
 "row.noreelsrecommended.desc" = "Blendet die Vollbildkarte „Empfohlen“ zwischen Reels aus.";
 "row.noreelsrecommended.title" = "Reels-Empfehlungskarte entfernen";
-"row.nostories.desc" = "Blendet die Story-Leiste und einzelne Story-Karten aus dem Feed aus.";
-"row.nostories.title" = "Storys entfernen";
+"row.nomainstories.desc" = "Blendet die Haupt-Story-Leiste ganz oben im Feed aus.";
+"row.nomainstories.title" = "Oberen Story-Bereich entfernen";
+"row.nostories.desc" = "Blendet einzelne Story-Karten und Empfehlungen aus dem Feed aus.";
+"row.nostories.title" = "Storys aus dem Feed entfernen";
 "row.nostorypymk.desc" = "Entfernt „Personen, die du vielleicht kennst“ aus der Story-Leiste.";
 "row.nostorypymk.title" = "Story-Vorschläge ausblenden";
 "row.nosuggestedpages.title" = "Vorgeschlagene Seiten entfernen";

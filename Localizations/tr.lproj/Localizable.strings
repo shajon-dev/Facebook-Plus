@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Soldaki menüyü düzenle";
 "cat.sidebar.title" = "Yan Menü";
-"cat.stories.summary" = "Gizlice izle, otomatik ilerleme yok";
+"cat.stories.summary" = "Şeridi gizle, gizlice izle";
 "cat.stories.title" = "Hikâyeler";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "“Tanıyor Olabileceğin Kişiler”i Kaldır";
 "row.norecs.desc" = "Algoritmanın önerdiği gönderileri gizler.";
 "row.norecs.title" = "Önerileri Kaldır";
-"row.noreels.title" = "Reels Şeridini Kaldır";
+"row.noreels.title" = "Akıştan Reels'ı Kaldır";
 "row.noreelsrecommended.desc" = "Reels videoları arasında gösterilen tam ekran “Önerilen” kartını gizler.";
 "row.noreelsrecommended.title" = "Reels önerilen kartını kaldır";
-"row.nostories.desc" = "Hikâye şeridini ve tekil hikâye kartlarını akıştan gizler.";
-"row.nostories.title" = "Hikâyeleri Kaldır";
+"row.nomainstories.desc" = "Akışın en üstündeki ana hikâye çubuğunu gizler.";
+"row.nomainstories.title" = "Üst Hikâye Şeridini Kaldır";
+"row.nostories.desc" = "Akıştaki tekil hikâye kartlarını ve önerileri gizler.";
+"row.nostories.title" = "Akıştan Hikâyeleri Kaldır";
 "row.nostorypymk.desc" = "Hikaye çubuğundan “Tanıyor olabileceğin kişiler” kısmını kaldırır.";
 "row.nostorypymk.title" = "Hikâye Önerilerini Gizle";
 "row.nosuggestedpages.title" = "Önerilen Sayfaları Kaldır";

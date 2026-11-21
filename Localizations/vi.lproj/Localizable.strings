@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Dọn gọn menu bên trái";
 "cat.sidebar.title" = "Menu bên";
-"cat.stories.summary" = "Xem ẩn danh, không tự chuyển";
+"cat.stories.summary" = "Ẩn thanh tin, xem ẩn danh";
 "cat.stories.title" = "Tin";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Ẩn “Những người bạn có thể biết”";
 "row.norecs.desc" = "Ẩn các bài viết được đề xuất theo thuật toán.";
 "row.norecs.title" = "Xóa đề xuất";
-"row.noreels.title" = "Xóa thanh cuộn Reels";
+"row.noreels.title" = "Xóa Reels khỏi bảng tin";
 "row.noreelsrecommended.desc" = "Ẩn thẻ toàn màn hình “Được đề xuất” giữa các thước phim Reels.";
 "row.noreelsrecommended.title" = "Ẩn thẻ Đề xuất trong Reels";
-"row.nostories.desc" = "Ẩn thanh tin và các thẻ tin đơn lẻ khỏi bảng tin.";
-"row.nostories.title" = "Xóa tin";
+"row.nomainstories.desc" = "Ẩn thanh tin chính ở đầu bảng tin.";
+"row.nomainstories.title" = "Xóa thanh tin đầu bảng tin";
+"row.nostories.desc" = "Ẩn các thẻ tin đơn lẻ và gợi ý tin khỏi bảng tin.";
+"row.nostories.title" = "Xóa tin khỏi bảng tin";
 "row.nostorypymk.desc" = "Xóa mục “Những người bạn có thể biết” khỏi khay tin story.";
 "row.nostorypymk.title" = "Ẩn đề xuất tin";
 "row.nosuggestedpages.title" = "Xóa Trang được đề xuất";

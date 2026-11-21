@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Tidy the left menu";
 "cat.sidebar.title" = "Sidebar";
-"cat.stories.summary" = "Watch privately, no auto-advance";
+"cat.stories.summary" = "Hide the tray, watch privately";
 "cat.stories.title" = "Stories";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Remove People You May Know";
 "row.norecs.desc" = "Hides algorithmically suggested posts.";
 "row.norecs.title" = "Remove Recommendations";
-"row.noreels.title" = "Remove Reels Carousel";
+"row.noreels.title" = "Remove Reels from Feed";
 "row.noreelsrecommended.desc" = "Hides the full-screen “Recommended” card shown between Reels.";
 "row.noreelsrecommended.title" = "Remove Reels Recommended Card";
-"row.nostories.desc" = "Hides the Stories row and single story cards from the feed.";
-"row.nostories.title" = "Remove Stories";
+"row.nomainstories.desc" = "Hides the main horizontal Stories bar at the very top of the feed.";
+"row.nomainstories.title" = "Remove Top Stories Tray";
+"row.nostories.desc" = "Hides inline story cards and ephemeral story recommendations from the feed.";
+"row.nostories.title" = "Remove Stories from Feed";
 "row.nostorypymk.desc" = "Removes “people you may know” from the story tray.";
 "row.nostorypymk.title" = "Hide Story Suggestions";
 "row.nosuggestedpages.title" = "Remove Suggested Pages";

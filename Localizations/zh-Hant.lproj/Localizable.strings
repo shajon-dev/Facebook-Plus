@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "整理左側選單";
 "cat.sidebar.title" = "側邊選單";
-"cat.stories.summary" = "匿名觀看，不自動播放";
+"cat.stories.summary" = "隱藏限時動態列，匿名觀看";
 "cat.stories.title" = "限時動態";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "移除「你可能認識的人」";
 "row.norecs.desc" = "隱藏演算法推薦的貼文。";
 "row.norecs.title" = "移除推薦貼文";
-"row.noreels.title" = "移除 Reels 輪播";
+"row.noreels.title" = "從動態消息中移除 Reels";
 "row.noreelsrecommended.desc" = "隱藏 Reels 之間顯示的全螢幕「推薦」卡片。";
 "row.noreelsrecommended.title" = "移除 Reels 推薦卡片";
-"row.nostories.desc" = "隱藏動態消息中的限時動態列與單則限時動態卡片。";
-"row.nostories.title" = "移除限時動態";
+"row.nomainstories.desc" = "隱藏動態消息最頂端的限時動態列。";
+"row.nomainstories.title" = "移除頂端限時動態列";
+"row.nostories.desc" = "隱藏動態消息中的單則限時動態卡片與推薦。";
+"row.nostories.title" = "從動態消息中移除限時動態";
 "row.nostorypymk.desc" = "從限時動態列中移除「你可能認識的人」。";
 "row.nostorypymk.title" = "隱藏限時動態中的推薦朋友";
 "row.nosuggestedpages.title" = "移除推薦粉絲專頁";

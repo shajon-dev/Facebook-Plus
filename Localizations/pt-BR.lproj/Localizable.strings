@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Organize o menu da esquerda";
 "cat.sidebar.title" = "Menu lateral";
-"cat.stories.summary" = "Ver em modo privado, sem avanço automático";
+"cat.stories.summary" = "Ocultar a barra, ver em modo privado";
 "cat.stories.title" = "Stories";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Ocultar “Pessoas que talvez você conheça”";
 "row.norecs.desc" = "Oculta as publicações sugeridas pelo algoritmo.";
 "row.norecs.title" = "Remover recomendações";
-"row.noreels.title" = "Remover o carrossel de Reels";
+"row.noreels.title" = "Remover Reels do feed";
 "row.noreelsrecommended.desc" = "Oculta o cartão em tela cheia “Recomendado” entre os Reels.";
 "row.noreelsrecommended.title" = "Remover cartão recomendado dos Reels";
-"row.nostories.desc" = "Oculta a barra de stories e os cards de story individuais do feed.";
-"row.nostories.title" = "Remover stories";
+"row.nomainstories.desc" = "Oculta a barra principal de stories no topo do feed.";
+"row.nomainstories.title" = "Remover barra superior de stories";
+"row.nostories.desc" = "Oculta os cards de story individuais e sugestões do feed.";
+"row.nostories.title" = "Remover stories do feed";
 "row.nostorypymk.desc" = "Remove “Pessoas que talvez você conheça” da barra de stories.";
 "row.nostorypymk.title" = "Ocultar sugestões de stories";
 "row.nosuggestedpages.title" = "Remover páginas sugeridas";

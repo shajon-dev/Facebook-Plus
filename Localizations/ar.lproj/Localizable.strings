@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "ترتيب قائمة الاختصارات";
 "cat.sidebar.title" = "القائمة الجانبية";
-"cat.stories.summary" = "مشاهدة بخصوصية، دون تقدّم تلقائي";
+"cat.stories.summary" = "إخفاء الشريط، ومشاهدة بخصوصية";
 "cat.stories.title" = "القصص";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "إزالة “أشخاص قد تعرفهم”";
 "row.norecs.desc" = "يُخفي المنشورات المقترحة بواسطة الخوارزمية.";
 "row.norecs.title" = "إزالة التوصيات";
-"row.noreels.title" = "إزالة شريط Reels";
+"row.noreels.title" = "إزالة Reels من آخر الأخبار";
 "row.noreelsrecommended.desc" = "إخفاء بطاقة “مقترح لك” بملء الشاشة بين المقاطع.";
 "row.noreelsrecommended.title" = "إزالة بطاقة Reels المقترحة";
-"row.nostories.desc" = "يُخفي شريط القصص وبطاقات القصص الفردية من آخر الأخبار.";
-"row.nostories.title" = "إزالة القصص";
+"row.nomainstories.desc" = "إخفاء شريط القصص الأفقي الرئيسي في أعلى الموجز.";
+"row.nomainstories.title" = "إزالة شريط القصص العلوي";
+"row.nostories.desc" = "يُخفي بطاقات القصص الفردية وتوصيات القصص من آخر الأخبار.";
+"row.nostories.title" = "إزالة القصص من آخر الأخبار";
 "row.nostorypymk.desc" = "إزالة “أشخاص قد تعرفهم” من شريط القصص.";
 "row.nostorypymk.title" = "إخفاء اقتراحات القصص";
 "row.nosuggestedpages.title" = "إزالة الصفحات المقترحة";

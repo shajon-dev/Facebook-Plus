@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "왼쪽 메뉴 정리";
 "cat.sidebar.title" = "사이드 메뉴";
-"cat.stories.summary" = "익명으로 보기, 자동 넘김 없음";
+"cat.stories.summary" = "트레이 숨기기, 익명으로 보기";
 "cat.stories.title" = "스토리";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "“알 수도 있는 사람” 숨기기";
 "row.norecs.desc" = "알고리즘이 추천한 게시물을 숨깁니다.";
 "row.norecs.title" = "추천 게시물 제거";
-"row.noreels.title" = "릴스 캐러셀 제거";
+"row.noreels.title" = "피드에서 릴스 제거";
 "row.noreelsrecommended.desc" = "릴스 사이에 표시되는 전체 화면 “추천” 카드를 숨깁니다.";
 "row.noreelsrecommended.title" = "Reels 추천 카드 제거";
-"row.nostories.desc" = "피드에서 스토리 줄과 단일 스토리 카드를 숨깁니다.";
-"row.nostories.title" = "스토리 제거";
+"row.nomainstories.desc" = "피드 맨 위에 있는 기본 스토리 바를 숨깁니다.";
+"row.nomainstories.title" = "상단 스토리 바 제거";
+"row.nostories.desc" = "피드의 개별 스토리 카드 및 추천 스토리를 숨깁니다.";
+"row.nostories.title" = "피드에서 스토리 제거";
 "row.nostorypymk.desc" = "스토리 트레이에서 “알 수도 있는 사람”을 제거합니다.";
 "row.nostorypymk.title" = "스토리 추천 숨기기";
 "row.nosuggestedpages.title" = "추천 페이지 제거";
