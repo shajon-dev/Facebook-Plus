@@ -52,6 +52,11 @@
 "row.oled.title" = "OLED डार्क मोड";
 "row.oleddividers.title" = "पोस्ट डिवाइडर दिखाएं";
 "row.oleddividers.desc" = "OLED मोड में पोस्ट के बीच की हल्की लाइनें रखता है। बंद करने पर पूरी फ़ीड काली हो जाती है।";
+
+"cat.sidebar.title" = "साइडबार";
+"cat.sidebar.summary" = "बाईं ओर का मेनू व्यवस्थित करें";
+"row.hidesidebarupgrades.title" = "«अपग्रेड» छिपाएँ";
+"row.hidesidebaralsometa.title" = "«Meta से अन्य» छिपाएँ";
 "row.disablehdr.title" = "HDR बंद करें";
 "row.disablehdr.desc" = "फ़ोटो और वीडियो को अतिरिक्त चमकीले HDR के बजाय स्टैंडर्ड रेंज में दिखाता है।";
 "row.oled.desc" = "पूरे ऐप को असली काला बनाता है।";

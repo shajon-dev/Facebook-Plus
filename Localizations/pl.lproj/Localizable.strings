@@ -52,6 +52,11 @@
 "row.oled.title" = "Tryb ciemny OLED";
 "row.oleddividers.title" = "Pokaż separatory postów";
 "row.oleddividers.desc" = "Zachowuje cienkie linie między postami w trybie OLED. Wyłącz, aby uzyskać całkowicie czarny kanał.";
+
+"cat.sidebar.title" = "Menu boczne";
+"cat.sidebar.summary" = "Porządek w menu po lewej";
+"row.hidesidebarupgrades.title" = "Ukryj „Ulepszenia”";
+"row.hidesidebaralsometa.title" = "Ukryj „Również od Meta”";
 "row.disablehdr.title" = "Wyłącz HDR";
 "row.disablehdr.desc" = "Pokazuje zdjęcia i filmy w standardowym zakresie zamiast bardzo jasnego HDR.";
 "row.oled.desc" = "Ustawia prawdziwą czerń w całej aplikacji.";

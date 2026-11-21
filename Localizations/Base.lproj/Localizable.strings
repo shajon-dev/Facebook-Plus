@@ -54,6 +54,11 @@
 "row.oled.title" = "OLED Dark Mode";
 "row.oleddividers.title" = "Show Post Dividers";
 "row.oleddividers.desc" = "Keeps the faint lines between posts in OLED mode. Turn off for a fully black feed.";
+
+"cat.sidebar.title" = "Sidebar";
+"cat.sidebar.summary" = "Tidy the left menu";
+"row.hidesidebarupgrades.title" = "Hide Upgrades";
+"row.hidesidebaralsometa.title" = "Hide Also from Meta";
 "row.disablehdr.title" = "Disable HDR";
 "row.disablehdr.desc" = "Shows photos and videos in standard range instead of extra-bright HDR.";
 "row.oled.desc" = "Turns the whole app true black.";

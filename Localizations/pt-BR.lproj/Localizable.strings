@@ -52,6 +52,11 @@
 "row.oled.title" = "Modo escuro OLED";
 "row.oleddividers.title" = "Mostrar divisórias de posts";
 "row.oleddividers.desc" = "Mantém as linhas tênues entre posts no modo OLED. Desative para um feed totalmente preto.";
+
+"cat.sidebar.title" = "Menu lateral";
+"cat.sidebar.summary" = "Organize o menu da esquerda";
+"row.hidesidebarupgrades.title" = "Ocultar «Upgrades»";
+"row.hidesidebaralsometa.title" = "Ocultar «Também da Meta»";
 "row.disablehdr.title" = "Desativar HDR";
 "row.disablehdr.desc" = "Mostra fotos e vídeos em faixa padrão em vez do HDR muito brilhante.";
 "row.oled.desc" = "Deixa o app todo preto de verdade.";

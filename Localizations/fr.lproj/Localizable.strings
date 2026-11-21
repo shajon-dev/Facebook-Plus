@@ -52,6 +52,11 @@
 "row.oled.title" = "Mode sombre OLED";
 "row.oleddividers.title" = "Afficher les séparateurs de publications";
 "row.oleddividers.desc" = "Garde les fines lignes entre les publications en mode OLED. Désactivez pour un fil entièrement noir.";
+
+"cat.sidebar.title" = "Menu latéral";
+"cat.sidebar.summary" = "Ranger le menu de gauche";
+"row.hidesidebarupgrades.title" = "Masquer « Mises à niveau »";
+"row.hidesidebaralsometa.title" = "Masquer « Aussi de Meta »";
 "row.disablehdr.title" = "Désactiver le HDR";
 "row.disablehdr.desc" = "Affiche photos et vidéos en plage standard au lieu du HDR très lumineux.";
 "row.oled.desc" = "Rend toute l’app vraiment noire.";

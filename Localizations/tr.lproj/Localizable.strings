@@ -52,6 +52,11 @@
 "row.oled.title" = "OLED Karanlık Mod";
 "row.oleddividers.title" = "Gönderi ayırıcılarını göster";
 "row.oleddividers.desc" = "OLED modunda gönderiler arasındaki ince çizgileri korur. Tamamen siyah bir akış için kapatın.";
+
+"cat.sidebar.title" = "Yan Menü";
+"cat.sidebar.summary" = "Soldaki menüyü düzenle";
+"row.hidesidebarupgrades.title" = "«Yükseltmeler»i Gizle";
+"row.hidesidebaralsometa.title" = "«Meta’dan Diğerleri»ni Gizle";
 "row.disablehdr.title" = "HDR'yi kapat";
 "row.disablehdr.desc" = "Fotoğraf ve videoları aşırı parlak HDR yerine standart aralıkta gösterir.";
 "row.oled.desc" = "Tüm uygulamayı gerçek siyaha çevirir.";

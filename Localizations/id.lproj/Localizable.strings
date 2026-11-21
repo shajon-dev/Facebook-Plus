@@ -52,6 +52,11 @@
 "row.oled.title" = "Mode Gelap OLED";
 "row.oleddividers.title" = "Tampilkan Pembatas Postingan";
 "row.oleddividers.desc" = "Mempertahankan garis tipis antar postingan di mode OLED. Matikan untuk feed sepenuhnya hitam.";
+
+"cat.sidebar.title" = "Menu Samping";
+"cat.sidebar.summary" = "Rapikan menu kiri";
+"row.hidesidebarupgrades.title" = "Sembunyikan «Upgrade»";
+"row.hidesidebaralsometa.title" = "Sembunyikan «Juga dari Meta»";
 "row.disablehdr.title" = "Nonaktifkan HDR";
 "row.disablehdr.desc" = "Menampilkan foto dan video dalam rentang standar, bukan HDR yang terlalu terang.";
 "row.oled.desc" = "Membuat seluruh aplikasi benar-benar hitam.";

@@ -52,6 +52,11 @@
 "row.oled.title" = "OLED 純黑深色模式";
 "row.oleddividers.title" = "顯示貼文分隔線";
 "row.oleddividers.desc" = "在 OLED 模式下保留貼文之間的淺色分隔線。關閉則整個動態消息全黑。";
+
+"cat.sidebar.title" = "側邊選單";
+"cat.sidebar.summary" = "整理左側選單";
+"row.hidesidebarupgrades.title" = "隱藏「升級」";
+"row.hidesidebaralsometa.title" = "隱藏「Meta 旗下其他服務」";
 "row.disablehdr.title" = "關閉 HDR";
 "row.disablehdr.desc" = "以標準範圍顯示相片和影片，而非過亮的 HDR。";
 "row.oled.desc" = "將整個 App 背景轉為純黑色。";
