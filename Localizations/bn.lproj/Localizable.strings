@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "বাঁ দিকের মেনু গোছান";
 "cat.sidebar.title" = "সাইডবার";
-"cat.stories.summary" = "গোপনে দেখুন, স্বয়ংক্রিয় এগিয়ে যাওয়া বন্ধ";
+"cat.stories.summary" = "ট্রে লুকান, গোপনে দেখুন";
 "cat.stories.title" = "স্টোরি";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "“আপনি চিনতে পারেন” সরান";
 "row.norecs.desc" = "অ্যালগরিদমে সাজেস্ট করা পোস্ট লুকায়।";
 "row.norecs.title" = "সুপারিশ সরান";
-"row.noreels.title" = "Reels ক্যারোসেল সরান";
+"row.noreels.title" = "ফিড থেকে Reels সরান";
 "row.noreelsrecommended.desc" = "Reels-এর মাঝে দেখানো ফুল-স্ক্রিন “সুপারিশকৃত” কার্ড লুকায়।";
 "row.noreelsrecommended.title" = "Reels-এর Recommended কার্ড সরান";
-"row.nostories.desc" = "ফিড থেকে স্টোরি সারি এবং একক স্টোরি কার্ড লুকায়।";
-"row.nostories.title" = "স্টোরি সরান";
+"row.nomainstories.desc" = "ফিডের একেবারে শীর্ষে থাকা প্রধান অনুভূমিক স্টোরি বারটি লুকায়।";
+"row.nomainstories.title" = "শীর্ষের স্টোরি বার সরান";
+"row.nostories.desc" = "ফিড স্ক্রোল করার সময় আসা ইনলাইন স্টোরি কার্ড এবং সুপারিশগুলি লুকায়।";
+"row.nostories.title" = "ফিড থেকে স্টোরি সরান";
 "row.nostorypymk.desc" = "স্টোরি ট্রে থেকে “পরিচিত ব্যক্তিরা” অংশটি সরান।";
 "row.nostorypymk.title" = "স্টোরি সাজেশন লুকান";
 "row.nosuggestedpages.title" = "প্রস্তাবিত পেজ সরান";

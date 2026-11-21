@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "整理左侧菜单";
 "cat.sidebar.title" = "侧边菜单";
-"cat.stories.summary" = "匿名查看，不自动播放";
+"cat.stories.summary" = "隐藏快拍栏，匿名查看";
 "cat.stories.title" = "快拍";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "移除“你可能认识的人”";
 "row.norecs.desc" = "隐藏算法推荐的帖子。";
 "row.norecs.title" = "移除推荐内容";
-"row.noreels.title" = "移除 Reels 轮播";
+"row.noreels.title" = "从信息流中移除 Reels";
 "row.noreelsrecommended.desc" = "隐藏 Reels 之间显示的全屏“推荐”卡片。";
 "row.noreelsrecommended.title" = "移除 Reels 推荐卡片";
-"row.nostories.desc" = "隐藏信息流中的快拍栏和单个快拍卡片。";
-"row.nostories.title" = "移除快拍";
+"row.nomainstories.desc" = "隐藏信息流最顶部的快拍栏。";
+"row.nomainstories.title" = "移除顶部快拍栏";
+"row.nostories.desc" = "隐藏信息流中的单个快拍卡片和快拍推荐。";
+"row.nostories.title" = "从信息流中移除快拍";
 "row.nostorypymk.desc" = "从快拍栏中移除“你可能认识的人”。";
 "row.nostorypymk.title" = "隐藏快拍推荐";
 "row.nosuggestedpages.title" = "移除推荐主页";

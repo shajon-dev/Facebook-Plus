@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Порядок в левом меню";
 "cat.sidebar.title" = "Боковое меню";
-"cat.stories.summary" = "Смотреть анонимно, без автоперехода";
+"cat.stories.summary" = "Скрыть ленту, смотреть анонимно";
 "cat.stories.title" = "Истории";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Скрыть “Вы можете их знать”";
 "row.norecs.desc" = "Скрывает посты, предложенные алгоритмом.";
 "row.norecs.title" = "Убрать рекомендации";
-"row.noreels.title" = "Убрать карусель Reels";
+"row.noreels.title" = "Убрать Reels из ленты";
 "row.noreelsrecommended.desc" = "Скрывает полноэкранную карточку “Рекомендовано” между Reels.";
 "row.noreelsrecommended.title" = "Убрать карточку рекомендаций в Reels";
-"row.nostories.desc" = "Скрывает ленту историй и отдельные карточки историй из ленты.";
-"row.nostories.title" = "Убрать истории";
+"row.nomainstories.desc" = "Скрывает главную панель историй в самом верху ленты.";
+"row.nomainstories.title" = "Убрать верхнюю панель историй";
+"row.nostories.desc" = "Скрывает отдельные карточки историй и рекомендации из ленты.";
+"row.nostories.title" = "Убрать истории из ленты";
 "row.nostorypymk.desc" = "Удаляет блок “Вы можете их знать” из ленты историй.";
 "row.nostorypymk.title" = "Скрыть предложения в историях";
 "row.nosuggestedpages.title" = "Убрать рекомендуемые страницы";

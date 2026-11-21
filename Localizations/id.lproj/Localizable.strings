@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Rapikan menu kiri";
 "cat.sidebar.title" = "Menu Samping";
-"cat.stories.summary" = "Tonton diam-diam, tanpa lanjut otomatis";
+"cat.stories.summary" = "Sembunyikan baris, tonton diam-diam";
 "cat.stories.title" = "Cerita";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Sembunyikan “Orang yang Mungkin Anda Kenal”";
 "row.norecs.desc" = "Menyembunyikan postingan yang disarankan algoritma.";
 "row.norecs.title" = "Hapus Rekomendasi";
-"row.noreels.title" = "Hapus Korsel Reels";
+"row.noreels.title" = "Hapus Reels dari Feed";
 "row.noreelsrecommended.desc" = "Sembunyikan kartu layar penuh “Direkomendasikan” di antara Reels.";
 "row.noreelsrecommended.title" = "Hapus kartu Rekomendasi Reels";
-"row.nostories.desc" = "Menyembunyikan baris Story dan kartu story tunggal dari feed.";
-"row.nostories.title" = "Hapus Story";
+"row.nomainstories.desc" = "Menyembunyikan bilah Story utama di bagian paling atas feed.";
+"row.nomainstories.title" = "Hapus Bilah Story Atas";
+"row.nostories.desc" = "Menyembunyikan kartu story tunggal dan rekomendasi dari feed.";
+"row.nostories.title" = "Hapus Story dari Feed";
 "row.nostorypymk.desc" = "Hapus “orang yang mungkin Anda kenal” dari deretan cerita.";
 "row.nostorypymk.title" = "Sembunyikan Saran Story";
 "row.nosuggestedpages.title" = "Hapus Halaman yang Disarankan";

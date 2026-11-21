@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "左のメニューを整える";
 "cat.sidebar.title" = "サイドメニュー";
-"cat.stories.summary" = "匿名で視聴、自動送りなし";
+"cat.stories.summary" = "トレイを非表示、匿名で視聴";
 "cat.stories.title" = "ストーリーズ";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "「知り合いかも」を非表示";
 "row.norecs.desc" = "アルゴリズムによるおすすめ投稿を非表示にします。";
 "row.norecs.title" = "おすすめを削除";
-"row.noreels.title" = "リールのカルーセルを削除";
+"row.noreels.title" = "フィードからリールを削除";
 "row.noreelsrecommended.desc" = "リール間に表示される全画面の「おすすめ」カードを非表示にします。";
 "row.noreelsrecommended.title" = "Reels のおすすめカードを非表示";
-"row.nostories.desc" = "フィードからストーリーズの列と単体のストーリーズカードを非表示にします。";
-"row.nostories.title" = "ストーリーズを削除";
+"row.nomainstories.desc" = "フィードの最上部にあるメインのストーリーズバーを非表示にします。";
+"row.nomainstories.title" = "上部ストーリーズバーを削除";
+"row.nostories.desc" = "フィード内の単体ストーリーズカードやおすすめを非表示にします。";
+"row.nostories.title" = "フィードからストーリーズを削除";
 "row.nostorypymk.desc" = "ストーリートレイから「知り合いかも」を削除します。";
 "row.nostorypymk.title" = "ストーリーズの提案を非表示";
 "row.nosuggestedpages.title" = "おすすめページを非表示";

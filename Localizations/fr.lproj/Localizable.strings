@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Ranger le menu de gauche";
 "cat.sidebar.title" = "Menu latéral";
-"cat.stories.summary" = "Regarder en privé, sans avance auto";
+"cat.stories.summary" = "Masquer le bandeau, regarder en privé";
 "cat.stories.title" = "Stories";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Masquer “Vous connaissez peut-être”";
 "row.norecs.desc" = "Masque les publications suggérées par l’algorithme.";
 "row.norecs.title" = "Supprimer les recommandations";
-"row.noreels.title" = "Supprimer le carrousel Reels";
+"row.noreels.title" = "Supprimer les Reels du fil";
 "row.noreelsrecommended.desc" = "Masque la carte plein écran “Recommandé” affichée entre les Reels.";
 "row.noreelsrecommended.title" = "Masquer la carte recommandée des Reels";
-"row.nostories.desc" = "Masque le bandeau des stories et les cartes de story individuelles du fil.";
-"row.nostories.title" = "Supprimer les stories";
+"row.nomainstories.desc" = "Masque le bandeau principal des stories tout en haut du fil.";
+"row.nomainstories.title" = "Supprimer le bandeau supérieur de stories";
+"row.nostories.desc" = "Masque les cartes de story individuelles et les recommandations du fil.";
+"row.nostories.title" = "Supprimer les stories du fil";
 "row.nostorypymk.desc" = "Supprime “Vous connaissez peut-être” de la barre des stories.";
 "row.nostorypymk.title" = "Masquer les suggestions de stories";
 "row.nosuggestedpages.title" = "Supprimer les pages suggérées";

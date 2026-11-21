@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "बाईं ओर का मेनू व्यवस्थित करें";
 "cat.sidebar.title" = "साइडबार";
-"cat.stories.summary" = "निजी तौर पर देखें, कोई ऑटो-प्ले नहीं";
+"cat.stories.summary" = "ट्रे छिपाएँ, निजी तौर पर देखें";
 "cat.stories.title" = "स्टोरी";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "“शायद आप जानते हों” छुपाएँ";
 "row.norecs.desc" = "एल्गोरिद्म द्वारा सुझाई गई पोस्ट छिपाता है।";
 "row.norecs.title" = "सुझाव हटाएँ";
-"row.noreels.title" = "Reels कैरोसेल हटाएँ";
+"row.noreels.title" = "फ़ीड से Reels हटाएँ";
 "row.noreelsrecommended.desc" = "Reels के बीच दिखने वाला फ़ुल-स्क्रीन “अनुशंसित” कार्ड छुपाता है।";
 "row.noreelsrecommended.title" = "Reels का अनुशंसित कार्ड हटाएँ";
-"row.nostories.desc" = "फ़ीड से स्टोरी पंक्ति और एकल स्टोरी कार्ड छिपाता है।";
-"row.nostories.title" = "स्टोरी हटाएँ";
+"row.nomainstories.desc" = "फ़ीड के सबसे ऊपर मौजूद मुख्य स्टोरी बार को छुपाता है।";
+"row.nomainstories.title" = "शीर्ष स्टोरी ट्रे हटाएँ";
+"row.nostories.desc" = "फ़ीड में दिखने वाले अलग स्टोरी कार्ड और सुझाव छिपाता है।";
+"row.nostories.title" = "फ़ीड से स्टोरी हटाएँ";
 "row.nostorypymk.desc" = "स्टोरी ट्रे से “शायद आप जानते हों” हटाएँ।";
 "row.nostorypymk.title" = "स्टोरी सुझाव छिपाएँ";
 "row.nosuggestedpages.title" = "सुझाए गए पेज हटाएँ";

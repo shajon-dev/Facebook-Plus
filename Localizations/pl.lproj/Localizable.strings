@@ -25,7 +25,7 @@
 "cat.plus.title" = "Facebook Plus";
 "cat.sidebar.summary" = "Porządek w menu po lewej";
 "cat.sidebar.title" = "Menu boczne";
-"cat.stories.summary" = "Oglądaj prywatnie, bez automatycznego przejścia";
+"cat.stories.summary" = "Ukryj pasek, oglądaj prywatnie";
 "cat.stories.title" = "Relacje";
 
 
@@ -212,11 +212,13 @@
 "row.nopymk.title" = "Ukryj „Osoby, które możesz znać”";
 "row.norecs.desc" = "Ukrywa posty sugerowane algorytmicznie.";
 "row.norecs.title" = "Usuń rekomendacje";
-"row.noreels.title" = "Usuń karuzelę rolek";
+"row.noreels.title" = "Usuń rolki z aktualności";
 "row.noreelsrecommended.desc" = "Ukrywa pełnoekranową kartę „Polecane” między rolkami.";
 "row.noreelsrecommended.title" = "Usuń kartę polecanych w Reels";
-"row.nostories.desc" = "Ukrywa pasek relacji oraz pojedyncze karty relacji w aktualnościach.";
-"row.nostories.title" = "Usuń relacje";
+"row.nomainstories.desc" = "Ukrywa główny pasek relacji na samej górze aktualności.";
+"row.nomainstories.title" = "Usuń górny pasek relacji";
+"row.nostories.desc" = "Ukrywa pojedyncze karty relacji i rekomendacje w aktualnościach.";
+"row.nostories.title" = "Usuń relacje z aktualności";
 "row.nostorypymk.desc" = "Usuwa „Osoby, które możesz znać” z paska relacji.";
 "row.nostorypymk.title" = "Ukryj sugestie relacji";
 "row.nosuggestedpages.title" = "Usuń sugerowane strony";
