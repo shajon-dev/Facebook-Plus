@@ -159,10 +159,11 @@ static void FBPInterceptSettingsButton(UIView *root) {
 
 /// Breadth-first search under @c root for the first view the block accepts,
 /// bounded so a layout pass never walks an unbounded tree.
-static UIView *FBPFirstViewWhere(UIView *root, BOOL (^test)(UIView *candidate)) {
+static UIView *FBPFirstViewWhere(UIView *root, NSInteger limit,
+                                 BOOL (^test)(UIView *candidate)) {
     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
     NSInteger visited = 0;
-    while (queue.count && visited < 600) {
+    while (queue.count && visited < limit) {
         UIView *candidate = queue.firstObject;
         [queue removeObjectAtIndex:0];
         visited += 1;
@@ -170,6 +171,71 @@ static UIView *FBPFirstViewWhere(UIView *root, BOOL (^test)(UIView *candidate)) 
         [queue addObjectsFromArray:candidate.subviews];
     }
     return nil;
+}
+
+/// Is this the top "facebook" wordmark?
+///
+/// Two ways of saying so, because the bar is not built the same on every OS:
+///
+///   * an accessibility identifier containing "wordmark" — the app ships both
+///     "facebook-wordmark" and "fb-nav-header-wordmark", neither translated;
+///   * failing that, an image view that calls itself Facebook and is shaped
+///     like the wordmark. The identifier is what the iOS 18 bar carries and the
+///     label is all that was left on the newer one, so neither test alone finds
+///     it on both.
+static BOOL FBPIsWordmarkView(UIView *candidate) {
+    NSString *identifier = candidate.accessibilityIdentifier;
+    if (identifier.length &&
+        [identifier.lowercaseString containsString:@"wordmark"]) {
+        return YES;
+    }
+    if (![candidate isKindOfClass:UIImageView.class]) return NO;
+    if (![candidate.accessibilityLabel isEqualToString:@"Facebook"]) return NO;
+    CGSize size = candidate.bounds.size;
+    return size.width > size.height && size.height > 0 && size.height <= 60;
+}
+
+/// One compact description of what the top bar actually holds, for the case
+/// where the wordmark is not in it. Diagnostic builds only, once per launch:
+/// this is the question a phone that cannot be attached to has to answer in a
+/// log, which is how the 16 Pro Max reported this one in the first place.
+static void FBPReportWordmarkMiss(UIView *bar) {
+#if FBP_DIAG
+    static BOOL reported = NO;
+    if (reported) return;
+    reported = YES;
+
+    UIView *root = bar.window ?: bar;
+    FBPDiag(@"wordmark", @"not found · bar %@ frame=%@ hidden=%d · window=%d",
+            NSStringFromClass(bar.class), NSStringFromCGRect(bar.frame),
+            bar.hidden, bar.window != nil);
+
+    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
+    NSInteger visited = 0;
+    NSInteger printed = 0;
+    while (queue.count && visited < 1200 && printed < 40) {
+        UIView *candidate = queue.firstObject;
+        [queue removeObjectAtIndex:0];
+        visited += 1;
+        [queue addObjectsFromArray:candidate.subviews];
+
+        // Only what could plausibly be the wordmark: something named, or any
+        // image view sitting in the top bar's band of the screen.
+        BOOL named = candidate.accessibilityIdentifier.length > 0 ||
+                     candidate.accessibilityLabel.length > 0;
+        BOOL image = [candidate isKindOfClass:UIImageView.class];
+        if (!named && !image) continue;
+        CGRect inWindow = [candidate convertRect:candidate.bounds toView:nil];
+        if (CGRectGetMinY(inWindow) > 160) continue;
+
+        printed += 1;
+        FBPDiag(@"wordmark", @"  %@ id=%@ label=%@ frame=%@",
+                NSStringFromClass(candidate.class),
+                candidate.accessibilityIdentifier ?: @"(nil)",
+                candidate.accessibilityLabel ?: @"(nil)",
+                NSStringFromCGRect(inWindow));
+    }
+#endif
 }
 
 /// Long press on the top "facebook" wordmark opens Facebook Plus settings.
@@ -184,29 +250,65 @@ static UIView *FBPFirstViewWhere(UIView *root, BOOL (^test)(UIView *candidate)) 
 ///     NO, inside a ComponentKit top bar (CKComponentHostingView) under
 ///     FBNavigationBar, wrapped by a plain UIView that does carry interaction.
 ///
-/// So match the image view by its identifier and attach the gesture to its
-/// wrapping superview, which is already interactive and sized to the wordmark.
-/// ComponentKit re-mounts that subtree, so the search runs on every
-/// FBNavigationBar layout; FBPAttachSettingsGesture skips a view that already
-/// carries the gesture, and re-attaches to the fresh view after a re-mount.
+/// So match the image view and attach the gesture to its wrapping superview,
+/// which is already interactive and sized to the wordmark.
+///
+/// WHY THE SEARCH DOES NOT STOP AT THE BAR
+///
+/// It used to, and on iOS 26+ it found nothing: the exported log off a 16 Pro
+/// Max running iOS 27 shows FBNavigationBar laying out repeatedly with no
+/// "wordmark attached" line after it, while the same build on an older phone
+/// attaches on the first pass. The bar is still there and still lays out; the
+/// wordmark is mounted somewhere else in the window. So a miss inside the bar
+/// widens to the window rather than giving up — this long press is the tweak's
+/// main entry point, and losing it loses the settings panel.
+///
+/// The search is kept off the layout path by its own result instead of by a
+/// latch: while the view it attached to is still in a window the gesture is
+/// live and nothing is walked at all. Only a ComponentKit re-mount, which takes
+/// that view out of the window, costs another walk, and a bar with no wordmark
+/// in it (every screen that is not the feed) is re-examined once a second
+/// rather than on every layout pass.
+static __weak UIView *gFBPWordmarkTarget = nil;
+static CFAbsoluteTime gFBPWordmarkSearchedAt = 0;
+
 static void FBPAttachWordmarkGesture(UIView *bar) {
-    UIView *logo = FBPFirstViewWhere(bar, ^BOOL(UIView *candidate) {
-        return [candidate isKindOfClass:UIImageView.class] &&
-               [candidate.accessibilityIdentifier.lowercaseString
-                   containsString:@"wordmark"];
-    });
-    if (!logo) return;
+    UIView *attached = gFBPWordmarkTarget;
+    if (attached && attached.window) return;
+
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    if (now - gFBPWordmarkSearchedAt < 1.0) return;
+    gFBPWordmarkSearchedAt = now;
+
+    BOOL (^test)(UIView *) = ^BOOL(UIView *candidate) {
+        return FBPIsWordmarkView(candidate);
+    };
+
+    BOOL inBar = YES;
+    UIView *logo = FBPFirstViewWhere(bar, 600, test);
+    if (!logo && bar.window) {
+        inBar = NO;
+        logo = FBPFirstViewWhere(bar.window, 1200, test);
+    }
+    if (!logo) {
+        FBPReportWordmarkMiss(bar);
+        return;
+    }
+
     // The image view is non-interactive; its wrapper carries touches and is sized
     // to the wordmark. Fall back to the image view itself if it has no superview.
     UIView *target = logo.superview ?: logo;
     target.userInteractionEnabled = YES;
     FBPAttachSettingsGesture(target);
+    gFBPWordmarkTarget = target;
+
     static BOOL logged = NO;
     if (!logged) {
         logged = YES;
-        FBPTraceLine(@"wordmark attached · %@ · id=%@",
+        FBPTraceLine(@"wordmark attached · %@ · id=%@ · %@",
                      NSStringFromClass(target.class),
-                     logo.accessibilityIdentifier ?: @"(nil)");
+                     logo.accessibilityIdentifier ?: @"(nil)",
+                     inBar ? @"in bar" : @"elsewhere in window");
     }
 }
 
@@ -226,6 +328,24 @@ static void FBPAttachWordmarkGesture(UIView *bar) {
 %end
 
 %end // FBPNavLogo
+
+// The app header on newer builds. FBNavigationBar still lays out there, but the
+// header the user sees — and the one the wordmark is mounted under — is this
+// view, so it drives the search too rather than relying on the other bar's
+// layout happening to coincide.
+%group FBPNavLogoMovable
+
+%hook FBMovableNavigationBarView
+
+- (void)layoutSubviews {
+    FBPTraceFire("chrome.FBMovableNavigationBarView.layoutSubviews");
+    %orig;
+    FBPAttachWordmarkGesture(self);
+}
+
+%end
+
+%end // FBPNavLogoMovable
 
 #pragma mark - Launch bootstrap
 
@@ -299,5 +419,9 @@ void FBPInitChromeHooks(void) {
     // that bar's layout (it also fires for the NSKVONotifying_ KVO subclass).
     if (objc_getClass("FBNavigationBar")) {
         FBP_ONCE(gNavLogo) { %init(FBPNavLogo); }
+    }
+
+    if (objc_getClass("FBMovableNavigationBarView")) {
+        FBP_ONCE(gNavLogoMovable) { %init(FBPNavLogoMovable); }
     }
 }
