@@ -65,6 +65,7 @@ FacebookPlus_FILES = \
 	src/Features/Calls/FBPCallBlocker.xm \
 	src/Features/Notifications/FBPNotifClientSync.xm \
 	src/Features/Notifications/FBPLocalNotify.xm \
+	src/Features/Cache/FBPCacheCleaner.m \
 	src/Features/Update/FBPUpdateController.m \
 	src/Features/Update/FBPUpdateChecker.m \
 	src/PluginsInject/PluginsInject.mm \
@@ -92,6 +93,7 @@ FBP_INCLUDE_DIRS = \
 	src/Features/AppChrome \
 	src/Features/AppIcons \
 	src/Features/Calls \
+	src/Features/Cache \
 	src/Features/Confirmation \
 	src/Features/Downloads \
 	src/Features/Feed \
@@ -119,7 +121,7 @@ ifeq ($(FBP_DIAG),1)
 FacebookPlus_CFLAGS += -DFBP_DIAG=1
 endif
 
-FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia CoreVideo VideoToolbox Security PushKit CallKit UserNotifications
+FacebookPlus_FRAMEWORKS = UIKit Foundation Photos QuartzCore CoreGraphics CoreText AVFoundation CoreMedia CoreVideo VideoToolbox Security PushKit CallKit UserNotifications WebKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
