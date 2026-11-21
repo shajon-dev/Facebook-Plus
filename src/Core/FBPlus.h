@@ -156,13 +156,15 @@ extern NSString *const FBPKeyNotifClientSync;
 
 // Other
 extern NSString *const FBPKeyNotifyUpdates;
-extern NSString *const FBPKeyAutoClearCache;
+extern NSString *const FBPKeyAutoClearCache;    // Sweep the caches on every launch
+extern NSString *const FBPKeyCacheSchedule;     // Sweep on a UTC schedule instead: "off", "12" or "24" hours
 extern NSString *const FBPKeyLanguage;          // In-tweak UI language ("" = English/Base, "fr", …)
 
 // Internal
 extern NSString *const FBPKeyIntroduced;        // Onboarding has been shown
 extern NSString *const FBPKeyLastNotifiedVersion; // Latest release the user was told about
 extern NSString *const FBPKeyResolvedGitHubOwner; // GitHub owner last found live (primary or mirror)
+extern NSString *const FBPKeyLastCacheSweep;    // When the caches were last swept, as a Unix time
 
 #pragma mark - Confirmations
 

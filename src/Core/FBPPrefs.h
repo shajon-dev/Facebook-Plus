@@ -16,6 +16,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)boolForKey:(NSString *)key;
 - (void)setBool:(BOOL)value forKey:(NSString *)key;
 
+/// For values the tweak records rather than the user sets — a timestamp, say.
+/// Unlike the setters above these are not followed by -commit, so writing one
+/// does not announce a settings change to the hooks.
+- (double)doubleForKey:(NSString *)key;
+- (void)setDouble:(double)value forKey:(NSString *)key;
+
 - (nullable NSString *)stringForKey:(NSString *)key;
 - (void)setString:(nullable NSString *)value forKey:(NSString *)key;
 

@@ -75,7 +75,13 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyKeychainRebind   : @YES,
         FBPKeyNotifClientSync  : @YES,
         FBPKeyNotifyUpdates    : @YES,
-        FBPKeyAutoClearCache   : @YES,
+        // Off: sweeping on every launch makes a cold start of every start, and
+        // the schedule below covers the same ground without that cost.
+        FBPKeyAutoClearCache   : @NO,
+        // "off", "12" or "24": the UTC clock times an automatic sweep runs at.
+        // A day is enough to keep the caches from growing without throwing
+        // away what the app just prefetched.
+        FBPKeyCacheSchedule    : @"24",
         FBPKeyIntroduced       : @NO,
     };
 }
@@ -86,6 +92,14 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
 
 - (void)setBool:(BOOL)value forKey:(NSString *)key {
     [_defaults setBool:value forKey:key];
+}
+
+- (double)doubleForKey:(NSString *)key {
+    return [_defaults doubleForKey:key];
+}
+
+- (void)setDouble:(double)value forKey:(NSString *)key {
+    [_defaults setDouble:value forKey:key];
 }
 
 - (NSString *)stringForKey:(NSString *)key {

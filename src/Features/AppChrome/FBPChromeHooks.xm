@@ -236,11 +236,15 @@ static void FBPAttachWordmarkGesture(UIView *bar) {
 - (BOOL)application:(UIApplication *)application
     didFinishLaunchingWithOptions:(NSDictionary *)options {
     FBPTraceFire("chrome.FBBaseAppDelegate.application");
-    BOOL result = %orig;
 
-    if (FBPEnabled(FBPKeyAutoClearCache)) {
-        [FBPCacheCleaner clearAllCachesWithCompletion:nil];
-    }
+    // Before %orig, not after: the sweep has to finish before Facebook opens
+    // its feed and session stores, or it deletes what they are already reading
+    // and the feed fails a page or two in. It stages rather than unlinks, so
+    // the wait here is a handful of renames, and it decides for itself whether
+    // the user's schedule has one owed.
+    [FBPCacheCleaner clearCachesAtLaunchIfDue];
+
+    BOOL result = %orig;
 
     [FBPWelcomeController presentIfNeeded];
 
