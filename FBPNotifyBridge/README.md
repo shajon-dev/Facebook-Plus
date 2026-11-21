@@ -1,11 +1,12 @@
 # FBPNotifyBridge — the notification-service session bridge
 
-**Status: shipped, and half the job is done (last device capture 2026-11-08).**
+**Status: shipped, and half the job is done (last device capture 2026-11-21).**
 
 | | On a re-signed build |
 |---|---|
-| Messenger messages and calls | **Detailed.** Confirmed on device — content mutated and delivered in 165 ms. |
-| Likes, comments, replies, tags, mentions, friend requests | **Still generic, or no banner at all.** |
+| Messenger messages and calls | **Detailed.** Confirmed on device: the extension runs and the text is already in the payload — `NSE RAN … body 'You missed a call from Zhai.'`, payload keys `aps,ep,ki,pim,pnid,t`. |
+| Likes, comments, replies, tags, mentions, friend requests | **Still generic.** The push reaches the app, the fetch runs and succeeds, and comes back empty. See [What is still missing](#what-is-still-missing). |
+| An original-entitlements install (TrollStore, or the `.deb` on a jailbroken App Store Facebook) | **Was broken by this layer and is fixed.** The redirects now stand down where Facebook's own entitlements are intact. |
 
 > [!IMPORTANT]
 > **It comes down to your signing certificate.** If your developer certificate
@@ -209,23 +210,60 @@ seconds, before Facebook's own client-sync fetch can finish, so nothing is ever
 posted.
 
 So for this half, no change inside this dylib can help: the code never runs.
-Two things are being pursued instead, and neither belongs here —
+The work moved to the main app, and a run of device captures on 2026-11-21
+narrowed it to one question.
 
-1. **`com.apple.developer.usernotifications.filtering`.** The extension's
-   original entitlements carry it; it is Apple-restricted (granted only by
-   request, and Apple's own rejection wording limits the categories to
-   messaging, emergency, education and healthcare), so no third-party profile
-   will ever have it, and re-signing replaces the whole entitlement dictionary.
-   It is the only plausible mechanism by which Meta's contentless pushes reach
-   the extension on an App Store build. Not yet confirmed on device.
-2. **Finishing the fetch in the main app.** The app is already awake and
-   Facebook's own machinery is already in that process —
-   `FBPushNotifClientSyncManager`, `FBPushNotifClientSyncGraphQLNetworker`,
-   `addNotificationRequest:withCompletionHandler:`, and a notification source
-   label named `DEFAULT__FROM_SILENT_PUSH_FALLBACK`. Holding a background task
-   assertion across `application:didReceiveRemoteNotification:fetchCompletionHandler:`
-   so the fetch can complete needs no entitlement and no server. That work lives
-   in the main tweak, not in this dylib.
+**The whole chain is now instrumented and three badge-update pushes were caught
+end to end** (`src/Features/Notifications/FBPNotifClientSync.xm`):
+
+```
+[notify] push to app delegate: keys=aps,p,pim,pnid nt=badge_update badge-update=1
+[diag]   client sync: badge-update push delivered to the app delegate
+[diag]   client sync: trigger extra U1U660bbaf1264c1G…+1795210307243821
+[diag]   client sync: holding background task 3
+[diag]   client sync: running
+[fire]   notif.FBPushNotifClientSyncQueryBuilder.builderWithCount
+[diag]   client sync: SUCCEEDED
+```
+
+Every push reached the app, every sync ran under a background assertion, every
+one reported **SUCCEEDED**, and `-evaluatePush:` was **not reached once**, with
+no drop reason. The response carries nothing. So the suspended-too-early theory
+is dead: the fetch completes, and comes back empty.
+
+Two facts explain why, and both are new.
+
+**The query pages backwards from a cursor.** The three runs used cursors
+1795174192, 1795203110 and 1795203150 — Unix seconds — while the pnid the push
+itself carried embeds 1795210307, later than all of them. That rules out the
+reading where the query asks for notifications *after* the cursor, because the
+new notification is newer than every cursor used and would have come back. What
+remains is a page reaching backwards, which can never contain a notification
+newer than its cursor — exactly an empty-but-successful result. The `pnids`
+array is the "already have" list, which is consistent: adding the new pnid to it
+was tried and changed nothing. `FBPNotifClientSync.xm` now moves the cursor past
+*now*, for its own run only, and reports what it changed.
+
+**Facebook's own observer never runs.**
+`-[FBNotificationsPushNotifClientSyncBackgroundFetchObserver handleBackgroundFetchRequest:]`
+did not fire for any of the three pushes — iOS hands a contentless push straight
+to the app delegate. Decompiled (main binary `0x100950650`) that method is one
+MobileConfig gate, `ios_moen_client_sync`, and its sibling counter is named
+`bg_fetch_app_layer_silent_push_skipped_not_badge_update` — it *skips* what is
+not a badge update, so on an App Store build it is meant to handle exactly these
+pushes. A gate that is off explains both facts.
+
+**And the text is read wherever it appears.**
+`src/Features/Notifications/FBPLocalNotify.xm` stops waiting for Facebook's own
+display pipeline and posts the banner itself, from
+`-[FBNotificationsSQLiteManager saveObject:toTable:]` — the one chokepoint every
+path that persists a notification goes through, whose schema is generic so the
+model object arrives with its text still on it — and from `-evaluatePush:`, with
+its own dedup and a hook on `-[UNUserNotificationCenter addNotificationRequest:]`
+so it stands down if Facebook's pipeline ever starts working. Neither has fired
+on device yet, which is itself the finding: see
+[`.temp/Notification-todo.md`](../.temp/Notification-todo.md) for the two routes
+left and the addresses not to re-derive.
 
 One thing worth stating plainly, because it is asked often: **a push server of
 our own is not an option.** APNs routes by `apns-topic`, which is the app's
@@ -273,6 +311,8 @@ rather than reasoning. Worth reading before proposing any of them again.
 | **Extensions stripped at build time** | `build.py` passes cyan `-g` (`--remove-encrypted`), never `-e` (`--remove-extensions`), and the decrypted input IPA is `cryptid 0` throughout. The shipped IPA carries the appex with `FBPNotifyBridge.dylib` weak-linked — verified in the release artifact. |
 | **Notifications being switched off** | The same capture read back `authorization=authorized alert=on lockScreen=on notificationCenter=on badge=on sound=on`. |
 | **Running a push server of our own** | APNs routes by `apns-topic`, which is `com.facebook.Facebook`; pushing there needs an APNs key from the team owning that App ID. A signing `.p12` is not an APNs credential, and `NEAppPushProvider` needs an `app-push-provider` entitlement sideloading profiles do not grant. |
+| **`com.apple.developer.usernotifications.filtering`** | Closed by Apple's own documentation, not by testing. The entitlement exists so an extension can **suppress a visible** push — ["only required to make the notification silent"](https://developer.apple.com/forums/thread/649172) — and does not cause a non-alerting push to launch one. It was this file's route 1 for weeks; it was never the mechanism. |
+| **LiveContainer as a host** | It does not support app extensions at all, and allocates keychain access groups randomly per container, so the NSE can neither be registered nor share a group with its host. |
 | **Explicit (non-wildcard) App IDs, and whether the extension launches at all** | Settled on device — see [below](#explicit-app-ids-and-whether-the-nse-launches--settled). |
 
 One finding worth keeping in view, because it contradicts an earlier reading of
@@ -284,33 +324,35 @@ the capture analysed. Both shapes are in play.
 
 ## What happens next
 
-In order, because the first one decides the rest.
+The capture that used to be step one has been taken, three times, and it moved
+the question — see [What is still missing](#what-is-still-missing). What is left,
+in order:
 
-1. **Capture, before anything else.** An `FBP_DIAG=1` build, recording per push:
-   `hasAlertContent` / `hasMutableContent` / `pushType`, the payload, whether the
-   extension launched, whether Facebook called `addNotificationRequest:`, and the
-   access group each process resolved. Trigger a like, a comment, a friend
-   request, a tag and a Messenger message deliberately. A push carrying
-   `mutable-content` means the extension runs and loses, which is a session
-   problem; one without means it never runs, which is not.
-2. **Finish the fetch in the main app.** Hook
-   `application:didReceiveRemoteNotification:fetchCompletionHandler:`, hold a
-   `beginBackgroundTaskWithExpirationHandler:` assertion, let Facebook's own
-   `FBPushNotifClientSyncManager` complete, then call the completion handler.
-   Force `FBMobileConfigSilentPushFallbackTable` if it turns out to gate the
-   fallback. This is main-tweak work, not bridge work.
-3. **Probe the filtering entitlement.** Add the key to the appex before signing
-   and see whether `installd` accepts it. Either answer is worth having — a
-   refusal closes the route for good and leaves TrollStore as the only one.
-   `build.py` already captures and re-applies the appex's original entitlements,
-   so this is a few lines.
-4. **Run one keychain implementation in both processes** — see the last entry
-   under [Still unverified](#still-unverified).
+1. **Settle the cursor.** `FBPNotifClientSync.xm` now moves the query's cursor
+   past *now* for its own run and logs `cursor=… -> …`. If the next capture
+   reaches `-evaluatePush:`, the backwards-paging reading is right and
+   `FBPLocalNotify.xm` posts the banner from there with no further work. If it
+   does not, the cursor is not the cause and the line in the log says so.
+2. **Probe the `ios_moen_client_sync` gate**, cheapest first. `+[FBMobileConfigLifeCycleController
+   getAddedParamsFilePath:]` is Objective-C and class-level, so one `%hook` and
+   one log line say whether MobileConfig overrides are file-backed — and a file
+   is something a sideloaded build can write, where `MSHookFunction` is not.
+   Full sequence in [`.temp/Notification-todo.md`](../.temp/Notification-todo.md).
+3. **Promote the text taps in `FBPLocalNotify.xm`.** They log and do not post,
+   deliberately: `FBNotificationText` is built by the list UI as well, and a
+   background fetch could construct dozens. Once a capture shows which one fires
+   during a push-woken launch, that one becomes the post site.
+4. **Adopt the main→appex defaults fan-out.** Not a notification fix — a
+   correctness one. A `group.*` write in the app can sit in that process's
+   cfprefsd cache where the extension never sees it, and the additive shape also
+   keeps the app off the redirect path entirely. Details, and why it is worth
+   doing anyway, are in the notes above.
 5. **Wrap the content handler.** A once-only, exception- and expiry-safe wrapper
    around `didReceiveNotificationRequest:withContentHandler:` that always calls
    the handler exactly once, falling back to the original content. This does not
-   make notifications detailed; it removes the separate failure class where a
-   banner arrives ~30 s late or not at all.
+   make a notification detailed; it removes the separate failure class where a
+   banner arrives ~30 s late or not at all. iQFace ships exactly this, in
+   `IQFNotifyPassthrough.dylib`, and it is the one thing it has that we do not.
 
 ## Build and injection
 
