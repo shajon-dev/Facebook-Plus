@@ -31,6 +31,7 @@ FacebookPlus_FILES = \
 	src/Features/Onboarding/FBPWelcomeController.m \
 	src/Features/AppIcons/FBPAppIconController.m \
 	src/Features/Language/FBPLanguageController.m \
+	src/Features/Language/FBPLanguagePackHooks.xm \
 	src/Features/Feed/FBPFeedHooks.xm \
 	src/Features/Feed/FBPFeedSurveyHooks.xm \
 	src/Features/Ads/FBPAdsHooks.xm \
