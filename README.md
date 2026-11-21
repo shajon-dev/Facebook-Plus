@@ -43,7 +43,7 @@
     <tr><td nowrap>👑 <b>Facebook Plus</b></td><td>Preview Meta's paid subscriber features without subscribing — including the Story diamond/heart reaction; Direct or Trial unlock, off by default with a warning</td></tr>
     <tr><td nowrap rowspan="5">📰 <b>Feed</b></td><td>Remove ads &amp; sponsored posts — feed, video, Stories and Marketplace</td></tr>
     <tr><td>Hide "People you may know", Group and Page suggestions</td></tr>
-    <tr><td>Hide the Reels carousel, Threads promo and Stories tray</td></tr>
+    <tr><td>Hide Reels in the feed, Top Stories tray, Threads promo</td></tr>
     <tr><td>Remove survey prompts ("Are you interested in this post?")</td></tr>
     <tr><td>Remove the affiliate / product banner, in the comment sheet and on the Reel itself</td></tr>
     <tr><td nowrap rowspan="2">🧭 <b>Links</b></td><td>Open external links in your default browser</td></tr>

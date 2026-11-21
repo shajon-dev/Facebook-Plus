@@ -689,7 +689,6 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPSwitchRow(FBPKeyNoRecs, FBPL(@"row.norecs.title"), FBPL(@"row.norecs.desc"), @"magic"),
                 FBPSwitchRow(FBPKeyNoReels, FBPL(@"row.noreels.title"), nil, @"reels"),
                 FBPSwitchRow(FBPKeyNoReelsRecommended, FBPL(@"row.noreelsrecommended.title"), FBPL(@"row.noreelsrecommended.desc"), @"reels"),
-                FBPSwitchRow(FBPKeyNoStories, FBPL(@"row.nostories.title"), FBPL(@"row.nostories.desc"), @"incognito"),
                 FBPSwitchRow(FBPKeyNoThreads, FBPL(@"row.nothreads.title"), FBPL(@"row.nothreads.desc"), @"at"),
             ]),
             FBPSection(FBPL(@"footer.feedClutter"), @[
@@ -713,6 +712,10 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         ]},
         @{ kRowTitle : FBPL(@"cat.stories.title"), kRowDesc : FBPL(@"cat.stories.summary"),
            kRowIcon : @"incognito", kRowCategory : @[
+            FBPSection(nil, @[
+                FBPSwitchRow(FBPKeyNoMainStories, FBPL(@"row.nomainstories.title"), FBPL(@"row.nomainstories.desc"), @"incognito"),
+                FBPSwitchRow(FBPKeyNoStories, FBPL(@"row.nostories.title"), FBPL(@"row.nostories.desc"), @"incognito"),
+            ]),
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyAnonymousStories, FBPL(@"row.anonstories.title"), FBPL(@"row.anonstories.desc"), @"incognito"),
                 FBPSwitchRow(FBPKeyNoAutoNext, FBPL(@"row.noautonext.title"), nil, @"reels"),
