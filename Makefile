@@ -64,6 +64,7 @@ FacebookPlus_FILES = \
 	src/Features/Links/FBPLinkBridge.xm \
 	src/Features/Calls/FBPCallBlocker.xm \
 	src/Features/Notifications/FBPNotifClientSync.xm \
+	src/Features/Notifications/FBPLocalNotify.xm \
 	src/Features/Update/FBPUpdateController.m \
 	src/Features/Update/FBPUpdateChecker.m \
 	src/PluginsInject/PluginsInject.mm \
@@ -79,7 +80,7 @@ FBP_VERSION := $(shell awk -F': ' '/^Version:/{print $$2; exit}' control)
 
 # Every directory a source may #import a sibling header from. One list, used by
 # the compiler below, by the .clangd the compile-commands target writes, and by
-# scripts/verify.py — so the editor and the typechecker cannot drift from the
+# scripts/doctor.py — so the editor and the typechecker cannot drift from the
 # build the way they silently did when each kept its own copy.
 FBP_INCLUDE_DIRS = \
 	src/Core \
@@ -194,9 +195,10 @@ compile-commands:
 		| bear parse-sh -o compile_commands.json 2>/dev/null
 	@echo "==> Wrote compile_commands.json and .clangd"
 
-# Typecheck every source without building: fast, parallel, and across all four
-# shipped configurations (tweak and bridge, each with and without FBP_DIAG).
-# See scripts/verify.py.
+# Every check scripts/doctor.py has: the four shipped configurations
+# typechecked in parallel, both targets actually linked, and the repository's
+# own rules over whatever git tracks. This target runs all of them: a check
+# that has to be requested separately tends not to be run at all.
 .PHONY: check
 check:
-	@python3 scripts/verify.py check
+	@python3 scripts/doctor.py
