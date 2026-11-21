@@ -61,6 +61,10 @@ static const CGFloat kFBPSidebarDefaultHeight = 57.0;
 /// Where Facebook starts its own rows' glyphs, measured off a row beside it.
 @property (nonatomic) CGFloat leadingInset;
 @property (nonatomic) BOOL insetMeasured;
+/// A move the row has made but not yet animated: see FBPSidebarMoveEntry.
+@property (nonatomic) BOOL moveWaiting;
+@property (nonatomic) CGPoint movedFrom;
+@property (nonatomic) CGRect movedTo;
 @end
 
 @implementation FBPSidebarEntryRow {
@@ -690,6 +694,74 @@ static CGFloat FBPSidebarMeasuredInset(UIScrollView *list, CGRect rowFrame) {
 
 #pragma mark - Placing the row
 
+/// The animation the list has just put on its own cells, or nil when there is
+/// none to join.
+///
+/// Opening "Settings and privacy" on the SE: the collection view puts the whole
+/// change inside one performBatchUpdates and hands every cell a 0.3s
+/// easeInEaseOut animation — the log-out cell's presentation layer was measured
+/// gliding from y 809.6 to 1377.4 over that window. A zero beginTime is what
+/// says those animations are still in the open transaction rather than already
+/// running, and that is the only moment the row can start alongside them.
+/// Preferring a position animation picks a row that is moving over one that is
+/// only fading in; the timing is the same either way.
+static CAAnimation *FBPSidebarListAnimation(UIScrollView *list) {
+    CAAnimation *any = nil;
+    for (UIView *sub in list.subviews) {
+        if ([sub isKindOfClass:FBPSidebarEntryRow.class]) continue;
+        for (NSString *key in sub.layer.animationKeys) {
+            CAAnimation *animation = [sub.layer animationForKey:key];
+            if (!animation || animation.beginTime != 0.0) continue;
+            if ([animation isKindOfClass:CAPropertyAnimation.class] &&
+                [[(CAPropertyAnimation *)animation keyPath] isEqualToString:@"position"]) {
+                return animation;
+            }
+            if (!any) any = animation;
+        }
+    }
+    return any;
+}
+
+/// Moves the row to @c frame, keeping step with the list when the list is
+/// animating.
+///
+/// The row is a subview rather than a cell, so nothing animates it: its frame is
+/// set from a cell's -layoutSubviews, which the collection view runs inside its
+/// batch update with animations off — +areAnimationsEnabled was NO on every one
+/// of those passes. The row therefore arrived at its final place in the first
+/// frame of the update and then stood there for the 0.3s Facebook's own rows
+/// spent travelling, which reads as the row vanishing from where it was and
+/// turning up early somewhere else. It joins them by taking their animation.
+///
+/// Taking it needs a second pass: the move lands on the first cell laid out in
+/// the update, and the cells are given their animations a few passes later —
+/// 0.130s against 0.135s in the run measured. So the move is remembered and
+/// every later pass through the same update is another chance to catch it,
+/// which is why this runs even when the frame has not changed.
+static void FBPSidebarMoveEntry(UIScrollView *list, FBPSidebarEntryRow *row, CGRect frame) {
+    if (!CGRectEqualToRect(row.frame, frame)) {
+        CGRect was = row.frame;
+        CGPoint from = row.layer.position;
+        row.frame = frame;
+        row.moveWaiting = !CGRectIsEmpty(was) && !CGPointEqualToPoint(from, row.layer.position);
+        row.movedFrom = from;
+        row.movedTo = frame;
+    }
+    // A remembered move is only the one the row is still standing at the end of.
+    if (!row.moveWaiting || !CGRectEqualToRect(row.frame, row.movedTo)) return;
+
+    CAAnimation *pace = FBPSidebarListAnimation(list);
+    if (!pace) return;
+    row.moveWaiting = NO;
+
+    CABasicAnimation *move = [CABasicAnimation animationWithKeyPath:@"position"];
+    move.fromValue = [NSValue valueWithCGPoint:row.movedFrom];
+    move.toValue = [NSValue valueWithCGPoint:row.layer.position];
+    move.duration = pace.duration;
+    move.timingFunction = pace.timingFunction;
+    [row.layer addAnimation:move forKey:@"position"];
+}
+
 /// Puts the tweak's row in the gap the layout hooks opened above the log-out
 /// row, and keeps it there as the menu's own content grows and shrinks.
 static void FBPSidebarInstallEntry(UIScrollView *list) {
@@ -704,7 +776,7 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
     CGRect frame = CGRectMake(0, FBPSidebarRowTop(layout, content),
                               list.bounds.size.width,
                               FBPSidebarEntryHeight(layout, content));
-    if (!CGRectEqualToRect(row.frame, frame)) row.frame = frame;
+    FBPSidebarMoveEntry(list, row, frame);
 
     // Once a measurement lands the row keeps it; until then every pass is
     // another chance at one.
