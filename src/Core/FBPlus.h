@@ -42,6 +42,33 @@ NS_ASSUME_NONNULL_BEGIN
 ///     }
 #define FBP_ONCE(name) static BOOL name = NO; if (!name && (name = YES))
 
+/// One line per call site, however many times hook installation re-runs.
+///
+/// Every report that says whether a group installed has to use this, not
+/// FBPLog. The installers run again for each image dyld loads, and a device
+/// launch on 2026-11-21 loaded 781 of them: five report lines that sat NEXT to
+/// an FBP_ONCE install instead of INSIDE it produced 3,905 of the 4,000 lines
+/// in the exported log and pushed everything else out of it. The install was
+/// correctly guarded in each case; only the line about it was not.
+///
+/// This applies to the failure branch just as much as the success one — "class
+/// not found" repeats 781 times just as happily.
+///
+///     if (checker) {
+///         FBP_ONCE(gMetaPlus) { %init(FBPMetaPlus); }
+///         FBPLogOnce(@"plus: benefit gate installed");
+///     } else {
+///         FBPLogOnce(@"plus: FBSubsBenefitStatusChecker not found");
+///     }
+#define FBPLogOnce(fmt, ...)                                                   \
+    do {                                                                       \
+        static BOOL _fbp_logged_once = NO;                                     \
+        if (!_fbp_logged_once) {                                               \
+            _fbp_logged_once = YES;                                            \
+            FBPLog(fmt, ##__VA_ARGS__);                                        \
+        }                                                                      \
+    } while (0)
+
 #pragma mark - Notifications
 
 /// Posted whenever any preference changes, so live views can re-read state

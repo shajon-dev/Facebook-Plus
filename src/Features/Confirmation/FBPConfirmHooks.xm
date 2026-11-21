@@ -290,6 +290,6 @@ void FBPInitConfirmHooks(void) {
     if (objc_getClass("CKComponentActionControlForwarder")) {
         FBP_ONCE(gConfirm) { %init(FBPConfirm); }
     } else {
-        FBPLog(@"CKComponentActionControlForwarder not found — confirmations disabled");
+        FBPLogOnce(@"CKComponentActionControlForwarder not found — confirmations disabled");
     }
 }

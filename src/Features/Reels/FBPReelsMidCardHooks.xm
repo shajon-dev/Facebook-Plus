@@ -79,7 +79,7 @@ void FBPInitReelsMidCardHooks(void) {
         [config respondsToSelector:@selector(isTYAMidcardSeeMyAlgorithmButtonEnabled:)]) {
         FBP_ONCE(gReelsMidCardGate) { %init(FBPReelsMidCardGate); }
     } else {
-        FBPLog(@"FBRADLConfigHelper TYA mid-card gates not found — "
+        FBPLogOnce(@"FBRADLConfigHelper TYA mid-card gates not found — "
                @"Reels recommended-card hiding inactive");
     }
 }

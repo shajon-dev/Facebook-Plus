@@ -98,6 +98,6 @@ void FBPInitFeedSurveyHooks(void) {
         [component respondsToSelector:@selector(newWithActionLink:tracking:externalVariables:dismissalExternalVariableName:toolbox:)]) {
         FBP_ONCE(gFeedInlineSurvey) { %init(FBPFeedInlineSurvey); }
     } else {
-        FBPLog(@"FBFeedInlineSurveyComponent factory not found — in-post survey cards not suppressed");
+        FBPLogOnce(@"FBFeedInlineSurveyComponent factory not found — in-post survey cards not suppressed");
     }
 }
