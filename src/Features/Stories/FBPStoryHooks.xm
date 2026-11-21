@@ -1,4 +1,5 @@
-// Stories: incognito viewing, manual mark-as-seen, no auto-advance.
+// Stories: incognito viewing, manual mark-as-seen, no auto-advance, and
+// removal of the tray at the top of News Feed.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -461,6 +462,41 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
 
 %end // FBPStoryFallback
 
+#pragma mark - Stories tray (News Feed)
+
+// The horizontal tray at the top of News Feed.
+//
+// It is a ComponentKit *section* of the feed's own data source, not a feed unit
+// and not a view the tweak can hide. On device the feed's `feed-table` has four
+// sections — composer, tray, posts, footer — and the tray's item unwraps as
+// CKDataSourceItem -> FBSectionComponentDataSourceModel ->
+// FBInlineSnacksCompositeModel. FBInlineSnacksSectionComponent is the factory
+// that builds that section, and refusing to build it is what removes it.
+//
+// Verified on Facebook 585 against the live app: with the factory answering nil
+// the feed drops to three sections, the tray leaves no empty cell and no gap,
+// and paging still works (twenty-two posts over six screens of scrolling).
+//
+// Sizing the tray's cell to zero instead — the obvious-looking alternative —
+// keeps the section in the data source and means lying to the layout about an
+// item it has already measured, which is how the feed gets wedged.
+
+%group FBPStoryTray
+
+%hook FBInlineSnacksSectionComponent
+
++ (id)newWithSession:(id)session
+    inlineSnacksController:(id)controller
+              initialModel:(id)model {
+    FBPTraceFire("story.FBInlineSnacksSectionComponent.newWithSession");
+    if (FBPEnabled(FBPKeyNoMainStories)) return nil;
+    return %orig;
+}
+
+%end
+
+%end // FBPStoryTray
+
 #pragma mark - Init
 
 void FBPInitStoryHooks(void) {
@@ -505,5 +541,13 @@ void FBPInitStoryHooks(void) {
 
     if (objc_getClass("FBSnacksBucketViewController")) {
         FBP_ONCE(gStoryFallback) { %init(FBPStoryFallback); }
+    }
+
+    // The section component only exists once the feed stack is up, so this is
+    // latched like the others rather than assumed present at load.
+    if (objc_getClass("FBInlineSnacksSectionComponent")) {
+        FBP_ONCE(gStoryTray) { %init(FBPStoryTray); }
+    } else {
+        FBPLogOnce(@"FBInlineSnacksSectionComponent not found — stories tray stays");
     }
 }

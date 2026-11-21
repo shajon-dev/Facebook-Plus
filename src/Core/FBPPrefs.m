@@ -33,6 +33,9 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyNoPYMK           : @YES,
         FBPKeyNoReels          : @YES,
         FBPKeyNoStories        : @YES,
+        // Off: the tray is the one piece of feed clutter people often want,
+        // so removing it is opt-in rather than something an update does.
+        FBPKeyNoMainStories    : @NO,
         FBPKeyNoStoryPYMK      : @YES,
         FBPKeyNoThreads        : @YES,
         FBPKeyNoGroupSuggestions : @YES,

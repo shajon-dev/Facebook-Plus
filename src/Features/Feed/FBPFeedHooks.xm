@@ -29,7 +29,11 @@ static NSDictionary<NSString *, NSString *> *FBPCategoryMap(void) {
             @"ENGAGEMENT"    : FBPKeyNoRecs,
             @"ENGAGEMENT_QP" : FBPKeyNoRecs,
             @"FB_SHORTS"     : FBPKeyNoReels,
-            @"MULTI_FB_STORIES_TRAY" : FBPKeyNoStories,
+            // Gone from v585 (see the token diagnostic below), where the tray
+            // is removed at its section component instead — see
+            // FBPStoryHooks.xm. Kept mapped so older builds that still serve
+            // the token obey the same switch.
+            @"MULTI_FB_STORIES_TRAY" : FBPKeyNoMainStories,
             @"PYMK_STORY"    : FBPKeyNoStoryPYMK,
             // The feed-level bucket was renamed PYMK_FEED somewhere before
             // v585 — the bare "PYMK" token is gone from that build's binary,
@@ -356,10 +360,13 @@ static BOOL FBPShouldFilterModel(id model) {
     // A single ephemeral story shown inline in the feed (its own card, distinct
     // from the horizontal tray). It arrives as FBMemStoriesSingleBucketInline
     // ViewerFeedUnit under an ORGANIC edge, so it is matched by class name rather
-    // than category. Gated by the same Stories toggle as the tray.
+    // than category.
     if (FBPEnabled(FBPKeyNoStories)) {
         NSString *className = NSStringFromClass([model class]);
-        if ([className containsString:@"SingleBucketInlineViewer"]) return YES;
+        if ([className containsString:@"SingleBucketInlineViewer"] ||
+            [className containsString:@"StoriesSingleBucketFeedUnit"]) {
+            return YES;
+        }
     }
 
     // The story-tray PYMK / suggested bucket, distinct from the feed-level one.
