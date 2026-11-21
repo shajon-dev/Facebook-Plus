@@ -68,6 +68,33 @@ BOOL fbpIsAppExtensionProcess(void) {
 // every write — which, for the group suites Facebook keeps session and account
 // state in, looks exactly like being logged out, in the app and in the
 // notification extension alike. So create them before handing the container over.
+// Gives a stand-in App-Group container the directories a real one is born
+// with.
+//
+// Creating the container and nothing inside it is not enough. A real group
+// container already has Library/Caches, and code that writes there does not
+// create it first: Facebook's language-pack downloader asks for a temporary
+// file inside it, the create fails with NSURLErrorCannotCreateFile (-3000),
+// and the download is reported as a failure with Facebook's generic "not
+// enough space" text. That is issue #9, and the same signature was traced in
+// Messenger. Library/Preferences is made at the same time, because a suite
+// opened against this container needs it for the same reason.
+BOOL prepareGroupContainer(NSURL *container) {
+	if (!container) {
+		return NO;
+	}
+	if (!createDirectoryIfNotExists(container.path)) {
+		return NO;
+	}
+
+	NSURL *library = [container URLByAppendingPathComponent:@"Library" isDirectory:YES];
+	BOOL ready = createDirectoryIfNotExists(
+	    [library URLByAppendingPathComponent:@"Caches" isDirectory:YES].path);
+	ready &= createDirectoryIfNotExists(
+	    [library URLByAppendingPathComponent:@"Preferences" isDirectory:YES].path);
+	return ready;
+}
+
 BOOL prepareDefaultsContainer(NSURL *container) {
 	if (!container) {
 		return NO;
