@@ -10,12 +10,9 @@
 #define FBP_VERSION @"0.0.0"
 #endif
 
-// Releases are published under two GitHub owners. The primary is preferred; the
-// mirror is used only when the primary's releases endpoint does not answer HTTP
-// 200 (for example while the primary account is suspended).
-static NSString *const kPrimaryOwner  = @"SHAJON-404";
-static NSString *const kFallbackOwner = @"shajon-dev";
-static NSString *const kRepoName      = @"Facebook-Plus";
+// Releases are published under the shajon-dev GitHub owner.
+static NSString *const kGitHubOwner = @"shajon-dev";
+static NSString *const kRepoName    = @"Facebook-Plus";
 
 // This launch's resolved owner (mirrors FBPKeyResolvedGitHubOwner, which
 // persists it across launches).
@@ -43,17 +40,12 @@ static NSInteger FBPVersionCompare(NSString *a, NSString *b) {
 #pragma mark - Owner resolution
 
 + (NSString *)activeGitHubOwner {
-    if (sResolvedOwner.length) return sResolvedOwner;
-    NSString *saved = [FBPPrefs.shared stringForKey:FBPKeyResolvedGitHubOwner];
-    // Until a probe proves the primary is live, prefer the mirror: the primary
-    // account may be suspended, and a live link beats a dead one.
-    return saved.length ? saved : kFallbackOwner;
+    return kGitHubOwner;
 }
 
 + (void)setResolvedOwner:(NSString *)owner {
-    if (!owner.length) return;
-    sResolvedOwner = owner;
-    [FBPPrefs.shared setString:owner forKey:FBPKeyResolvedGitHubOwner];
+    sResolvedOwner = owner.length ? owner : kGitHubOwner;
+    [FBPPrefs.shared setString:sResolvedOwner forKey:FBPKeyResolvedGitHubOwner];
     [FBPPrefs.shared commit];
 }
 
@@ -71,10 +63,7 @@ static NSInteger FBPVersionCompare(NSString *a, NSString *b) {
 }
 
 + (void)refreshGitHubOwner {
-    [self fetchFromOwner:kPrimaryOwner
-              completion:^(NSInteger status, NSString *tag, NSString *body, NSError *error) {
-        [self setResolvedOwner:(status == 200 && tag.length) ? kPrimaryOwner : kFallbackOwner];
-    }];
+    [self setResolvedOwner:kGitHubOwner];
 }
 
 #pragma mark - Release fetch
@@ -120,24 +109,14 @@ static NSInteger FBPVersionCompare(NSString *a, NSString *b) {
             dispatch_async(dispatch_get_main_queue(), ^{ completion(v, c, e); });
         };
 
-    // Try the primary owner first; if its releases endpoint doesn't answer
-    // HTTP 200 (suspended account, moved repo, no network), use the mirror.
-    [self fetchFromOwner:kPrimaryOwner
+    [self fetchFromOwner:kGitHubOwner
               completion:^(NSInteger status, NSString *tag, NSString *body, NSError *error) {
         if (status == 200 && tag.length) {
-            [self setResolvedOwner:kPrimaryOwner];
+            [self setResolvedOwner:kGitHubOwner];
             reply(tag, body, nil);
-            return;
+        } else {
+            reply(nil, nil, error ?: [NSError errorWithDomain:@"FBPUpdate" code:2 userInfo:nil]);
         }
-        [self fetchFromOwner:kFallbackOwner
-                  completion:^(NSInteger s2, NSString *tag2, NSString *body2, NSError *err2) {
-            [self setResolvedOwner:kFallbackOwner];
-            if (s2 == 200 && tag2.length) {
-                reply(tag2, body2, nil);
-            } else {
-                reply(nil, nil, err2 ?: [NSError errorWithDomain:@"FBPUpdate" code:2 userInfo:nil]);
-            }
-        }];
     }];
 }
 
