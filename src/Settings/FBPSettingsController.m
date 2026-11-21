@@ -121,6 +121,9 @@ static UIImage *FBPSettingsIcon(NSString *name) {
               reuseIdentifier:(NSString *)reuseIdentifier {
     if ((self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) {
         self.backgroundColor = FBPCardColor();
+        self.clipsToBounds = YES;
+        self.contentView.clipsToBounds = YES;
+
         UIView *selected = [[UIView alloc] init];
         selected.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
         self.selectedBackgroundView = selected;
@@ -142,11 +145,22 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         _titleLabel.font = FBPFont(16, UIFontWeightRegular);
         _titleLabel.textColor = UIColor.labelColor;
         _titleLabel.numberOfLines = 0;
+        _titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
+        _titleLabel.allowsDefaultTighteningForTruncation = YES;
+        [_titleLabel setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
+                                                     forAxis:UILayoutConstraintAxisHorizontal];
+        [_titleLabel setContentHuggingPriority:UILayoutPriorityDefaultLow
+                                       forAxis:UILayoutConstraintAxisHorizontal];
 
         _descLabel = [[UILabel alloc] init];
         _descLabel.font = FBPFont(12, UIFontWeightRegular);
         _descLabel.textColor = UIColor.secondaryLabelColor;
         _descLabel.numberOfLines = 0;
+        _descLabel.lineBreakMode = NSLineBreakByWordWrapping;
+        [_descLabel setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
+                                                    forAxis:UILayoutConstraintAxisHorizontal];
+        [_descLabel setContentHuggingPriority:UILayoutPriorityDefaultLow
+                                      forAxis:UILayoutConstraintAxisHorizontal];
 
         _labelStack = [[UIStackView alloc] initWithArrangedSubviews:@[_titleLabel, _descLabel]];
         _labelStack.axis = UILayoutConstraintAxisVertical;
@@ -166,7 +180,15 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         [_accessoryContainer setContentCompressionResistancePriority:UILayoutPriorityRequired
                                                              forAxis:UILayoutConstraintAxisHorizontal];
 
+        NSLayoutConstraint *centerY = [_labelStack.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor];
+        centerY.priority = UILayoutPriorityDefaultHigh;
+
+        NSLayoutConstraint *cvWidth = [self.contentView.widthAnchor constraintEqualToAnchor:self.widthAnchor];
+        cvWidth.priority = UILayoutPriorityDefaultHigh;
+
         [NSLayoutConstraint activateConstraints:@[
+            cvWidth,
+
             [_iconTile.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor
                                                     constant:kContentInset],
             [_iconTile.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
@@ -179,9 +201,11 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             [_iconView.heightAnchor constraintEqualToConstant:22],
 
             [_labelStack.leadingAnchor constraintEqualToAnchor:_iconTile.trailingAnchor constant:12],
-            [_labelStack.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+            centerY,
             [_labelStack.topAnchor constraintGreaterThanOrEqualToAnchor:self.contentView.topAnchor
                                                                constant:9],
+            [self.contentView.bottomAnchor constraintGreaterThanOrEqualToAnchor:_labelStack.bottomAnchor
+                                                                       constant:9],
             [_labelStack.trailingAnchor constraintLessThanOrEqualToAnchor:_accessoryContainer.leadingAnchor
                                                                  constant:-10],
 
@@ -194,9 +218,27 @@ static UIImage *FBPSettingsIcon(NSString *name) {
     return self;
 }
 
+- (void)layoutSubviews {
+    CGFloat accessoryW = self.accessoryContainer.frame.size.width;
+    if (accessoryW <= 0) accessoryW = 51.0;
+    CGFloat textWidth = self.contentView.bounds.size.width - kContentInset - 29 - 12 - 10 - accessoryW - kContentInset;
+    if (textWidth > 0) {
+        if (self.titleLabel.preferredMaxLayoutWidth != textWidth) {
+            self.titleLabel.preferredMaxLayoutWidth = textWidth;
+        }
+        if (self.descLabel.preferredMaxLayoutWidth != textWidth) {
+            self.descLabel.preferredMaxLayoutWidth = textWidth;
+        }
+    }
+    [super layoutSubviews];
+}
+
 - (void)prepareForReuse {
     [super prepareForReuse];
     for (UIView *subview in self.accessoryContainer.subviews) [subview removeFromSuperview];
+    for (NSLayoutConstraint *c in self.accessoryContainer.constraints.copy) {
+        [self.accessoryContainer removeConstraint:c];
+    }
     self.titleLabel.text = nil;
     self.titleLabel.textColor = UIColor.labelColor;
     self.descLabel.text = nil;
@@ -275,16 +317,55 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 
 #pragma mark Cell configuration (shared)
 
+static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
+    CGFloat screenW = UIScreen.mainScreen.bounds.size.width;
+    CGFloat baseSize = 16.0;
+    if (screenW <= 320.0) {
+        baseSize = 14.5;
+    } else if (screenW <= 375.0) {
+        baseSize = 15.5;
+    }
+    if (!text.length || availableWidth <= 0) return baseSize;
+
+    UIFont *font = FBPFont(baseSize, UIFontWeightRegular);
+    CGSize size = [text sizeWithAttributes:@{ NSFontAttributeName : font }];
+    if (size.width <= availableWidth) {
+        return baseSize;
+    }
+
+    // Attempt to scale down to fit on a single line
+    CGFloat minSingleLineSize = screenW <= 320.0 ? 12.0 : 13.0;
+    CGFloat scale = availableWidth / size.width;
+    CGFloat target = baseSize * scale;
+    if (target >= minSingleLineSize) {
+        return floor(target * 2.0) / 2.0;
+    }
+
+    // If it cannot fit on 1 line even at minSingleLineSize, allow wrapping with a comfortable font size
+    return screenW <= 320.0 ? 13.5 : 14.5;
+}
+
 - (void)configureCell:(FBPSettingsCell *)cell withRow:(NSDictionary *)row {
     BOOL disabled = [row[kRowDisabled] boolValue];
 
-    cell.titleLabel.text = row[kRowTitle];
+    CGFloat screenW = UIScreen.mainScreen.bounds.size.width;
+    if (screenW <= 0) screenW = 375.0;
+    // Estimated text width: screen width minus card insets (16*2), content insets (16*2), icon (29), spacing (12+10), accessory (51)
+    CGFloat estimatedTextWidth = screenW - 32.0 - 134.0;
+    if (estimatedTextWidth <= 0) estimatedTextWidth = 150.0;
+
+    NSString *title = row[kRowTitle];
+    cell.titleLabel.text = title;
+    CGFloat titleSize = FBPTitleFontSize(title, estimatedTextWidth);
+    cell.titleLabel.font = FBPFont(titleSize, UIFontWeightRegular);
     cell.titleLabel.textColor = disabled      ? UIColor.tertiaryLabelColor
                               : [row[kRowDanger] boolValue] ? UIColor.systemRedColor
                                                             : UIColor.labelColor;
     NSString *desc = row[kRowDesc];
     cell.descLabel.text = desc;
     cell.descLabel.hidden = (desc.length == 0);
+    CGFloat descSize = screenW <= 320.0 ? 11.0 : (screenW <= 375.0 ? 11.5 : 12.0);
+    cell.descLabel.font = FBPFont(descSize, UIFontWeightRegular);
 
     UIImage *icon = FBPSettingsIcon(row[kRowIcon]);
     cell.iconView.image = icon;
@@ -296,6 +377,8 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         UISwitch *toggle = [[UISwitch alloc] init];
         toggle.onTintColor = FBPTintColor();
         toggle.on = FBPEnabled(row[kRowKey]);
+        [toggle setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        [toggle setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
         objc_setAssociatedObject(toggle, @selector(tag), row[kRowKey],
                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         if (row[kRowConfirm]) {
@@ -367,6 +450,8 @@ static UIImage *FBPSettingsIcon(NSString *name) {
                 [UIImage fbp_symbolNamed:(isPicker ? @"chevron.up.chevron.down" : @"chevron.right")
                                     size:13 weight:UIImageSymbolWeightSemibold]];
             chevron.tintColor = UIColor.tertiaryLabelColor;
+            [chevron setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+            [chevron setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
             [pieces addObject:chevron];
         }
         if (pieces.count) {
@@ -374,6 +459,8 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             stack.axis = UILayoutConstraintAxisHorizontal;
             stack.alignment = UIStackViewAlignmentCenter;
             stack.spacing = 7;
+            [stack setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+            [stack setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
             [self setAccessory:stack inCell:cell];
         }
     }
@@ -400,7 +487,14 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         [view.trailingAnchor constraintEqualToAnchor:cell.accessoryContainer.trailingAnchor],
         [view.centerYAnchor constraintEqualToAnchor:cell.accessoryContainer.centerYAnchor],
         [view.topAnchor constraintGreaterThanOrEqualToAnchor:cell.accessoryContainer.topAnchor],
+        [view.bottomAnchor constraintLessThanOrEqualToAnchor:cell.accessoryContainer.bottomAnchor],
     ]];
+    if ([view isKindOfClass:UISwitch.class]) {
+        [NSLayoutConstraint activateConstraints:@[
+            [cell.accessoryContainer.widthAnchor constraintEqualToConstant:51],
+            [cell.accessoryContainer.heightAnchor constraintEqualToConstant:31],
+        ]];
+    }
 }
 
 - (void)fbpToggleSwitch:(UISwitch *)sender {
