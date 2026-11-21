@@ -88,11 +88,22 @@ static id gInFlightManager;
 //     / ...Response exist only inside NotificationServiceExtension — the
 //     process iOS refuses to start for a contentless push.
 //
-// Also worth knowing before touching this hook again: `count` logs as a
-// different nonsense value on every call (20281400, 34027576, 93648952), which
-// suggests the declared signature does not match the real one. That is why the
-// hook calls bare `%orig` and never forwards the arguments it read — a misread
-// value passed on would corrupt the call.
+// SETTLED 2026-11-21: `count` is an OBJECT, not an NSInteger. The "different
+// nonsense value on every call" (20281400, 34027576, 93648952, 89747664) was a
+// heap pointer's low 32 bits printed with %d. Disassembling
+// +[FBPushNotifClientSyncQueryBuilder builderWithCount:cursor:deviceId:extraData:pnids:]
+// at 0x1003b52c8 in 588.0.0 shows `mov x0, x2` followed immediately by a call —
+// x2, the first declared argument, is retained, which an NSInteger never is.
+//
+// It follows that forwarding the arguments IS safe: all five are 64-bit
+// register arguments on arm64, so the declaration only ever mattered for how
+// they were printed. The hook below now declares `count` as `id` and may pass
+// its arguments on.
+
+// YES while the sync WE started is in flight, so the query hook below only ever
+// alters our own run and never a fetch Facebook made for its own reasons.
+// Bracketed by fbpRunClientSync and the listener's succeeded/failed callbacks.
+static BOOL gOurSyncInFlight = NO;
 
 // The FBUserSession the client-sync networker needs. There is no global
 // accessor for it in the main binary, so it is taken from whichever of
@@ -156,13 +167,15 @@ static void fbpBeginBackgroundTask(void) {
 @implementation FBPClientSyncListener
 
 - (void)pushNotifClientSyncManagerSucceeded {
-	FBPDiagLog(@"client sync: SUCCEEDED");
+	FBPDiag(@"notify", @"client-sync: SUCCEEDED");
+	gOurSyncInFlight = NO;
 	fbpEndBackgroundTask();
 	gInFlightManager = nil;
 }
 
 - (void)pushNotifClientSyncManagerFailedWithError:(NSError *)error {
-	FBPDiagLog(@"client sync: FAILED — %@", error.localizedDescription ?: error);
+	FBPDiagFail(@"notify", @"client-sync: FAILED — %@", error.localizedDescription ?: error);
+	gOurSyncInFlight = NO;
 	fbpEndBackgroundTask();
 	gInFlightManager = nil;
 }
@@ -220,12 +233,17 @@ static void fbpRunClientSync(id observer, NSString *pnid) {
 		}
 
 		gInFlightManager = manager;
+		// Set before the run starts: the query is built asynchronously on
+		// Facebook's own queue, so the flag has to already be true by the time
+		// it gets there. Cleared by the listener above, whichever way it ends.
+		gOurSyncInFlight = YES;
 		fbpBeginBackgroundTask();
 		FBPDiagLog(@"client sync: running");
 		[manager runWithTrigger:trigger];
 		FBPDiagLog(@"client sync: runWithTrigger returned");
 	} @catch (NSException *exception) {
-		FBPDiagLog(@"client sync: threw %@ — %@", exception.name, exception.reason);
+		gOurSyncInFlight = NO;
+		FBPDiagFail(@"notify", @"client-sync: threw %@ — %@", exception.name, exception.reason);
 		// A changed initialiser signature would land here rather than take the
 		// app down inside a background wake.
 		gInFlightManager = nil;
@@ -283,6 +301,27 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 	FBPTraceFire("notif.FBBaseAppDelegate.didReceiveRemoteNotification");
 	%orig;
 
+	// EVERY push that reaches the app, not just the ones this hook acts on.
+	//
+	// A capture on 2026-11-21 03:27 had the extension running for a Messenger
+	// call — payload keys aps,ep,ki,pim,pnid,t, with the text already in it —
+	// and this selector never firing at all. That is the single most useful
+	// fact in the file and it was only knowable from the *absence* of a line,
+	// which is indistinguishable from the hook not being installed. One line
+	// per push settles it: a like or comment that reaches the app shows up
+	// here, with the shape that decides what can be done about it.
+	//
+	// Structure only. The payload carries the user's own notification text.
+	NSDictionary *pim = [userInfo isKindOfClass:NSDictionary.class] ? userInfo[@"pim"] : nil;
+	id notifType = [pim isKindOfClass:NSDictionary.class] ? pim[@"nt"] : nil;
+	NSArray *keys = [userInfo isKindOfClass:NSDictionary.class]
+	                    ? [userInfo.allKeys sortedArrayUsingSelector:@selector(compare:)]
+	                    : nil;
+	FBPDiag(@"notify", @"push to app delegate: keys=%@ nt=%@ badge-update=%d",
+	        keys.count ? [keys componentsJoinedByString:@","] : @"(none)",
+	        [notifType isKindOfClass:NSString.class] ? notifType : @"(none)",
+	        fbpIsBadgeUpdatePush(userInfo));
+
 	if (!fbpIsBadgeUpdatePush(userInfo)) return;
 
 	id pnid = userInfo[@"pnid"];
@@ -301,27 +340,58 @@ static BOOL fbpIsBadgeUpdatePush(NSDictionary *userInfo) {
 // nothing, so the question is whether it carries any pnids at all.
 %hook FBPushNotifClientSyncQueryBuilder
 
-+ (id)builderWithCount:(NSInteger)count
++ (id)builderWithCount:(id)count
                 cursor:(id)cursor
               deviceId:(id)deviceId
              extraData:(id)extraData
                  pnids:(id)pnids {
 	FBPTraceFire("notif.FBPushNotifClientSyncQueryBuilder.builderWithCount");
 
-	// One line: an NSArray description spans lines and a line-based log filter
-	// loses everything after the opening bracket.
-	NSString *ids = @"(nil)";
-	if ([pnids isKindOfClass:NSArray.class]) {
-		ids = ((NSArray *)pnids).count
-		    ? [(NSArray *)pnids componentsJoinedByString:@" | "]
-		    : @"(empty)";
-	} else if (pnids) {
-		ids = [pnids description];
+	// WHAT THE CURSOR TURNED OUT TO BE, AND WHY IT IS MOVED.
+	//
+	// The 03:31 capture on 2026-11-21 caught three badge-update pushes end to
+	// end: each reached the app delegate, each ran this sync, each reported
+	// SUCCEEDED, and -evaluatePush: was not called once. The response carried
+	// nothing. The cursors used were 1795174192, 1795203110 and 1795203150 —
+	// Unix seconds — while the pnid the push itself carried embeds 1795210307,
+	// later than all three.
+	//
+	// That kills the reading where the query asks for notifications *after* the
+	// cursor: the new notification is newer than every cursor used, so it would
+	// have come back and did not. What is left is a page that reaches BACKWARDS
+	// from the cursor, which can never contain a notification newer than it —
+	// which is exactly the empty-but-successful result three captures have
+	// shown. The pnids array is the "already have" list; adding the new pnid to
+	// it was tried and changed nothing, consistent with that reading too.
+	//
+	// So the cursor is moved past now for our own run, and only ours. If this
+	// is right, the next capture reaches -evaluatePush:. If it is wrong, the
+	// line below says what was asked for and the idea is dead with evidence
+	// rather than argument.
+	id effectiveCursor = cursor;
+	if (gOurSyncInFlight && cursor) {
+		NSTimeInterval ahead = NSDate.date.timeIntervalSince1970 + 60;
+		// Match whatever type Facebook used, rather than assuming one.
+		if ([cursor isKindOfClass:NSString.class]) {
+			effectiveCursor = [NSString stringWithFormat:@"%.0f", ahead];
+		} else if ([cursor isKindOfClass:NSNumber.class]) {
+			effectiveCursor = @((long long)ahead);
+		}
 	}
 
-	FBPDiagLog(@"client sync: query count=%d cursor=%@ deviceId=%@ extra=%@ pnids=%@",
-	           (int)count, cursor ?: @"(nil)", deviceId ?: @"(nil)", extraData ?: @"(nil)", ids);
-	return %orig;
+	// One line: an NSArray description spans lines and a line-based log filter
+	// loses everything after the opening bracket. The pnids themselves are not
+	// logged any more — 175 of them per call is most of a log, and the count is
+	// what the question needs.
+	NSUInteger pnidCount =
+		[pnids isKindOfClass:NSArray.class] ? ((NSArray *)pnids).count : 0;
+
+	FBPDiag(@"notify", @"client-sync query: count=%@ cursor=%@%@ pnids=%lu ours=%d", count ?: @"(nil)",
+	        cursor ?: @"(nil)",
+	        effectiveCursor == cursor ? @"" : [NSString stringWithFormat:@" -> %@", effectiveCursor],
+	        (unsigned long)pnidCount, gOurSyncInFlight);
+
+	return %orig(count, effectiveCursor, deviceId, extraData, pnids);
 }
 
 %end
