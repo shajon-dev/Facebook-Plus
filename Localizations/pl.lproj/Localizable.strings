@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Ukrywa sekcje „Osoby, które możesz znać / Grupy, do których warto dołączyć / Dla Ciebie” w aktualnościach.";
 "footer.metaplus" = "Tylko podgląd. Funkcje wymagające serwera nie będą działać.";
 "footer.plusmode" = "Metoda bezpośrednia wymusza włączenie funkcji.\nTryb próbny symuluje aktywny okres próbny w aplikacji.";
-"footer.resetpushkeys" = "Facebook szyfruje treść powiadomień kluczem zarejestrowanym przez Twoje urządzenie. Jeśli rejestracja nie powiodła się, serwer wysyła jedynie plakietkę bez tekstu. To czyści zapisane klucze, aby Facebook utworzył nowe przy następnym uruchomieniu.";
 
 
 "info.developer" = "Deweloper";
@@ -154,8 +153,6 @@
 "reset.title" = "Zresetuj wszystkie ustawienia";
 
 
-"resetpushkeys.confirm" = "Zresetuj klucze";
-"resetpushkeys.message" = "Facebook utworzy i zarejestruje nowe klucze push przy następnym uruchomieniu. Twoje konto i logowanie pozostaną bez zmian. Następnie zamknij aplikację i otwórz ją ponownie.";
 
 
 "row.anonstories.desc" = "Pozwala oglądać relacje bez wysyłania potwierdzenia odczytu.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Czcionka";
 "row.hidesidebaralsometa.title" = "Ukryj „Również od Meta”";
 "row.hidesidebarupgrades.title" = "Ukryj uaktualnienia";
-"row.keychainrebind.desc" = "Utrzymuje działanie pęku kluczy w podpisanej ponownie aplikacji. Wyłącz, jeśli Facebook zamyka się przy dotknięciu „Wyślij wiadomość” w profilu.";
-"row.keychainrebind.title" = "Zgodność pęku kluczy";
 "row.language.title" = "Język";
 "row.linksinsafari.desc" = "Otwiera zewnętrzne łącza w domyślnej przeglądarce zamiast w przeglądarce w aplikacji.";
 "row.linksinsafari.title" = "Otwieraj łącza w Safari";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Usuń ankiety";
 "row.nothreads.desc" = "Ukrywa kartę promocyjną Threads.";
 "row.nothreads.title" = "Usuń promocję Threads";
-"row.notifclientsync.desc" = "Gdy zmienia się tylko plakietka, pobierz i wyświetl treść powiadomienia";
-"row.notifclientsync.title" = "Pobierz brakujące powiadomienia";
 "row.oled.desc" = "Ustawia prawdziwą czerń w całej aplikacji.";
 "row.oled.title" = "Tryb ciemny OLED";
 "row.oleddividers.desc" = "Zachowuje cienkie linie między postami w trybie OLED. Wyłącz, aby uzyskać całkowicie czarny kanał.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Metoda odblokowania";
 "row.plusmode.trial" = "Wersja próbna";
 "row.reset.title" = "Zresetuj wszystkie ustawienia";
-"row.resetpushkeys.desc" = "Wymuś zarejestrowanie nowych kluczy szyfrowania powiadomień push w Facebooku";
-"row.resetpushkeys.title" = "Zresetuj klucze powiadomień";
 "row.suspend.desc" = "Wymusza zamknięcie Facebooka; otwórz go ponownie, aby zastosować zmiany.";
 "row.suspend.title" = "Zamknij aplikację";
 "row.welcome.title" = "Pokaż ekran powitalny";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Pamięć podręczna została wyczyszczona";
 "toast.logCleared" = "Dzienniki wyczyszczone.";
 "toast.logEmpty" = "Brak zarejestrowanych dzienników.";
-"toast.pushKeysReset" = "Klucze push wyczyszczone (%lu). Uruchom ponownie Facebooka";
 "toast.settingsReset" = "Ustawienia zostały zresetowane";
 
 

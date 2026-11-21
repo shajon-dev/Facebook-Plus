@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Oculta las secciones de “Personas que quizás conozcas”, sugerencias de grupos y “Para ti”.";
 "footer.metaplus" = "Solo vista previa. Las funciones del lado del servidor no estarán disponibles.";
 "footer.plusmode" = "Directo fuerza la activación de las funciones.\nPrueba simula un periodo de prueba activo en la app.";
-"footer.resetpushkeys" = "Facebook cifra el texto de las notificaciones con una clave registrada por tu dispositivo. Si no se completó el registro, solo aparece el globo numérico sin texto. Esto borra las claves guardadas para que Facebook genere nuevas al iniciar.";
 
 
 "info.developer" = "Desarrollador";
@@ -154,8 +153,6 @@
 "reset.title" = "Restablecer todos los ajustes";
 
 
-"resetpushkeys.confirm" = "Restablecer claves";
-"resetpushkeys.message" = "Facebook generará y registrará nuevas claves push en el próximo inicio. Tu cuenta y sesión no se verán afectadas. Cierra por completo Facebook y vuelve a abrirlo.";
 
 
 "row.anonstories.desc" = "Ver historias sin enviar confirmación de lectura.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Fuente";
 "row.hidesidebaralsometa.title" = "Ocultar “También de Meta”";
 "row.hidesidebarupgrades.title" = "Ocultar mejoras";
-"row.keychainrebind.desc" = "Mantiene el llavero funcional en apps firmadas. Desactívalo si Facebook se cierra al pulsar Mensaje en un perfil.";
-"row.keychainrebind.title" = "Compatibilidad con el llavero";
 "row.language.title" = "Idioma";
 "row.linksinsafari.desc" = "Abre los enlaces externos en tu navegador predeterminado en vez del navegador integrado.";
 "row.linksinsafari.title" = "Abrir enlaces en Safari";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Quitar las encuestas";
 "row.nothreads.desc" = "Oculta la tarjeta de “Descubre nuevos hilos” de Threads.";
 "row.nothreads.title" = "Eliminar la promo de Threads";
-"row.notifclientsync.desc" = "Obtiene y muestra la notificación cuando solo cambia el contador";
-"row.notifclientsync.title" = "Recuperar notificaciones faltantes";
 "row.oled.desc" = "Pone toda la app en negro puro.";
 "row.oled.title" = "Modo oscuro OLED";
 "row.oleddividers.desc" = "Mantiene las líneas tenues entre publicaciones en modo OLED. Desactívalo para un feed totalmente negro.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Método de desbloqueo";
 "row.plusmode.trial" = "Prueba";
 "row.reset.title" = "Restablecer todos los ajustes";
-"row.resetpushkeys.desc" = "Obliga a Facebook a registrar nuevas claves de cifrado push";
-"row.resetpushkeys.title" = "Restablecer claves de notificaciones";
 "row.suspend.desc" = "Fuerza el cierre de Facebook; vuelve a abrirlo para aplicar los cambios.";
 "row.suspend.title" = "Cerrar la app";
 "row.welcome.title" = "Mostrar pantalla de bienvenida";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Caché vaciada";
 "toast.logCleared" = "Registros borrados.";
 "toast.logEmpty" = "No hay registros disponibles.";
-"toast.pushKeysReset" = "Claves push restablecidas (%lu). Vuelve a abrir Facebook";
 "toast.settingsReset" = "Ajustes restablecidos";
 
 

@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Blendet die Bereiche „Personen, die du vielleicht kennst / Gruppen, denen du beitreten solltest / Für dich“ aus.";
 "footer.metaplus" = "Nur Vorschau. Serverbasierte Funktionen funktionieren nicht.";
 "footer.plusmode" = "Direkt erzwingt die Funktionen sofort.\nTestphase simuliert eine aktive Testphase in der App.";
-"footer.resetpushkeys" = "Facebook verschlüsselt Mitteilungstexte mit einem Schlüssel, den dein Gerät registriert. Wenn diese Registrierung fehlschlägt, zeigt das Gerät nur den Zähler ohne Text. Dies löscht die gespeicherten Schlüssel, damit Facebook beim nächsten Start neue erstellt.";
 
 
 "info.developer" = "Entwickler";
@@ -154,8 +153,6 @@
 "reset.title" = "Alle Einstellungen zurücksetzen";
 
 
-"resetpushkeys.confirm" = "Schlüssel zurücksetzen";
-"resetpushkeys.message" = "Facebook erstellt und registriert beim nächsten Start neue Push-Schlüssel. Dein Konto und deine Anmeldedaten bleiben unverändert. Bitte beende Facebook und öffne es danach erneut.";
 
 
 "row.anonstories.desc" = "Storys ansehen, ohne eine Lesebestätigung zu senden.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Schrift";
 "row.hidesidebaralsometa.title" = "„Auch von Meta“ ausblenden";
 "row.hidesidebarupgrades.title" = "Upgrades ausblenden";
-"row.keychainrebind.desc" = "Hält den Schlüsselbund einer neu signierten App funktionsfähig. Schalte es aus, wenn Facebook beim Tippen auf „Nachricht“ in einem Profil abstürzt.";
-"row.keychainrebind.title" = "Keychain-Kompatibilität";
 "row.language.title" = "Sprache";
 "row.linksinsafari.desc" = "Öffnet externe Links im Standardbrowser statt im In-App-Browser.";
 "row.linksinsafari.title" = "Links in Safari öffnen";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Umfragekarten entfernen";
 "row.nothreads.desc" = "Blendet die Threads-Werbekarte aus.";
 "row.nothreads.title" = "Threads-Werbung entfernen";
-"row.notifclientsync.desc" = "Mitteilungstext abrufen und anzeigen, wenn sich nur der Zähler ändert";
-"row.notifclientsync.title" = "Fehlende Mitteilungen abrufen";
 "row.oled.desc" = "Macht die gesamte App komplett schwarz.";
 "row.oled.title" = "OLED-Dunkelmodus";
 "row.oleddividers.desc" = "Behält die feinen Linien zwischen Beiträgen im OLED-Modus. Aus für einen komplett schwarzen Feed.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Freischaltmethode";
 "row.plusmode.trial" = "Test";
 "row.reset.title" = "Alle Einstellungen zurücksetzen";
-"row.resetpushkeys.desc" = "Facebook veranlassen, neue Push-Verschlüsselungsschlüssel zu registrieren";
-"row.resetpushkeys.title" = "Mitteilungsschlüssel zurücksetzen";
 "row.suspend.desc" = "Facebook erzwungen schließen; zum Anwenden erneut öffnen.";
 "row.suspend.title" = "App beenden";
 "row.welcome.title" = "Willkommensbildschirm anzeigen";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Cache geleert";
 "toast.logCleared" = "Protokolle gelöscht.";
 "toast.logEmpty" = "Noch keine Protokolle vorhanden.";
-"toast.pushKeysReset" = "Push-Schlüssel gelöscht (%lu). Facebook bitte neu öffnen";
 "toast.settingsReset" = "Einstellungen zurückgesetzt";
 
 
