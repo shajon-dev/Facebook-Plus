@@ -41,13 +41,27 @@
 // nil. An NSError in the -3000 range alongside them means the file could not be
 // created, which is the Messenger signature after all; anything else means it
 // is not.
+//
+// FBBundledLanguagePackLoader is deliberately not watched. It looks like the
+// obvious place and it is never called: three locales were traced end to end
+// on device and every one went archive -> flatbuffer without it.
 
 #import "FBPlus.h"
+#import "FBPHeaders.h"
 #import "FBPTrace.h"
 
 #import <objc/runtime.h>
 
+/// Whether the diagnostic hooks below are installed. A constant rather than a
+/// preprocessor fence around the hooks themselves: Logos lays its own preamble
+/// down at the first %hook it sees, and wrapping that in #if took the preamble
+/// out of a non-diagnostic build and left every later group without it. The
+/// groups are compiled either way and the branch that installs them is dropped.
 #if FBP_DIAG
+static const BOOL kFBPLanguagePackDiagnostics = YES;
+#else
+static const BOOL kFBPLanguagePackDiagnostics = NO;
+#endif
 
 #pragma mark - The loader
 
@@ -81,16 +95,6 @@
     FBPDiag(@"i18n", @"archive decompress %@ -> %@ ok=%d found=%d",
             language, path, ok, found ? *found : -1);
     return ok;
-}
-
-%end
-
-%hook FBBundledLanguagePackLoader
-
-- (id)loadLanguagePackFromBundle:(id)bundle fbLocale:(id)locale {
-    id pack = %orig;
-    FBPDiag(@"i18n", @"bundled loader locale=%@ -> %@", locale, pack ? @"ok" : @"nil");
-    return pack;
 }
 
 %end
@@ -130,13 +134,65 @@
 
 %end // FBPLanguagePackErrors
 
-#endif // FBP_DIAG
+#pragma mark - The wall at first launch
+
+// Presses "Try Again" once, so the first launch in a downloaded language does
+// not stop at a wall the user has to clear by hand.
+//
+// What is left of issue #9 is only this screen, and only the first time: pick a
+// language, and the next launch shows "English (United Kingdom) wasn't
+// downloaded. Try clearing space on your phone and try again." Tapping Try
+// Again works, and so does picking the language again from Settings, which is
+// how the issue was eventually reported as "it downloads now". The pack itself
+// is fine: the device log shows it decompressed out of the bundled
+// languages.lgpk and parsed, for both of the locales the issue names.
+//
+// So the pack is not missing, it is late. Facebook asks for it during startup
+// and puts this screen up when it is not ready yet, rather than waiting, and
+// the message it shows blames disk space, which is why the issue was first read
+// as a storage problem.
+//
+// Pressing its own retry is the smallest thing that resolves it, and it is the
+// same code path as the user's tap, analytics included. Once per launch: if the
+// pack genuinely cannot be fetched, the screen comes back and stays, which is
+// the honest outcome rather than a loop.
+
+%group FBPLanguagePackWall
+
+%hook FBDownloadLanguagePackInterstitialViewController
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+
+    FBPLanguagePackInterstitial *wall = (FBPLanguagePackInterstitial *)self;
+    if (![wall respondsToSelector:@selector(_didTapRetryButton)]) {
+        return;
+    }
+
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        FBPDiag(@"i18n", @"language wall shown at launch, retrying once");
+        // A beat, so the controller has finished appearing and Facebook's own
+        // retry sees a settled view: this runs from viewDidAppear:.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            [wall _didTapRetryButton];
+        });
+    });
+}
+
+%end
+
+%end // FBPLanguagePackWall
 
 #pragma mark - Init
 
 void FBPInitLanguagePackHooks(void) {
-#if FBP_DIAG
-    if (objc_getClass("FBFlatBufferLanguagePack")) {
+    if (objc_getClass("FBDownloadLanguagePackInterstitialViewController")) {
+        FBP_ONCE(gLanguagePackWall) { %init(FBPLanguagePackWall); }
+    }
+
+    if (kFBPLanguagePackDiagnostics && objc_getClass("FBFlatBufferLanguagePack")) {
         FBP_ONCE(gLanguagePackDiag) {
             %init(FBPLanguagePackDiag);
 
@@ -154,6 +210,7 @@ void FBPInitLanguagePackHooks(void) {
                     [NSLocale preferredLanguages].firstObject ?: @"(none)");
         }
     }
-    FBP_ONCE(gLanguagePackErrors) { %init(FBPLanguagePackErrors); }
-#endif
+    if (kFBPLanguagePackDiagnostics) {
+        FBP_ONCE(gLanguagePackErrors) { %init(FBPLanguagePackErrors); }
+    }
 }
