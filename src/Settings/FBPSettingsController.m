@@ -44,6 +44,13 @@ static NSString *const kRowLink    = @"link";    // tappable URL (info rows)
 static NSString *const kRowDanger  = @"danger";
 static NSString *const kRowCategory = @"category"; // detail sections for a menu row
 static NSString *const kRowConfirm  = @"confirmOnEnable"; // {title,message,confirm} alert shown before a switch turns on
+// Set on a row whose own switch is off upstream: it is drawn in a muted colour
+// and stops responding to touch entirely, rather than offering a choice that
+// changes nothing. See FBPPlusModeRow and FBPRowGatesOtherRows.
+static NSString *const kRowDisabled = @"disabled";
+
+// Defined with the row builders below, used by the switch handler above them.
+static BOOL FBPRowGatesOtherRows(NSString *key);
 
 // Associated-object key for a switch's confirm-on-enable payload. Its address is
 // the key; the stored value is the kRowConfirm dictionary.
@@ -67,7 +74,6 @@ static NSString *const kActionSuspend     = @"suspend";
 static NSString *const kActionLanguage    = @"language";
 static NSString *const kActionCheckUpdate = @"checkUpdate";
 static NSString *const kActionDownloads   = @"downloads";
-static NSString *const kActionResetPush  = @"resetPushKeys";
 static NSString *const kActionLogExport  = @"logExport";
 static NSString *const kActionLogClear   = @"logClear";
 static NSString *const kActionPlusMode   = @"plusMode";
@@ -269,8 +275,11 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 #pragma mark Cell configuration (shared)
 
 - (void)configureCell:(FBPSettingsCell *)cell withRow:(NSDictionary *)row {
+    BOOL disabled = [row[kRowDisabled] boolValue];
+
     cell.titleLabel.text = row[kRowTitle];
-    cell.titleLabel.textColor = [row[kRowDanger] boolValue] ? UIColor.systemRedColor
+    cell.titleLabel.textColor = disabled      ? UIColor.tertiaryLabelColor
+                              : [row[kRowDanger] boolValue] ? UIColor.systemRedColor
                                                             : UIColor.labelColor;
     NSString *desc = row[kRowDesc];
     cell.descLabel.text = desc;
@@ -367,6 +376,19 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             [self setAccessory:stack inCell:cell];
         }
     }
+
+    // Frozen, and it has to *look* frozen. Applied last so it covers whatever
+    // the branches above put in the cell — the value label, the chevron, the
+    // icon — rather than being undone by them. userInteractionEnabled is what
+    // actually stops the touch; the colours are what stop the user reaching for
+    // it in the first place. Cells are reused, so the enabled case resets every
+    // one of these explicitly.
+    cell.contentView.alpha = disabled ? 0.4 : 1.0;
+    cell.userInteractionEnabled = !disabled;
+    if (disabled) {
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        cell.iconView.tintColor = UIColor.tertiaryLabelColor;
+    }
 }
 
 - (void)setAccessory:(UIView *)view inCell:(FBPSettingsCell *)cell {
@@ -403,6 +425,7 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             [sender setOn:YES animated:YES];
             [FBPPrefs.shared setBool:YES forKey:key];
             [FBPPrefs.shared commit];
+            if (FBPRowGatesOtherRows(key)) [self.tableView reloadData];
         }]];
         // System blue keeps the buttons legible on the alert's light background
         // (the settings tint is tuned for the black panel, not a system alert).
@@ -413,6 +436,11 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 
     [FBPPrefs.shared setBool:sender.isOn forKey:key];
     [FBPPrefs.shared commit];
+
+    // Rows this switch gates have to redraw now, not on the next time the page
+    // is opened: turning Facebook Plus off has to grey the unlock-method row
+    // while the user is looking at it.
+    if (FBPRowGatesOtherRows(key)) [self.tableView reloadData];
 }
 
 #pragma mark Photos permission
@@ -537,7 +565,18 @@ static NSDictionary *FBPPlusModeRow(void) {
                       nil, @"crown.fill", NO) mutableCopy];
     BOOL trial = [[FBPPrefs.shared stringForKey:FBPKeyMetaPlusMode] isEqualToString:@"trial"];
     row[kRowValue] = trial ? FBPL(@"row.plusmode.trial") : FBPL(@"row.plusmode.direct");
+    // The method only means something while Facebook Plus is on: with the
+    // toggle off, every gate in FBPPlusHooks.xm declines whichever mode is
+    // stored. Offering the picker there invites a change that does nothing, so
+    // it is frozen instead — muted, and not tappable.
+    if (!FBPEnabled(FBPKeyMetaPlus)) row[kRowDisabled] = @YES;
     return row;
+}
+
+/// YES when turning this switch changes whether *other* rows are usable, so the
+/// table has to be redrawn rather than just the switch moved.
+static BOOL FBPRowGatesOtherRows(NSString *key) {
+    return [key isEqualToString:FBPKeyMetaPlus];
 }
 
 #pragma mark - Category definitions
@@ -602,8 +641,8 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         ]},
         @{ kRowTitle : FBPL(@"cat.appearance.title"), kRowDesc : FBPL(@"cat.appearance.summary"),
            kRowIcon : @"magic", kRowCategory : @[
-            FBPSection(FBPL(@"row.oled.desc"), @[
-                FBPSwitchRow(FBPKeyOLED, FBPL(@"row.oled.title"), nil, @"moon.fill"),
+            FBPSection(nil, @[
+                FBPSwitchRow(FBPKeyOLED, FBPL(@"row.oled.title"), FBPL(@"row.oled.desc"), @"moon.fill"),
                 FBPSwitchRow(FBPKeyOLEDDividers, FBPL(@"row.oleddividers.title"), FBPL(@"row.oleddividers.desc"), @"rectangle.split.1x2"),
             ]),
             FBPSection(nil, @[
@@ -644,13 +683,6 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
                 FBPSwitchRow(FBPKeyAutoClearCache, FBPL(@"row.autoclear.title"), nil, @"arrow.triangle.2.circlepath"),
                 FBPActionRow(kActionClearCache, FBPL(@"row.clearcache.title"), nil, @"trash.fill", NO),
                 FBPActionRow(kActionCheckUpdate, FBPL(@"row.checkupdate.title"), FBPL(@"row.checkupdate.desc"), @"arrow.down.circle", NO),
-            ]),
-            FBPSection(FBPL(@"footer.resetpushkeys"), @[
-                FBPSwitchRow(FBPKeyKeychainRebind, FBPL(@"row.keychainrebind.title"), FBPL(@"row.keychainrebind.desc"), @"key.fill"),
-                FBPSwitchRow(FBPKeyNotifClientSync, FBPL(@"row.notifclientsync.title"),
-                             FBPL(@"row.notifclientsync.desc"), @"bell.badge.fill"),
-                FBPActionRow(kActionResetPush, FBPL(@"row.resetpushkeys.title"),
-                             FBPL(@"row.resetpushkeys.desc"), @"bell.badge.fill", YES),
             ]),
             FBPSection(nil, @[
                 FBPActionRow(kActionWelcome, FBPL(@"row.welcome.title"), nil, @"hand.wave.fill", NO),
@@ -717,87 +749,14 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
     return cell;
 }
 
-#pragma mark - Push registration reset
-
-// Facebook encrypts notification content and needs a public key the device
-// registered: FBRegisterPushTokenMutation carries hpkeParams (hpkeCiphersuite /
-// hpkeKeystoreId / hpkePubkey) and an encryption block (algorithm / key / keyId),
-// with the private halves in the keychain under
-// com.instagram.notifications.hpke / .encryption as kLatestHPKEKey,
-// kLatestEncryptionKey, kTokensKey and kLastServerSync.
-//
-// On a re-signed build those keychain reads once failed, so registration never
-// completed and the server had no key to encrypt with. The symptom: Messenger
-// and calls arrive as alert pushes, while Facebook's own notifications arrive as
-// "pim":{"nt":"badge_update"} with no alert, which iOS drops with "No content
-// that needs to alert".
-//
-// The reads work now, but kLastServerSync makes the app believe it already
-// registered, so it never sends a fresh key. Deleting these items forces it to
-// generate and register one on the next launch.
-//
-// Manual by design: a guess that needs testing, not something to run silently.
-// Facebook regenerates the removed items; no account state is touched.
-static NSUInteger FBPResetPushEncryptionKeys(void) {
-    NSArray<NSString *> *services = @[
-        @"com.instagram.notifications.hpke",
-        @"com.instagram.notifications.encryption",
-        @"com.facebook.notifications.hpke",
-        @"com.facebook.notifications.encryption",
-    ];
-    NSArray<NSString *> *accounts = @[
-        @"kLatestHPKEKey", @"kLatestEncryptionKey", @"kLastServerSync", @"kTokensKey",
-    ];
-
-    NSUInteger removed = 0;
-    for (NSString *service in services) {
-        NSDictionary *query = @{
-            (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-            (__bridge id)kSecAttrService: service,
-            (__bridge id)kSecAttrSynchronizable: (__bridge id)kSecAttrSynchronizableAny,
-        };
-        if (SecItemDelete((__bridge CFDictionaryRef)query) == errSecSuccess) removed++;
-    }
-    for (NSString *account in accounts) {
-        NSDictionary *generic = @{
-            (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
-            (__bridge id)kSecAttrAccount: account,
-            (__bridge id)kSecAttrSynchronizable: (__bridge id)kSecAttrSynchronizableAny,
-        };
-        if (SecItemDelete((__bridge CFDictionaryRef)generic) == errSecSuccess) removed++;
-
-        NSDictionary *key = @{
-            (__bridge id)kSecClass: (__bridge id)kSecClassKey,
-            (__bridge id)kSecAttrApplicationTag: [account dataUsingEncoding:NSUTF8StringEncoding],
-        };
-        if (SecItemDelete((__bridge CFDictionaryRef)key) == errSecSuccess) removed++;
-    }
-    return removed;
-}
-
-- (void)confirmResetPushKeys {
-    UIAlertController *alert =
-        [UIAlertController alertControllerWithTitle:FBPL(@"row.resetpushkeys.title")
-                                            message:FBPL(@"resetpushkeys.message")
-                                     preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
-                                              style:UIAlertActionStyleCancel
-                                            handler:nil]];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"resetpushkeys.confirm")
-                                              style:UIAlertActionStyleDestructive
-                                            handler:^(UIAlertAction *action) {
-        NSUInteger removed = FBPResetPushEncryptionKeys();
-        [FBPToastManager.shared
-            showMessage:[NSString stringWithFormat:FBPL(@"toast.pushKeysReset"), (unsigned long)removed]
-                success:YES];
-    }]];
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     NSDictionary *row = [self rowsInSection:indexPath.section][indexPath.row];
     if (![row[kRowType] isEqualToString:kTypeAction]) return;
+    // A frozen row already refuses the touch through userInteractionEnabled;
+    // this is the guard for anything that reaches the delegate another way,
+    // such as a keyboard or accessibility activation.
+    if ([row[kRowDisabled] boolValue]) return;
     NSString *action = row[kRowKey];
 
     if ([action isEqualToString:kActionClearCache]) {
@@ -815,8 +774,6 @@ static NSUInteger FBPResetPushEncryptionKeys(void) {
         [FBPUpdateChecker checkManuallyFromViewController:self];
     } else if ([action isEqualToString:kActionWelcome]) {
         [self dismissViewControllerAnimated:YES completion:^{ [FBPWelcomeController present]; }];
-    } else if ([action isEqualToString:kActionResetPush]) {
-        [self confirmResetPushKeys];
     } else if ([action isEqualToString:kActionReset]) {
         [self confirmReset];
     } else if ([action isEqualToString:kActionLogExport]) {
