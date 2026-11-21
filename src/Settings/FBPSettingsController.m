@@ -67,6 +67,7 @@ static NSString *const kSecRows   = @"rows";
 static NSString *const kSecFooter = @"footer";
 
 static NSString *const kActionClearCache  = @"clearCache";
+static NSString *const kActionCacheSchedule = @"cacheSchedule";
 static NSString *const kActionAppIcon     = @"appIcon";
 static NSString *const kActionFonts       = @"fonts";
 static NSString *const kActionWelcome     = @"welcome";
@@ -436,7 +437,8 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
         }
         // The unlock-method row opens an action sheet, so it gets the up/down
         // menu glyph rather than the push chevron the other rows use.
-        BOOL isPicker = [row[kRowKey] isEqualToString:kActionPlusMode];
+        BOOL isPicker = [row[kRowKey] isEqualToString:kActionPlusMode] ||
+                        [row[kRowKey] isEqualToString:kActionCacheSchedule];
         BOOL showChevron = [type isEqualToString:kTypeCategory] ||
                            row[kRowCategory] != nil ||
                            isPicker ||
@@ -668,10 +670,33 @@ static NSDictionary *FBPPlusModeRow(void) {
     return row;
 }
 
+// The automatic-sweep schedule. Shows the chosen setting as its trailing value;
+// tapping it opens an action sheet (see presentCacheSchedulePicker).
+static NSDictionary *FBPCacheScheduleRow(void) {
+    NSMutableDictionary *row =
+        [FBPActionRow(kActionCacheSchedule, FBPL(@"row.cacheschedule.title"),
+                      FBPL(@"row.cacheschedule.desc"), @"clock.arrow.circlepath", NO) mutableCopy];
+
+    NSString *choice = [FBPPrefs.shared stringForKey:FBPKeyCacheSchedule];
+    if ([choice isEqualToString:@"12"]) {
+        row[kRowValue] = FBPL(@"row.cacheschedule.12h");
+    } else if ([choice isEqualToString:@"24"]) {
+        row[kRowValue] = FBPL(@"row.cacheschedule.24h");
+    } else {
+        row[kRowValue] = FBPL(@"row.cacheschedule.off");
+    }
+    // With the launch switch on, every launch already sweeps and the schedule
+    // never gets a turn. Offering it there invites a change that does nothing,
+    // so it is frozen instead — muted, and not tappable.
+    if (FBPEnabled(FBPKeyAutoClearCache)) row[kRowDisabled] = @YES;
+    return row;
+}
+
 /// YES when turning this switch changes whether *other* rows are usable, so the
 /// table has to be redrawn rather than just the switch moved.
 static BOOL FBPRowGatesOtherRows(NSString *key) {
-    return [key isEqualToString:FBPKeyMetaPlus];
+    return [key isEqualToString:FBPKeyMetaPlus] ||
+           [key isEqualToString:FBPKeyAutoClearCache];
 }
 
 #pragma mark - Category definitions
@@ -779,6 +804,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
             ]),
             FBPSection(nil, @[
                 FBPSwitchRow(FBPKeyAutoClearCache, FBPL(@"row.autoclear.title"), nil, @"arrow.triangle.2.circlepath"),
+                FBPCacheScheduleRow(),
                 FBPActionRow(kActionClearCache, FBPL(@"row.clearcache.title"), nil, @"trash.fill", NO),
                 FBPActionRow(kActionCheckUpdate, FBPL(@"row.checkupdate.title"), FBPL(@"row.checkupdate.desc"), @"arrow.down.circle", NO),
             ]),
@@ -884,7 +910,44 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         [FBPToastManager.shared showMessage:FBPL(@"toast.logCleared") success:YES];
     } else if ([action isEqualToString:kActionPlusMode]) {
         [self presentPlusModePicker];
+    } else if ([action isEqualToString:kActionCacheSchedule]) {
+        [self presentCacheSchedulePicker];
     }
+}
+
+// Action sheet to pick how often the caches are swept automatically.
+- (void)presentCacheSchedulePicker {
+    UIAlertController *sheet = [UIAlertController
+        alertControllerWithTitle:FBPL(@"row.cacheschedule.title")
+                         message:nil
+                  preferredStyle:UIAlertControllerStyleActionSheet];
+
+    void (^choose)(NSString *) = ^(NSString *value) {
+        [FBPPrefs.shared setString:value forKey:FBPKeyCacheSchedule];
+        [FBPPrefs.shared commit];
+        [self reloadCurrentCategory];
+    };
+    NSArray<NSArray<NSString *> *> *choices = @[
+        @[ @"24",  FBPL(@"row.cacheschedule.24h") ],
+        @[ @"12",  FBPL(@"row.cacheschedule.12h") ],
+        @[ @"off", FBPL(@"row.cacheschedule.off") ],
+    ];
+    for (NSArray<NSString *> *choice in choices) {
+        NSString *value = choice.firstObject;
+        [sheet addAction:[UIAlertAction actionWithTitle:choice.lastObject
+                                                  style:UIAlertActionStyleDefault
+                                                handler:^(UIAlertAction *a) { choose(value); }]];
+    }
+    [sheet addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
+                                              style:UIAlertActionStyleCancel handler:nil]];
+    sheet.view.tintColor = UIColor.systemBlueColor;
+
+    // iPad: anchor the popover to the centre of the screen so it does not crash
+    // for want of a source view.
+    sheet.popoverPresentationController.sourceView = self.view;
+    sheet.popoverPresentationController.sourceRect =
+        CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMidY(self.view.bounds), 0, 0);
+    [self presentViewController:sheet animated:YES completion:nil];
 }
 
 // Action sheet to pick the Facebook Plus unlock method. "Direct" forces the
