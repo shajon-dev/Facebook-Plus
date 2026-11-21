@@ -146,10 +146,12 @@ static BOOL FBPIsThreadsUnit(id model) {
 // logs dist_to_min_gap_type_4/5/10, and several classes declare `category` with
 // an integer encoding (Ti / Tq / TQ) rather than T@"NSString".
 //
-// So rather than guess, this logs what the device actually serves. Turn
-// "Log Feed Unit Tokens" on in Settings, scroll the feed once, and read it back
-// in Console.app filtered on subsystem com.shajon.fbplus — the token set that
-// comes out is the ground truth to map in FBPCategoryMap().
+// So rather than guess, this logs what the device actually serves. It is on in
+// a FBP_DIAG build and off in every other. Scroll the feed once and read the
+// token set back either in Console.app, filtered on subsystem
+// com.shajon.fbplus, or straight out of Settings -> Logs, which is the only one
+// of the two reachable on a phone that cannot be attached to. What comes out is
+// the ground truth to map in FBPCategoryMap().
 
 static os_log_t FBPFeedUnitLog(void) {
     static os_log_t log;
@@ -172,11 +174,19 @@ static os_log_t FBPFeedUnitLog(void) {
 static atomic_bool gFBPLogFeedUnits = false;
 
 static void FBPRefreshFeedUnitLogging(void) {
-    // The per-feature log toggle was removed; this heavy per-model probe (it runs
-    // for every object the Pando tree materialises) stays off so it never janks
-    // scrolling. The main log already captures the feed hooks and their filter
-    // decisions. Flip this to true only for a local filter-debugging build.
+    // On in a diagnostic build and off in every other, rather than a constant
+    // somebody has to edit. The probe runs for every object the Pando tree
+    // materialises, so it would jank scrolling in a shipped build; in a
+    // FBP_DIAG build that cost is the point, and it is the only way to learn
+    // the token or class of a unit whose text comes from the server and so
+    // appears nowhere in the binary. "Suggested Pages for you" is one of those:
+    // its copy is not in any image or in the bundled strings, which is why the
+    // PagesYouMayLike class matcher does not reach it.
+#if FBP_DIAG
+    atomic_store_explicit(&gFBPLogFeedUnits, true, memory_order_relaxed);
+#else
     atomic_store_explicit(&gFBPLogFeedUnits, false, memory_order_relaxed);
+#endif
 }
 
 /// Field keys the diagnostic probes.
@@ -280,6 +290,10 @@ static void FBPLogFeedUnit(id model) {
                           className, key, description];
         if (FBPClaimDiagnosticLine(line)) {
             os_log(FBPFeedUnitLog(), "token %{public}@", line);
+            // Also into the log the Settings page exports, which is the only
+            // one reachable on a phone that cannot be attached to. Deduped
+            // above, so this is a line per distinct finding, not per model.
+            FBPDiag(@"feedunit", @"%@", line);
         }
         reported = YES;
     }
@@ -291,6 +305,7 @@ static void FBPLogFeedUnit(id model) {
         NSString *line = [NSString stringWithFormat:@"%@ · no token", className];
         if (FBPClaimDiagnosticLine(line)) {
             os_log(FBPFeedUnitLog(), "unit  %{public}@", line);
+            FBPDiag(@"feedunit", @"%@", line);
         }
     }
 }
