@@ -68,13 +68,53 @@ os_log_t FBPTraceLog(void) {
 // file stays Foundation-only. Mirrors kSuiteName and the FBPKeyLogs* constants.
 static NSString *const kFBPTraceSuite     = @"com.shajon.fbplus";
 static NSString *const kFBPTraceKeepKey   = @"logsKeep";
-static NSString *const kFBPTraceLastClear = @"logsLastClear";
+// The last-clear date used to live in this suite under "logsLastClear". It is a
+// file beside the log now (FBPLogDayStampPath): the date has to be read at the
+// moment the record is created, and reading a defaults suite there would run the
+// tweak's own suite hook, which logs. A stale "logsLastClear" left in anyone's
+// defaults is harmless and nothing reads it.
 
 // On by default: the log is kept across launches unless the user turns it off.
-static BOOL FBPLogsKeepAcrossLaunches(void) {
+//
+// READ ONCE, AND NEVER WHILE HOLDING A LOCK.
+//
+// Building an NSUserDefaults for a suite runs the tweak's own
+// -_initWithSuiteName:container: hook, whose resolver emits a diagnostic line
+// when it settles on a container — and emitting a line comes back into
+// FBPLogRecord, which takes gFBPLogLock, and into FBPLogMirrorToFile, which
+// takes gFBPTraceFileLock. This used to be read from inside
+// FBPTraceOpenFileLocked, i.e. with **both** of those held, and os_unfair_lock
+// is not recursive: the only reason it never deadlocked is that FBPTracePath()
+// happens to resolve the container earlier in the same call, which leaves the
+// resolver cached and quiet. That ordering is incidental, not guaranteed:
+// anything that logged before the path resolved would have deadlocked.
+//
+// So the value is primed once, from the one place that runs before any lock is
+// taken, and every locked caller reads the cached copy.
+static BOOL gFBPLogsKeep = YES;
+static BOOL gFBPLogsKeepPrimed = NO;
+
+static void FBPLogsPrimeKeepPreference(void) {
+    if (gFBPLogsKeepPrimed) return;
+
+    // Same reentrancy guard as FBPTracePath, for the same reason: the read can
+    // log, and that log would prime again. One line keeping the default is a
+    // acceptable cost of not recursing.
+    static _Thread_local BOOL priming = NO;
+    if (priming) return;
+
+    priming = YES;
     id value = [[[NSUserDefaults alloc] initWithSuiteName:kFBPTraceSuite]
                    objectForKey:kFBPTraceKeepKey];
-    return value ? [value boolValue] : YES;
+    priming = NO;
+
+    // Two threads racing here compute the same answer, so no lock is needed.
+    gFBPLogsKeep = value ? [value boolValue] : YES;
+    gFBPLogsKeepPrimed = YES;
+}
+
+static BOOL FBPLogsKeepAcrossLaunches(void) {
+    return gFBPLogsKeep;
 }
 
 #pragma mark - The file mirror
@@ -208,7 +248,14 @@ NSString *FBPTraceFilePath(void) {
 }
 
 BOOL FBPTraceFileIsShared(void) {
-    return gFBPTraceResolvedPath != nil;
+    // Read under the lock like every other access to it: the resolver publishes
+    // this from whichever thread logs first, and an unsynchronised read of a
+    // variable another thread is publishing is a data race whatever the
+    // architecture makes of it in practice.
+    os_unfair_lock_lock(&gFBPTracePathLock);
+    BOOL shared = gFBPTraceResolvedPath != nil;
+    os_unfair_lock_unlock(&gFBPTracePathLock);
+    return shared;
 }
 
 // Opens the mirror, and re-opens it once if the path has since improved from the
@@ -235,9 +282,42 @@ static void FBPTraceOpenFileLocked(NSString *path) {
     int fd = open(path.fileSystemRepresentation, flags, 0644);
     if (fd < 0) return;
 
+    NSString *previous = gFBPTraceOpenedPath;
     if (reopening) close(gFBPTraceFD);
     gFBPTraceFD = fd;
     gFBPTraceOpenedPath = [path copy];
+
+    // MOVE WHAT THE FALLBACK ALREADY HOLDS INTO THE SHARED FILE.
+    //
+    // This is what made every constructor line invisible. The App-Group path
+    // resolves lazily — it has to, LSBundleProxy is not always ready that early
+    // — so the first lines a process writes land in the private Caches file,
+    // and the descriptor only moves to the shared file once the path improves.
+    // The export, meanwhile, reads the *shared* file and replaces the in-memory
+    // record with it (FBPLogReloadIfChangedLocked), so those early lines were
+    // not merely in the wrong file: they were deleted from the record that had
+    // them. Three device exports in a row began mid-startup for this reason,
+    // with no "launch ·" line in any of them.
+    //
+    // Carrying the fallback's contents across on the one re-open fixes it at
+    // the source, and makes the replace-on-reload correct rather than lossy. It
+    // is a few launch lines, read and appended once per process.
+    if (reopening && previous.length && [previous isEqualToString:FBPTraceFallbackPath()]) {
+        NSData *carried = [NSData dataWithContentsOfFile:previous];
+        if (carried.length) {
+            const char *bytes = carried.bytes;
+            size_t remaining = carried.length;
+            while (remaining > 0) {
+                ssize_t written = write(fd, bytes, remaining);
+                if (written <= 0) break;
+                bytes += written;
+                remaining -= (size_t)written;
+            }
+        }
+        // Truncated, not deleted: the path stays valid for any line that still
+        // races in before the resolve completes, and nothing is carried twice.
+        (void)truncate(previous.fileSystemRepresentation, 0);
+    }
 }
 
 // Writes one already-formatted line to the file mirror.
@@ -268,24 +348,103 @@ static void FBPLogMirrorToFile(NSString *line) {
 #pragma mark - The record
 
 // Held in memory rather than read back from the mirror, which depends on a
-// writable path not every install has. No line cap: consecutive repeats collapse
-// to one "… xN" entry (see FBPLogRecord) so a chatty hook cannot grow the record,
-// and the daily auto-clear bounds what a long-lived launch accumulates.
+// writable path not every install has.
+//
+// The record is bounded, oldest out first. It used to be uncapped, on the
+// grounds that consecutive repeats collapse into one "… xN" entry (see
+// FBPLogRecord) so no single chatty call site can grow it. True, and not
+// enough: the collapse only folds **consecutive** repeats, so call sites that
+// alternate defeat it completely. A device export from 2026-11-21 filled 4,000
+// lines in one minute with five "gate installed" lines cycling, and everything
+// worth reading had already been pushed out of it.
+//
+// That spam is fixed where it belonged — those reports were sitting next to
+// their FBP_ONCE install instead of inside it, and now use FBPLogOnce — so this
+// cap is a backstop rather than the answer. It is set high enough to hold a
+// long session's real lines and low enough to stay bounded in the notification
+// extension, which has about 24 MB to live in.
+static const NSUInteger kFBPLogMaxLines = 10000;
+
+// Whether the day rolled over since the last clear, decided WITHOUT
+// NSUserDefaults — the date is kept in a small file beside the log, read and
+// written with POSIX calls. Defaults would mean the suite hook, and the suite
+// hook logs; this runs while the record is being created, which is the one
+// moment logging cannot be allowed to re-enter.
+static NSString *FBPLogDayStampPath(NSString *logPath) {
+    return logPath.length ? [logPath stringByAppendingPathExtension:@"day"] : nil;
+}
+
+static NSString *FBPLogToday(void) {
+    time_t now = time(NULL);
+    struct tm parts;
+    localtime_r(&now, &parts);
+    char day[16];
+    snprintf(day, sizeof(day), "%04d-%02d-%02d", parts.tm_year + 1900, parts.tm_mon + 1,
+             parts.tm_mday);
+    return @(day);
+}
+
+// YES when the kept log belongs to an earlier day. Writes today's stamp as it
+// goes, so it answers YES exactly once per day per device.
+static BOOL FBPLogDayRolledOver(NSString *logPath) {
+    NSString *stampPath = FBPLogDayStampPath(logPath);
+    if (!stampPath.length) return NO;
+
+    NSString *today = FBPLogToday();
+
+    char buffer[16] = {0};
+    int fd = open(stampPath.fileSystemRepresentation, O_RDONLY);
+    if (fd >= 0) {
+        ssize_t read_bytes = read(fd, buffer, sizeof(buffer) - 1);
+        close(fd);
+        if (read_bytes > 0 && strcmp(buffer, today.UTF8String) == 0) return NO;
+    }
+
+    fd = open(stampPath.fileSystemRepresentation, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0) {
+        const char *bytes = today.UTF8String;
+        if (bytes) (void)!write(fd, bytes, strlen(bytes));
+        close(fd);
+    }
+    return YES;
+}
+
 static NSMutableArray<NSString *> *FBPLogLines(void) {
     static NSMutableArray<NSString *> *lines;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         lines = [NSMutableArray array];
-        // Kept across launches: seed the record from last launch's file so the
-        // count and the export carry the history forward.
-        if (FBPLogsKeepAcrossLaunches()) {
-            NSString *path = FBPTracePathNoResolve();
+
+        NSString *path = FBPTracePathNoResolve();
+
+        // THE DAILY CLEAR HAPPENS HERE, BEFORE THE FIRST LINE EXISTS.
+        //
+        // It used to be driven by FBPLogDailyClearIfDue() from FBPEntry's
+        // constructor, which looked like "at launch" and is not: constructors do
+        // not all run before that one, so the clear landed in the middle of
+        // startup and wiped everything already recorded. A device export from
+        // 2026-11-21 contains not one line written by any constructor in the
+        // tweak — not the keychain access group, not the notification hooks'
+        // install summaries, not even FBPEntry's own "launch ·" line. Every
+        // debugging session that asked "did this hook install?" was reading a
+        // log the answer had been deleted from.
+        //
+        // Doing it as the record is created makes "once a day, before anything
+        // is logged" literally true, and leaves nothing to wipe afterwards.
+        if (FBPLogDayRolledOver(path)) {
+            if (path.length) (void)truncate(path.fileSystemRepresentation, 0);
+        } else if (FBPLogsKeepAcrossLaunches()) {
+            // Kept across launches: seed the record from last launch's file so
+            // the count and the export carry the history forward.
             NSString *existing = path.length ? [NSString stringWithContentsOfFile:path
                                                                          encoding:NSUTF8StringEncoding
                                                                             error:nil]
                                              : nil;
             for (NSString *line in [existing componentsSeparatedByString:@"\n"]) {
                 if (line.length) [lines addObject:line];
+            }
+            if (lines.count > kFBPLogMaxLines) {
+                [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogMaxLines)];
             }
         }
     });
@@ -307,9 +466,20 @@ static os_unfair_lock gFBPLogLock = OS_UNFAIR_LOCK_INIT;
 // record is replaced rather than appended to, which is correct because every
 // line this process wrote was mirrored to that same file.
 //
+// Defined below, with the run-collapsing state it belongs to.
+static void FBPLogFlushPendingLocked(void);
+
 // Call with gFBPLogLock held.
 static void FBPLogReloadIfChangedLocked(void) {
     static off_t lastSize = -1;
+
+    // Send the run in progress to the file FIRST. The record is about to be
+    // replaced by the file's contents, and the pending line is the one line this
+    // process has written that is NOT in the file yet — so without this the
+    // newest line disappeared from the count and from the export every time a
+    // reload ran. The comment below about "every line this process wrote was
+    // mirrored to that same file" was true of every line except the newest one.
+    FBPLogFlushPendingLocked();
 
     NSString *path = FBPTracePathNoResolve();
     if (!path.length) return;
@@ -324,10 +494,36 @@ static void FBPLogReloadIfChangedLocked(void) {
                                                       error:nil];
     if (!contents) return;   // A torn read mid-append: keep what we have.
 
-    NSMutableArray<NSString *> *lines = FBPLogLines();
-    [lines removeAllObjects];
+    NSMutableArray<NSString *> *fromFile = [NSMutableArray array];
     for (NSString *line in [contents componentsSeparatedByString:@"\n"]) {
-        if (line.length) [lines addObject:line];
+        if (line.length) [fromFile addObject:line];
+    }
+
+    // A line this process holds but the file does not is KEPT, not dropped.
+    //
+    // The record used to be replaced outright, on the stated grounds that every
+    // line this process wrote was already in this file. That was not true, and
+    // a replace therefore deleted evidence: a line written before the shared
+    // path resolved went to the private fallback file (now carried across in
+    // FBPTraceOpenFileLocked), and the run in progress is not in any file until
+    // it is flushed (now flushed above). Both are fixed at the source; this
+    // keeps the record honest even if a third way to miss the file turns up,
+    // because losing a line someone is trying to read is the worst outcome
+    // available here.
+    //
+    // Anything missing is by construction older than what the file holds — it
+    // was written before the file could take it — so it goes in front.
+    NSMutableArray<NSString *> *lines = FBPLogLines();
+    NSSet<NSString *> *known = [NSSet setWithArray:fromFile];
+    NSMutableArray<NSString *> *onlyInMemory = [NSMutableArray array];
+    for (NSString *line in lines) {
+        if (![known containsObject:line]) [onlyInMemory addObject:line];
+    }
+
+    [lines setArray:onlyInMemory];
+    [lines addObjectsFromArray:fromFile];
+    if (lines.count > kFBPLogMaxLines) {
+        [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogMaxLines)];
     }
 }
 
@@ -364,6 +560,19 @@ static void FBPLogFlushPendingLocked(void) {
     FBPLogMirrorToFile(out);
 }
 
+// A process's LAST line would otherwise never be written anywhere. The run
+// in progress is only sent to os_log and the file when a *different* line
+// arrives, so whatever a process logs last stays pending until it exits —
+// and for the notification extension, which lives a few hundred milliseconds
+// and writes a handful of lines, "the last line" is most of the evidence. An
+// exit handler flushes it, which costs nothing in the app and is the whole
+// difference in the extension.
+static void FBPLogFlushAtExit(void) {
+    os_unfair_lock_lock(&gFBPLogLock);
+    FBPLogFlushPendingLocked();
+    os_unfair_lock_unlock(&gFBPLogLock);
+}
+
 void FBPLogRecord(BOOL ok, NSString *_Nullable tag, NSString *message) {
     if (!message.length) return;
 
@@ -373,6 +582,16 @@ void FBPLogRecord(BOOL ok, NSString *_Nullable tag, NSString *message) {
     // this function is harmless. Everything downstream then reads the cached
     // value through FBPTracePathNoResolve() and never touches the hook again.
     (void)FBPTracePath();
+
+    // Both of these also have to happen before the lock: the preference read can
+    // log (see FBPLogsPrimeKeepPreference), and every locked path below reads the
+    // cached copy instead of calling out.
+    FBPLogsPrimeKeepPreference();
+
+    static dispatch_once_t exitOnce;
+    dispatch_once(&exitOnce, ^{
+        atexit(FBPLogFlushAtExit);
+    });
 
     os_unfair_lock_lock(&gFBPLogLock);
     NSMutableArray<NSString *> *lines = FBPLogLines();
@@ -403,6 +622,11 @@ void FBPLogRecord(BOOL ok, NSString *_Nullable tag, NSString *message) {
     gFBPRepeatCount = 1;
 
     [lines addObject:line];
+    // Bounded — see kFBPLogMaxLines. Dropping from the front keeps the pending
+    // run's entry, which is always the last one, where the rewrite expects it.
+    if (lines.count > kFBPLogMaxLines) {
+        [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogMaxLines)];
+    }
     os_unfair_lock_unlock(&gFBPLogLock);
 }
 
@@ -445,21 +669,21 @@ void FBPLogClear(void) {
 // Clears the log once per calendar day, on the first call after local midnight.
 // Call at launch; a same-day call returns at once.
 void FBPLogDailyClearIfDue(void) {
-    static NSDateFormatter *formatter;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        formatter = [NSDateFormatter new];
-        formatter.dateFormat = @"yyyy-MM-dd";
-        formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
-        formatter.timeZone = NSTimeZone.localTimeZone;
-    });
-    NSString *today = [formatter stringFromDate:NSDate.date];
+    // The clear itself now happens where the record is created, which is the
+    // only place that is genuinely "before anything is logged" — see the long
+    // note in FBPLogLines(). Calling this from a constructor, as FBPEntry does,
+    // used to wipe whatever earlier constructors had already recorded, because
+    // constructor order is not something a call site can choose.
+    //
+    // The call is kept and still does the right thing: touching the record is
+    // what runs the day check, so a launch that reaches here has had its clear
+    // decided exactly once. Priming first keeps the preference read out of the
+    // locked path.
+    FBPLogsPrimeKeepPreference();
 
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:kFBPTraceSuite];
-    if ([[defaults stringForKey:kFBPTraceLastClear] isEqualToString:today]) return;
-
-    FBPLogClear();
-    [defaults setObject:today forKey:kFBPTraceLastClear];
+    os_unfair_lock_lock(&gFBPLogLock);
+    (void)FBPLogLines();
+    os_unfair_lock_unlock(&gFBPLogLock);
 }
 
 #pragma mark - Feature diagnostics
@@ -623,6 +847,15 @@ static NSString *FBPLogHeader(NSUInteger lineCount) {
         @[ @"ios_version",   [NSString stringWithFormat:@"%ld.%ld.%ld",
                               (long)os.majorVersion, (long)os.minorVersion, (long)os.patchVersion] ],
         @[ @"log_lines",     [NSString stringWithFormat:@"%lu", (unsigned long)lineCount] ],
+        // Where this export came from, and whether the notification extension
+        // could have reached it. Three device captures were read without this,
+        // and every question they raised — are the extension's lines here, did
+        // the early lines land somewhere else — needed exactly these two facts
+        // and could not be answered from the file. The header is built outside
+        // both locks, so asking is safe here and nowhere inside the funnel.
+        @[ @"trace_file",    FBPTraceFilePath() ],
+        @[ @"trace_shared",  FBPTraceFileIsShared() ? @"yes (app and extension share it)"
+                                                    : @"NO (private Caches — extension lines cannot arrive)" ],
     ];
 
     NSMutableString *text = [NSMutableString stringWithString:@"Facebook Plus log\n\n"];
