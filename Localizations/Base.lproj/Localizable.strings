@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Hides the “you may know / should join / for you” units.";
 "footer.metaplus" = "Preview only. Server-side features will not work.";
 "footer.plusmode" = "Direct forces the features on outright.\nTrial makes the app simulate an active trial.";
-"footer.resetpushkeys" = "Facebook encrypts the text of a notification with a key your device registers with it. If that registration never completed, the server sends only a badge and no notification text. This clears the stored keys so Facebook makes new ones the next time it starts.";
 
 
 "info.developer" = "Developer Name";
@@ -154,8 +153,6 @@
 "reset.title" = "Reset All Settings";
 
 
-"resetpushkeys.confirm" = "Reset Keys";
-"resetpushkeys.message" = "Facebook will create and register new push keys the next time it starts. Nothing about your account or your login changes. Force-quit Facebook and open it again afterwards.";
 
 
 "row.anonstories.desc" = "View stories without sending a read receipt.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Font";
 "row.hidesidebaralsometa.title" = "Hide Also from Meta";
 "row.hidesidebarupgrades.title" = "Hide Upgrades";
-"row.keychainrebind.desc" = "Keeps a re-signed app’s keychain working. Turn it off if Facebook crashes when you tap Message on a profile.";
-"row.keychainrebind.title" = "Keychain Compatibility";
 "row.language.title" = "Language";
 "row.linksinsafari.desc" = "Opens external links in your default browser instead of the in-app browser.";
 "row.linksinsafari.title" = "Open Links in Safari";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Remove Survey Prompts";
 "row.nothreads.desc" = "Hides the “discover new threads” card.";
 "row.nothreads.title" = "Remove Threads Promo";
-"row.notifclientsync.desc" = "When only the badge moves, pull the notification and show it";
-"row.notifclientsync.title" = "Fetch Missing Notifications";
 "row.oled.desc" = "Turns the whole app true black.";
 "row.oled.title" = "OLED Dark Mode";
 "row.oleddividers.desc" = "Keeps the faint lines between posts in OLED mode. Turn off for a fully black feed.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Unlock Method";
 "row.plusmode.trial" = "Trial";
 "row.reset.title" = "Reset All Settings";
-"row.resetpushkeys.desc" = "Make Facebook register fresh push-encryption keys";
-"row.resetpushkeys.title" = "Reset Notification Keys";
 "row.suspend.desc" = "Force-close Facebook; reopen it to apply changes.";
 "row.suspend.title" = "Suspend App";
 "row.welcome.title" = "Show Welcome Screen";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Cache cleared";
 "toast.logCleared" = "Logs cleared.";
 "toast.logEmpty" = "No logs recorded yet.";
-"toast.pushKeysReset" = "Push keys cleared (%lu). Reopen Facebook";
 "toast.settingsReset" = "Settings reset";
 
 

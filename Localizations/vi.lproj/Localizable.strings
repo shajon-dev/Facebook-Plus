@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Ẩn các mục “Những người bạn có thể biết / Nhóm nên tham gia / Dành cho bạn” trên bảng tin.";
 "footer.metaplus" = "Chỉ xem trước. Các tính năng phía máy chủ sẽ không hoạt động.";
 "footer.plusmode" = "Trực tiếp kích hoạt tính năng ngay lập tức.\nDùng thử mô phỏng thời gian dùng thử đang hoạt động trong ứng dụng.";
-"footer.resetpushkeys" = "Facebook mã hóa nội dung thông báo bằng khóa mà thiết bị của bạn đăng ký. Nếu quá trình này chưa hoàn tất, máy chủ chỉ gửi huy hiệu số mà không có nội dung. Tùy chọn này sẽ xóa các khóa đã lưu để Facebook tạo khóa mới trong lần khởi động tiếp theo.";
 
 
 "info.developer" = "Nhà phát triển";
@@ -154,8 +153,6 @@
 "reset.title" = "Đặt lại tất cả cài đặt";
 
 
-"resetpushkeys.confirm" = "Đặt lại khóa";
-"resetpushkeys.message" = "Facebook sẽ tạo và đăng ký các khóa thông báo mới trong lần khởi động tiếp theo. Tài khoản và thông tin đăng nhập của bạn sẽ không bị ảnh hưởng. Hãy buộc đóng Facebook và mở lại sau đó.";
 
 
 "row.anonstories.desc" = "Xem tin mà không gửi xác nhận đã đọc.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Phông chữ";
 "row.hidesidebaralsometa.title" = "Ẩn “Sản phẩm khác từ Meta”";
 "row.hidesidebarupgrades.title" = "Ẩn nâng cấp";
-"row.keychainrebind.desc" = "Giữ cho keychain của ứng dụng đã ký lại hoạt động. Hãy tắt nếu Facebook bị thoát khi bạn chạm Message trên một trang cá nhân.";
-"row.keychainrebind.title" = "Tương thích Keychain";
 "row.language.title" = "Ngôn ngữ";
 "row.linksinsafari.desc" = "Mở liên kết ngoài trong trình duyệt mặc định thay vì trình duyệt trong ứng dụng.";
 "row.linksinsafari.title" = "Mở liên kết trong Safari";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Xóa thẻ khảo sát";
 "row.nothreads.desc" = "Ẩn thẻ quảng bá Threads.";
 "row.nothreads.title" = "Xóa quảng bá Threads";
-"row.notifclientsync.desc" = "Khi chỉ có huy hiệu số thay đổi, tìm nạp và hiển thị nội dung thông báo";
-"row.notifclientsync.title" = "Tìm nạp thông báo bị thiếu";
 "row.oled.desc" = "Chuyển toàn bộ ứng dụng sang màu đen thực sự.";
 "row.oled.title" = "Chế độ tối OLED";
 "row.oleddividers.desc" = "Giữ các đường mảnh giữa các bài viết ở chế độ OLED. Tắt để có bảng tin đen hoàn toàn.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Cách mở khóa";
 "row.plusmode.trial" = "Dùng thử";
 "row.reset.title" = "Đặt lại tất cả cài đặt";
-"row.resetpushkeys.desc" = "Buộc Facebook đăng ký lại các khóa mã hóa thông báo đẩy mới";
-"row.resetpushkeys.title" = "Đặt lại khóa thông báo";
 "row.suspend.desc" = "Buộc đóng Facebook; mở lại để áp dụng thay đổi.";
 "row.suspend.title" = "Thoát ứng dụng";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Đã xóa bộ nhớ đệm";
 "toast.logCleared" = "Đã xóa nhật ký.";
 "toast.logEmpty" = "Chưa có nhật ký nào được ghi.";
-"toast.pushKeysReset" = "Đã xóa khóa thông báo (%lu). Vui lòng mở lại Facebook";
 "toast.settingsReset" = "Đã đặt lại cài đặt";
 
 

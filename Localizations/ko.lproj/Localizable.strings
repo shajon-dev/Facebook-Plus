@@ -128,7 +128,6 @@
 "footer.feedClutter" = "피드에서 “알 수도 있는 사람 / 가입할 만한 그룹 / 추천” 섹션을 숨깁니다.";
 "footer.metaplus" = "미리보기 전용입니다. 서버 측 기능은 작동하지 않습니다.";
 "footer.plusmode" = "다이렉트는 기능을 즉시 강제로 활성화합니다.\n체험판은 앱에서 활성 체험판 상태를 시뮬레이션합니다.";
-"footer.resetpushkeys" = "Facebook은 기기에 등록된 키로 알림 텍스트를 암호화합니다. 등록이 완료되지 않으면 내용 없이 배지만 표시됩니다. 저장된 키를 지워 다음 실행 시 새 키를 생성하도록 합니다.";
 
 
 "info.developer" = "개발자";
@@ -154,8 +153,6 @@
 "reset.title" = "모든 설정 초기화";
 
 
-"resetpushkeys.confirm" = "키 재설정";
-"resetpushkeys.message" = "다음 실행 시 Facebook이 새 푸시 키를 생성하고 등록합니다. 계정이나 로그인에는 영향을 주지 않습니다. 완료 후 Facebook을 완전히 종료했다가 다시 여세요.";
 
 
 "row.anonstories.desc" = "읽음 표시를 보내지 않고 스토리를 봅니다.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "글꼴";
 "row.hidesidebaralsometa.title" = "“Meta의 기타 제품” 숨기기";
 "row.hidesidebarupgrades.title" = "업그레이드 숨기기";
-"row.keychainrebind.desc" = "다시 서명한 앱의 키체인이 계속 작동하도록 합니다. 프로필에서 바로 전송을 눌렀을 때 Facebook이 종료된다면 여기를 끄세요.";
-"row.keychainrebind.title" = "키체인 호환성";
 "row.language.title" = "언어";
 "row.linksinsafari.desc" = "외부 링크를 인앱 브라우저 대신 기본 브라우저에서 엽니다.";
 "row.linksinsafari.title" = "링크를 Safari에서 열기";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "설문 카드 제거";
 "row.nothreads.desc" = "Threads 프로모션 카드를 숨깁니다.";
 "row.nothreads.title" = "스레드 홍보 제거";
-"row.notifclientsync.desc" = "배지만 표시될 때 알림 내용을 가져와 표시합니다";
-"row.notifclientsync.title" = "누락된 알림 가져오기";
 "row.oled.desc" = "앱 전체를 완전한 검은색으로 만듭니다.";
 "row.oled.title" = "OLED 다크 모드";
 "row.oleddividers.desc" = "OLED 모드에서 게시물 사이의 옅은 선을 유지합니다. 끄면 피드가 완전히 검게 됩니다.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "잠금 해제 방식";
 "row.plusmode.trial" = "체험판";
 "row.reset.title" = "모든 설정 초기화";
-"row.resetpushkeys.desc" = "Facebook이 새로운 푸시 암호화 키를 등록하도록 합니다";
-"row.resetpushkeys.title" = "알림 키 재설정";
 "row.suspend.desc" = "Facebook을 강제 종료합니다. 변경 사항을 적용하려면 다시 염니다.";
 "row.suspend.title" = "앱 종료";
 "row.welcome.title" = "시작 화면 표시";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "캐시를 지웠습니다";
 "toast.logCleared" = "로그가 삭제되었습니다.";
 "toast.logEmpty" = "기록된 로그가 없습니다.";
-"toast.pushKeysReset" = "푸시 키가 초기화되었습니다 (%lu). Facebook을 다시 여세요";
 "toast.settingsReset" = "설정을 초기화했습니다";
 
 

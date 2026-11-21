@@ -128,7 +128,6 @@
 "footer.feedClutter" = "隱藏動態中的「你可能認識的人 / 推薦加入的社團 / 為你推薦」等區塊。";
 "footer.metaplus" = "僅供預覽，伺服器端功能將無法使用。";
 "footer.plusmode" = "直接掛鉤會直接強制開啟功能。\n試用模式會讓應用程式模擬處於有效試用期。";
-"footer.resetpushkeys" = "Facebook 使用裝置註冊的密鑰來加密通知文字。如果註冊未完成，伺服器僅會傳送標記角標而沒有通知文字。此選項會清除儲存的密鑰，讓 Facebook 在下次啟動時產生新密鑰。";
 
 
 "info.developer" = "開發者";
@@ -154,8 +153,6 @@
 "reset.title" = "重設所有設定";
 
 
-"resetpushkeys.confirm" = "重設密鑰";
-"resetpushkeys.message" = "Facebook 下次啟動時將建立並註冊新的推播密鑰。您的帳號或登入狀態不會受到任何影響。完成後請強制關閉 Facebook 並重新開啟。";
 
 
 "row.anonstories.desc" = "觀看限時動態時不傳送已讀回條。";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "字型";
 "row.hidesidebaralsometa.title" = "隱藏「Meta 的其他產品」";
 "row.hidesidebarupgrades.title" = "隱藏升級提示";
-"row.keychainrebind.desc" = "讓重新签署的 App 鑰匙串維持可用。若在個人檔案點按「訊息」會導致 Facebook 閃退，請關閉此項。";
-"row.keychainrebind.title" = "鑰匙串相容性";
 "row.language.title" = "語言";
 "row.linksinsafari.desc" = "使用系統預設瀏覽器開啟外部連結，而非 App 內建瀏覽器。";
 "row.linksinsafari.title" = "在 Safari 中開啟連結";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "移除問卷調查";
 "row.nothreads.desc" = "隱藏 Threads 推廣卡片。";
 "row.nothreads.title" = "移除 Threads 推廣";
-"row.notifclientsync.desc" = "當僅有標記角標變動時，擷取並顯示通知內容";
-"row.notifclientsync.title" = "擷取缺少的通知";
 "row.oled.desc" = "將整個 App 背景轉為純黑色。";
 "row.oled.title" = "OLED 純黑深色模式";
 "row.oleddividers.desc" = "在 OLED 模式下保留貼文之間的淺色分隔線。關閉則整個動態消息全黑。";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "解鎖方式";
 "row.plusmode.trial" = "試用";
 "row.reset.title" = "重設所有設定";
-"row.resetpushkeys.desc" = "讓 Facebook 重新註冊推播加密密鑰";
-"row.resetpushkeys.title" = "重設通知密鑰";
 "row.suspend.desc" = "強制關閉 Facebook；重新開啟以套用變更。";
 "row.suspend.title" = "關閉 App";
 "row.welcome.title" = "顯示歡迎畫面";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "已清除快取";
 "toast.logCleared" = "記錄已清除。";
 "toast.logEmpty" = "尚未有任何記錄。";
-"toast.pushKeysReset" = "推播密鑰已清除 (%lu)。請重新開啟 Facebook";
 "toast.settingsReset" = "已重設設定";
 
 

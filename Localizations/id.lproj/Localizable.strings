@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Sembunyikan bagian “orang yang mungkin Anda kenal / grup yang disarankan / untuk Anda” dari beranda.";
 "footer.metaplus" = "Hanya pratinjau. Fitur sisi server tidak akan berfungsi.";
 "footer.plusmode" = "Langsung mengaktifkan fitur secara langsung.\nUji Coba membuat aplikasi mensimulasikan uji coba aktif.";
-"footer.resetpushkeys" = "Facebook mengenkripsi teks notifikasi dengan kunci yang didaftarkan perangkat Anda. Jika pendaftaran belum selesai, server hanya mengirim lencana tanpa teks. Opsi ini menghapus kunci yang tersimpan agar Facebook membuat kunci baru saat diluncurkan berikutnya.";
 
 
 "info.developer" = "Pengembang";
@@ -154,8 +153,6 @@
 "reset.title" = "Setel Ulang Semua Pengaturan";
 
 
-"resetpushkeys.confirm" = "Atur Ulang Kunci";
-"resetpushkeys.message" = "Facebook akan membuat dan mendaftarkan kunci push baru saat berikutnya dibuka. Tidak ada yang berubah pada akun atau proses masuk Anda. Tutup paksa Facebook lalu buka kembali.";
 
 
 "row.anonstories.desc" = "Lihat story tanpa mengirim tanda telah dibaca.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Jenis Huruf";
 "row.hidesidebaralsometa.title" = "Sembunyikan “Juga dari Meta”";
 "row.hidesidebarupgrades.title" = "Sembunyikan Peningkatan";
-"row.keychainrebind.desc" = "Menjaga keychain aplikasi yang ditandatangani ulang tetap berfungsi. Matikan jika Facebook keluar sendiri saat kamu menekan Message di sebuah profil.";
-"row.keychainrebind.title" = "Kompatibilitas Keychain";
 "row.language.title" = "Bahasa";
 "row.linksinsafari.desc" = "Membuka tautan eksternal di browser default alih-alih browser dalam aplikasi.";
 "row.linksinsafari.title" = "Buka Tautan di Safari";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Hapus Survei";
 "row.nothreads.desc" = "Sembunyikan kartu promo Threads.";
 "row.nothreads.title" = "Hapus Promo Threads";
-"row.notifclientsync.desc" = "Ketika hanya lencana yang muncul, ambil dan tampilkan notifikasi";
-"row.notifclientsync.title" = "Ambil Notifikasi yang Hilang";
 "row.oled.desc" = "Membuat seluruh aplikasi benar-benar hitam.";
 "row.oled.title" = "Mode Gelap OLED";
 "row.oleddividers.desc" = "Mempertahankan garis tipis antar postingan di mode OLED. Matikan untuk feed sepenuhnya hitam.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Metode Buka";
 "row.plusmode.trial" = "Uji coba";
 "row.reset.title" = "Setel Ulang Semua Pengaturan";
-"row.resetpushkeys.desc" = "Buat Facebook mendaftarkan kunci enkripsi push baru";
-"row.resetpushkeys.title" = "Atur Ulang Kunci Notifikasi";
 "row.suspend.desc" = "Menutup paksa Facebook; buka lagi untuk menerapkan perubahan.";
 "row.suspend.title" = "Tutup Paksa Aplikasi";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Cache dibersihkan";
 "toast.logCleared" = "Log berhasil dihapus.";
 "toast.logEmpty" = "Belum ada log yang tercatat.";
-"toast.pushKeysReset" = "Kunci push dibersihkan (%lu). Buka kembali Facebook";
 "toast.settingsReset" = "Pengaturan disetel ulang";
 
 

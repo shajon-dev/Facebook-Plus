@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Akıştaki “Tanıyor Olabileceğin Kişiler / Katılabileceğin Gruplar / Senin İçin” kısımlarını gizler.";
 "footer.metaplus" = "Yalnızca önizleme. Sunucu taraflı özellikler çalışmayacaktır.";
 "footer.plusmode" = "Doğrudan modu özellikleri anında zorlayarak açar.\nDeneme modu uygulamada aktif bir deneme süresi simüle eder.";
-"footer.resetpushkeys" = "Facebook, bildirim metnini cihazınızın kaydettiği bir anahtarla şifreler. Bu kayıt tamamlanmadıysa sunucu metin olmadan yalnızca işaret gönderir. Bu işlem, Facebook'un bir sonraki başlangıçta yeni anahtarlar oluşturması için kayıtlı anahtarları temizler.";
 
 
 "info.developer" = "Geliştirici";
@@ -154,8 +153,6 @@
 "reset.title" = "Tüm Ayarları Sıfırla";
 
 
-"resetpushkeys.confirm" = "Anahtarları Sıfırla";
-"resetpushkeys.message" = "Facebook bir sonraki açılışta yeni bildirim anahtarları oluşturup kaydedecektir. Hesabınızda veya girişinizde hiçbir şey değişmez. Ardından Facebook'u tamamen kapatıp yeniden açın.";
 
 
 "row.anonstories.desc" = "Okundu bilgisi göndermeden hikâyeleri izle.";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "Yazı Tipi";
 "row.hidesidebaralsometa.title" = "“Meta'dan Diğer Ürünler”i Gizle";
 "row.hidesidebarupgrades.title" = "Yükseltmeleri Gizle";
-"row.keychainrebind.desc" = "Yeniden imzalanmış uygulamanın anahtar zincirini çalışır durumda tutar. Bir profilde Mesaj'a dokunduğunda Facebook çöküyorsa kapat.";
-"row.keychainrebind.title" = "Anahtar Zinciri Uyumluluğu";
 "row.language.title" = "Dil";
 "row.linksinsafari.desc" = "Harici bağlantıları uygulama içi tarayıcı yerine varsayılan tarayıcında açar.";
 "row.linksinsafari.title" = "Bağlantıları Safari'de aç";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "Anketleri Kaldır";
 "row.nothreads.desc" = "Threads tanıtım kartını gizler.";
 "row.nothreads.title" = "Threads Tanıtımını Kaldır";
-"row.notifclientsync.desc" = "Yalnızca işaret değiştiğinde bildirimi al ve göster";
-"row.notifclientsync.title" = "Eksik Bildirimleri Al";
 "row.oled.desc" = "Tüm uygulamayı gerçek siyaha çevirir.";
 "row.oled.title" = "OLED Karanlık Mod";
 "row.oleddividers.desc" = "OLED modunda gönderiler arasındaki ince çizgileri korur. Tamamen siyah bir akış için kapatın.";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "Kilit Açma Yöntemi";
 "row.plusmode.trial" = "Deneme";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
-"row.resetpushkeys.desc" = "Facebook'un yeni anlık bildirim şifreleme anahtarları kaydetmesini sağlayın";
-"row.resetpushkeys.title" = "Bildirim Anahtarlarını Sıfırla";
 "row.suspend.desc" = "Facebook’u zorla kapatır; değişiklikleri uygulamak için yeniden açın.";
 "row.suspend.title" = "Uygulamayı Kapat";
 "row.welcome.title" = "Karşılama Ekranını Göster";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "Önbellek temizlendi";
 "toast.logCleared" = "Günlükler temizlendi.";
 "toast.logEmpty" = "Henüz kayıtlı günlük yok.";
-"toast.pushKeysReset" = "Bildirim anahtarları temizlendi (%lu). Facebook'u yeniden açın";
 "toast.settingsReset" = "Ayarlar sıfırlandı";
 
 

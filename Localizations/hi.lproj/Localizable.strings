@@ -128,7 +128,6 @@
 "footer.feedClutter" = "फ़ीड से “शायद आप जानते हों / ग्रुप से जुड़ें / आपके लिए” वाले सुझाव छुपाता है।";
 "footer.metaplus" = "केवल पूर्वावलोकन। सर्वर-आधारित सुविधाएँ काम नहीं करेंगी।";
 "footer.plusmode" = "डायरेक्ट सीधे सुविधाओं को लागू करता है।\nट्रायल ऐप में एक सक्रिय परीक्षण का अनुकरण करता है।";
-"footer.resetpushkeys" = "Facebook नोटिफ़िकेशन टेक्स्ट को आपके डिवाइस की पंजीकृत कुंजी से एन्क्रिप्ट करता है। यदि पंजीकरण पूरा नहीं होता, तो केवल बैज दिखता है, टेक्स्ट नहीं। यह सहेजी गई कुंजियों को साफ़ करता है ताकि Facebook अगले स्टार्ट पर नई कुंजियाँ बनाए।";
 
 
 "info.developer" = "डेवलपर";
@@ -154,8 +153,6 @@
 "reset.title" = "सभी सेटिंग रीसेट करें";
 
 
-"resetpushkeys.confirm" = "कुंजियाँ रीसेट करें";
-"resetpushkeys.message" = "Facebook अगली बार शुरू होने पर नई पुश कुंजियाँ बनाएगा और पंजीकृत करेगा। आपके खाते या लॉगिन में कोई बदलाव नहीं होगा। इसके बाद Facebook को बंद करके फिर से खोलें।";
 
 
 "row.anonstories.desc" = "पढ़े जाने की सूचना भेजे बिना स्टोरी देखें।";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "फ़ॉन्ट";
 "row.hidesidebaralsometa.title" = "Meta की अन्य सेवाएँ छुपाएँ";
 "row.hidesidebarupgrades.title" = "अपग्रेड छुपाएँ";
-"row.keychainrebind.desc" = "पुनः साइन किए गए ऐप की कीचेन को चालू रखता है। अगर प्रोपाइल पर Message दबाने से Facebook क्रैश हो, तो इसे बंद करें।";
-"row.keychainrebind.title" = "कीचेन संगति";
 "row.language.title" = "भाषा";
 "row.linksinsafari.desc" = "बाहरी लिंक इन-ऐप ब्राउज़र के बजाय आपके डिफ़ॉल्ट ब्राउज़र में खोलता है।";
 "row.linksinsafari.title" = "लिंक Safari में खोलें";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "सर्वे कार्ड हटाएँ";
 "row.nothreads.desc" = "“नए थ्रेड खोजें” कार्ड छुपाता है।";
 "row.nothreads.title" = "Threads प्रचार हटाएँ";
-"row.notifclientsync.desc" = "जब केवल बैज दिखाई दे, तो नोटिफ़िकेशन प्राप्त करें और दिखाएँ";
-"row.notifclientsync.title" = "अनुपलब्ध नोटिफ़िकेशन लाएँ";
 "row.oled.desc" = "पूरे ऐप को असली काला बनाता है।";
 "row.oled.title" = "OLED डार्क मोड";
 "row.oleddividers.desc" = "OLED मोड में पोस्ट के बीच की हल्की लाइनें रखता है। बंद करने पर पूरी फ़ीड काली हो जाती है।";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "अनलॉक तरीका";
 "row.plusmode.trial" = "ट्रायल";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
-"row.resetpushkeys.desc" = "Facebook को नई पुश-एन्क्रिप्शन कुंजियाँ पंजीकृत करने दें";
-"row.resetpushkeys.title" = "नोटिफ़िकेशन कुंजियाँ रीसेट करें";
 "row.suspend.desc" = "Facebook को ज़बरदस्ती बंद करें; बदलाव लागू करने के लिए फिर से खोलें।";
 "row.suspend.title" = "ऐप बंद करें";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "कैश साफ़ हो गया";
 "toast.logCleared" = "लॉग साफ़ कर दिए गए।";
 "toast.logEmpty" = "अभी तक कोई लॉग दर्ज नहीं हुआ।";
-"toast.pushKeysReset" = "पुश कुंजियाँ साफ़ हो गईं (%lu)। Facebook को पुनः खोलें";
 "toast.settingsReset" = "सेटिंग रीसेट हो गईं";
 
 

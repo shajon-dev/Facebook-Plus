@@ -128,7 +128,6 @@
 "footer.feedClutter" = "フィードの「知り合いかも / おすすめグループ / おすすめ」セクションを非表示にします。";
 "footer.metaplus" = "プレビュー専用です。サーバー側で処理される機能は動作しません。";
 "footer.plusmode" = "ダイレクトは機能を直接強制有効化します。\nトライアルはアプリ内で無料トライアル状態を模擬します。";
-"footer.resetpushkeys" = "Facebookは端末が登録したキーを使用して通知テキストを暗号化します。登録が完了していない場合、テキストなしでバッジのみが届きます。保存されたキーを消去し、次回起動時に新しいキーを生成させます。";
 
 
 "info.developer" = "開発者";
@@ -154,8 +153,6 @@
 "reset.title" = "すべての設定をリセット";
 
 
-"resetpushkeys.confirm" = "キーをリセット";
-"resetpushkeys.message" = "次回起動時に新しいプッシュキーが作成・登録されます。アカウントやログイン状態に変更はありません。実行後、Facebookを強制終了して再起動してください。";
 
 
 "row.anonstories.desc" = "既読を送らずにストーリーズを見ます。";
@@ -195,8 +192,6 @@
 "row.fonts.title" = "フォント";
 "row.hidesidebaralsometa.title" = "「Metaのその他の製品」を非表示";
 "row.hidesidebarupgrades.title" = "アップグレードを非表示";
-"row.keychainrebind.desc" = "再署名したアプリのキーチェーンを動作させます。プロフィールで「メッセージ」をタップして Facebook が落ちる場合はオフにしてください。";
-"row.keychainrebind.title" = "キーチェーン互換性";
 "row.language.title" = "言語";
 "row.linksinsafari.desc" = "外部リンクをアプリ内ブラウザではなく既定のブラウザで開きます。";
 "row.linksinsafari.title" = "リンクを Safari で開く";
@@ -231,8 +226,6 @@
 "row.nosurveys.title" = "アンケートを削除";
 "row.nothreads.desc" = "Threadsのプロモーションカードを非表示にします。";
 "row.nothreads.title" = "Threads の宣伝を削除";
-"row.notifclientsync.desc" = "バッジのみ届いた際に通知内容を取得して表示します";
-"row.notifclientsync.title" = "未取得の通知を取得";
 "row.oled.desc" = "アプリ全体を真っ黒にします。";
 "row.oled.title" = "OLED ダークモード";
 "row.oleddividers.desc" = "OLEDモードで投稿間の薄い線を残します。オフにするとフィード全体が黒になります。";
@@ -242,8 +235,6 @@
 "row.plusmode.title" = "解除方法";
 "row.plusmode.trial" = "トライアル";
 "row.reset.title" = "すべての設定をリセット";
-"row.resetpushkeys.desc" = "Facebookにプッシュ暗号化キーを再登録させます";
-"row.resetpushkeys.title" = "通知キーをリセット";
 "row.suspend.desc" = "Facebook を強制終了します。変更を適用するには開き直してください。";
 "row.suspend.title" = "アプリを終了";
 "row.welcome.title" = "ようこそ画面を表示";
@@ -255,7 +246,6 @@
 "toast.cacheCleared" = "キャッシュを消去しました";
 "toast.logCleared" = "ログを消去しました。";
 "toast.logEmpty" = "記録されたログはありません。";
-"toast.pushKeysReset" = "プッシュキーを消去しました (%lu)。Facebookを再起動してください";
 "toast.settingsReset" = "設定をリセットしました";
 
 
