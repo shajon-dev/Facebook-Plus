@@ -20,6 +20,7 @@
 #import "FBPLanguageController.h"
 #import "FBPWelcomeController.h"
 #import "FBPUpdateChecker.h"
+#import "FBPCacheCleaner.h"
 #import "FBPTrace.h"
 
 #import <objc/runtime.h>
@@ -890,19 +891,12 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
 }
 
 - (void)clearCache {
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        NSString *cachePath = NSSearchPathForDirectoriesInDomains(
-            NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-        NSArray<NSString *> *contents =
-            [NSFileManager.defaultManager contentsOfDirectoryAtPath:cachePath error:NULL];
-        for (NSString *item in contents) {
-            [NSFileManager.defaultManager
-                removeItemAtPath:[cachePath stringByAppendingPathComponent:item] error:NULL];
-        }
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [FBPToastManager.shared showMessage:FBPL(@"toast.cacheCleared") success:YES];
-        });
-    });
+    [FBPCacheCleaner clearAllCachesWithCompletion:^(unsigned long long bytesFreed) {
+        NSString *msg = bytesFreed > 0
+            ? [NSString stringWithFormat:@"%@ (%@)", FBPL(@"toast.cacheCleared"), [FBPCacheCleaner formattedByteSize:bytesFreed]]
+            : FBPL(@"toast.cacheCleared");
+        [FBPToastManager.shared showMessage:msg success:YES];
+    }];
 }
 
 @end

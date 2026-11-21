@@ -8,6 +8,7 @@
 #import "FBPSettingsController.h"
 #import "FBPWelcomeController.h"
 #import "FBPUpdateChecker.h"
+#import "FBPCacheCleaner.h"
 #import "FBPSheet.h"
 #import "FBPToast.h"
 
@@ -238,17 +239,7 @@ static void FBPAttachWordmarkGesture(UIView *bar) {
     BOOL result = %orig;
 
     if (FBPEnabled(FBPKeyAutoClearCache)) {
-        dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-            NSString *cachePath = NSSearchPathForDirectoriesInDomains(
-                NSCachesDirectory, NSUserDomainMask, YES).firstObject;
-            NSArray<NSString *> *contents =
-                [NSFileManager.defaultManager contentsOfDirectoryAtPath:cachePath error:NULL];
-            for (NSString *item in contents) {
-                [NSFileManager.defaultManager
-                    removeItemAtPath:[cachePath stringByAppendingPathComponent:item]
-                               error:NULL];
-            }
-        });
+        [FBPCacheCleaner clearAllCachesWithCompletion:nil];
     }
 
     [FBPWelcomeController presentIfNeeded];
