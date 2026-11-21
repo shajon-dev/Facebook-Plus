@@ -210,7 +210,7 @@ certificate — lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.
 │   ├── fonts           # Bundled custom fonts offered by the Fonts picker
 │   ├── logo            # Custom app-icons drop folder for build.py injection
 │   └── svg             # Source vector graphics
-├── scripts             # verify.py (clang typecheck + 44-check test suite) and audit.py (static audit)
+├── scripts             # doctor.py — typecheck, link, and audit every git-tracked source
 ├── src                 # Tweak source code
 │   ├── Core            # Constructor, preferences, logging/diagnostics, fishhook submodule
 │   ├── Features        # All hooks & feature implementations:
