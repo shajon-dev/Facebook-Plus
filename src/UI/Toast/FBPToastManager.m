@@ -87,14 +87,33 @@ static const CGFloat kTabBarHeight = 49.0;
     FBPToastWindow *window = [self ensureWindow];
     if (!window) return;
 
+    UIView *host = window.rootViewController.view;
+    if (!host) return;
+
+    // Place the toast initially at the bottom-middle of the host view before
+    // constraints are resolved, ensuring its layer position never originates at (0, 0).
+    CGFloat screenWidth = CGRectGetWidth(host.bounds) ?: UIScreen.mainScreen.bounds.size.width;
+    CGFloat screenHeight = CGRectGetHeight(host.bounds) ?: UIScreen.mainScreen.bounds.size.height;
+    CGFloat initialWidth = 160.0;
+    CGFloat initialHeight = 46.0;
+    toast.frame = CGRectMake((screenWidth - initialWidth) / 2.0,
+                             screenHeight - initialHeight - kBottomInset,
+                             initialWidth,
+                             initialHeight);
+
     if (![self.toasts containsObject:toast]) [self.toasts addObject:toast];
-    [window.rootViewController.view addSubview:toast];
+    [host addSubview:toast];
 
     [NSLayoutConstraint activateConstraints:@[
-        [toast.centerXAnchor
-            constraintEqualToAnchor:window.rootViewController.view.centerXAnchor],
+        [toast.centerXAnchor constraintEqualToAnchor:host.centerXAnchor],
     ]];
-    [self updateAllToasts];
+
+    // Settle layout synchronously without animation so the toast snaps firmly into
+    // its resting bottom-middle position before its appearance animation begins.
+    [UIView performWithoutAnimation:^{
+        [self updateToastConstraints];
+        [host layoutIfNeeded];
+    }];
 }
 
 - (void)unregisterToast:(FBPToastView *)toast {
@@ -109,8 +128,8 @@ static const CGFloat kTabBarHeight = 49.0;
 
 #pragma mark - Layout
 
-/// Stack toasts upward from the bottom so a newer one never covers an older one.
-- (void)updateAllToasts {
+/// Calculate and apply bottom constraints for all active toasts.
+- (void)updateToastConstraints {
     UIView *host = self.window.rootViewController.view;
     if (!host) return;
 
@@ -124,7 +143,7 @@ static const CGFloat kTabBarHeight = 49.0;
     __block CGFloat offset = base;
     [self.toasts enumerateObjectsWithOptions:NSEnumerationReverse
                                   usingBlock:^(FBPToastView *toast, NSUInteger idx, BOOL *stop) {
-        CGFloat height = CGRectGetHeight(toast.bounds) ?: 52.0;
+        CGFloat height = CGRectGetHeight(toast.bounds) ?: 46.0;
         CGFloat target = -offset;
         offset += height + kToastSpacing;
 
@@ -139,7 +158,14 @@ static const CGFloat kTabBarHeight = 49.0;
             FBPSetBottomConstraint(toast, bottom);
         }
     }];
+}
 
+/// Stack toasts upward from the bottom so a newer one never covers an older one.
+- (void)updateAllToasts {
+    UIView *host = self.window.rootViewController.view;
+    if (!host) return;
+
+    [self updateToastConstraints];
     [UIView animateWithDuration:0.25 animations:^{ [host layoutIfNeeded]; }];
 }
 

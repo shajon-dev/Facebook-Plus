@@ -294,11 +294,12 @@ static const CGFloat kBadgeRadius   = 7.0;
 - (void)presentIfNeeded {
     if (self.superview) return;
     self.alpha = 0;
-    self.transform = CGAffineTransformMakeTranslation(0, 16);
+    self.transform = CGAffineTransformIdentity;
     [FBPToastManager.shared registerToast:self];
-    [UIView animateWithDuration:0.42
+    self.transform = CGAffineTransformMakeTranslation(0, 20);
+    [UIView animateWithDuration:0.35
                           delay:0
-         usingSpringWithDamping:0.86
+         usingSpringWithDamping:0.82
           initialSpringVelocity:0.2
                         options:UIViewAnimationOptionCurveEaseOut
                      animations:^{

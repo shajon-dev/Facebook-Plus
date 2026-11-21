@@ -13,10 +13,7 @@
 /// update screen when newer, or a toast for "up to date" / failure.
 + (void)checkManuallyFromViewController:(UIViewController *)controller;
 
-/// The GitHub owner currently in use. Releases are published under two owners; the
-/// primary ("SHAJON-404") is preferred whenever its releases endpoint answers HTTP 200,
-/// otherwise the mirror ("shajon-dev") is used. Resolved asynchronously and
-/// cached; returns the last known-live owner (mirror until proven otherwise).
+/// The GitHub owner currently in use ("shajon-dev").
 + (NSString *)activeGitHubOwner;
 
 /// https://github.com/<owner>                      — the owner's profile.
