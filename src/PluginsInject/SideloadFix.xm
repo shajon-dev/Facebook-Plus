@@ -35,17 +35,21 @@
 		return %orig;
 	}
 
+	// The container is prepared, not just created: a real group container comes
+	// with Library/Caches, and code that writes a temporary file there does not
+	// create it first. See prepareGroupContainer in Paths.mm.
 	if (NSURL *ourAppGroupURL = getAppGroupPathIfExists()) {
 		NSURL *fakeAppGroupURL = [ourAppGroupURL URLByAppendingPathComponent:groupIdentifier];
-		createDirectoryIfNotExists(fakeAppGroupURL.path);
+		prepareGroupContainer(fakeAppGroupURL);
 		return fakeAppGroupURL;
 	}
 
 	// fallback to a fake App Group path in Documents/App Group
 	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
 	NSString *fakePath = [[paths lastObject] stringByAppendingPathComponent:groupIdentifier];
-	createDirectoryIfNotExists(fakePath);
-	return [NSURL fileURLWithPath:fakePath];
+	NSURL *fallbackURL = [NSURL fileURLWithPath:fakePath];
+	prepareGroupContainer(fallbackURL);
+	return fallbackURL;
 }
 %end
 
