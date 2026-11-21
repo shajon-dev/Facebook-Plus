@@ -817,10 +817,82 @@ class HookCheck(Check):
         return ".".join(parts) if len(parts) == 2 and not rest else None
 
 
+class DeadCodeCheck(Check):
+    """What is still in the tree but nothing reaches any more.
+
+    The compiler already refuses an unused static function, so this looks only
+    where it cannot: a %group that no %init installs, a localized string no
+    source asks for, and a global function nothing calls. Each of those has
+    been left behind here at least once, by a feature that was removed with its
+    strings still in all eighteen catalogs.
+    """
+
+    name = "dead"
+    summary = "nothing left behind: a %group nobody installs, a string nobody asks for"
+
+    # A key can be built at the call site, as "download.job.stage." plus a
+    # tail, so a literal prefix counts as a use. Two components at least: a
+    # bare "row." or "footer." says nothing about which row.
+    MIN_PREFIX_PARTS = 2
+
+    DEFINITION = re.compile(
+        r"^\s*(?:void|BOOL|id|NSString\s*\*|CGFloat)\s+(FBP[A-Za-z0-9_]*)\s*\([^;]*\)\s*\{", re.M)
+
+    def run(self, ctx: "Doctor") -> list[Finding]:
+        index, repo = ctx.index, ctx.repo
+        findings: list[Finding] = []
+
+        # A %group that is compiled and never installed. Its hooks look present
+        # in the source and do nothing on the device.
+        declared: dict[str, Path] = {}
+        installed: set[str] = set()
+        for path, text in index.clean.items():
+            for name in index.GROUP.findall(text):
+                declared.setdefault(name, path)
+            installed.update(index.INIT.findall(text))
+        for name, path in sorted(declared.items()):
+            if name not in installed:
+                findings.append(Finding(
+                    self.name, f"%group {name} is never %init'ed, so its hooks never install",
+                    path=repo.rel(path)))
+
+        # A global function nothing calls. Counted across every source and
+        # header, so one mention is the definition itself.
+        sources = {p: t for p, t in index.clean.items()}
+        blob = "\n".join(sources.values())
+        for path, text in sources.items():
+            for name in self.DEFINITION.findall(text):
+                if len(re.findall(r"\b" + re.escape(name) + r"\b", blob)) <= 1:
+                    findings.append(Finding(
+                        self.name, f"{name} is defined and never called",
+                        path=repo.rel(path)))
+
+        # A string in the catalog that no source asks for, by name or by a
+        # prefix it is built from.
+        base = repo.root / "Localizations" / "Base.lproj" / "Localizable.strings"
+        if not base.exists():
+            return findings
+        catalog = re.findall(r'^\s*"([^"]+)"\s*=',
+                             base.read_text(encoding="utf-8"), re.M)
+        asked = {key for key, _, _ in index.localization_uses()}
+        for key in catalog:
+            if key in asked or key in blob:
+                continue
+            parts = key.split(".")
+            built = any(".".join(parts[:n]) + "." in blob
+                        for n in range(len(parts) - 1, self.MIN_PREFIX_PARTS - 1, -1))
+            if not built:
+                findings.append(Finding(
+                    self.name, f'"{key}" is in every catalog and no source asks for it',
+                    path=repo.rel(base)))
+        return findings
+
+
 class Doctor:
     """Runs the checks and reports what they found."""
 
-    CHECKS = (CompileCheck, LinkCheck, PrefCheck, StringCheck, LintCheck, HookCheck)
+    CHECKS = (CompileCheck, LinkCheck, PrefCheck, StringCheck, LintCheck, HookCheck,
+              DeadCodeCheck)
 
     # Enough to act on without burying the summary; -v prints the rest.
     LIMIT = 25
