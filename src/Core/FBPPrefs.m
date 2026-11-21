@@ -54,6 +54,8 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyFeedLike         : @YES,
         FBPKeyOLED             : @NO,
         FBPKeyOLEDDividers     : @YES,
+        FBPKeyHideSidebarUpgrades     : @YES,
+        FBPKeyHideSidebarAlsoFromMeta : @YES,
         FBPKeyDisableHDR       : @NO,
         // Off by default: this unlocks Facebook's paid subscriber UI (and the
         // Meta AI quotas) for preview, so it stays a deliberate opt-in rather
