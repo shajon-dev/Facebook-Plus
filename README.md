@@ -26,39 +26,43 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td nowrap rowspan="4">🎨 <b>Appearance</b></td><td>OLED dark mode (true black) that follows your iOS Light / Dark setting, with an option to hide the post dividers for a fully black feed</td></tr>
-    <tr><td>Disable HDR — show photos and video in standard range, not extra-bright HDR</td></tr>
+    <tr><td nowrap rowspan="4">🎨 <b>Appearance</b></td><td>OLED dark mode (true black) that follows your iOS Light / Dark setting, with an option to hide post dividers for a fully black feed</td></tr>
+    <tr><td>Disable HDR: force SDR rendering across all EDR paths, tone-mapping video layers to SDR and disabling HDR image views</td></tr>
     <tr><td>Alternate app icons</td></tr>
     <tr><td>Custom fonts from a bundled or imported <code>.ttf</code>/<code>.otf</code>, with adjustable size</td></tr>
+    <tr><td nowrap>🧹 <b>Cache</b></td><td>Scheduled automatic cache cleanup (every 12h, 24h, or off) running safely at startup without breaking feed pagination or deleting user sessions</td></tr>
     <tr><td nowrap>📞 <b>Calls</b></td><td>Silently block incoming VoIP and Messenger calls</td></tr>
     <tr><td nowrap rowspan="2">✅ <b>Confirmations</b></td><td>Opt-in prompts that catch accidental taps, with Cancel to stop the action</td></tr>
     <tr><td>Covers Like, Comment, Share, Post, Friend request and Follow / Join</td></tr>
-    <tr><td nowrap rowspan="2">🩺 <b>Diagnostics</b></td><td>Exportable in-app activity log for bug reports — kept across launches, cleared daily</td></tr>
-    <tr><td>About card with the Facebook Plus, Facebook, iOS and device details</td></tr>
-    <tr><td nowrap rowspan="5">⬇️ <b>Downloads</b></td><td>Choose a quality before saving — every rung the video actually offers, not just HD/SD</td></tr>
+    <tr><td nowrap rowspan="2">🩺 <b>Diagnostics</b></td><td>Exportable in-app activity log for bug reports: kept across launches, cleared daily</td></tr>
+    <tr><td>About card with Facebook Plus, Facebook, iOS and device details</td></tr>
+    <tr><td nowrap rowspan="5">⬇️ <b>Downloads</b></td><td>Choose a quality before saving: every rung the video actually offers, not just HD/SD</td></tr>
     <tr><td>Lossless merge of Facebook's separate video and audio streams</td></tr>
-    <tr><td>AV1 and VP9 qualities re-encoded on-device so Photos accepts them — no shipped FFmpeg</td></tr>
+    <tr><td>AV1 and VP9 qualities re-encoded on-device so Photos accepts them (no shipped FFmpeg)</td></tr>
     <tr><td>Save with add-only Photos access, without full-library permission (iOS 17+)</td></tr>
     <tr><td>Download manager with progress, cancel and retry</td></tr>
-    <tr><td nowrap>👑 <b>Facebook Plus</b></td><td>Preview Meta's paid subscriber features without subscribing — including the Story diamond/heart reaction; Direct or Trial unlock, off by default with a warning</td></tr>
-    <tr><td nowrap rowspan="5">📰 <b>Feed</b></td><td>Remove ads &amp; sponsored posts — feed, video, Stories and Marketplace</td></tr>
+    <tr><td nowrap>👑 <b>Facebook Plus</b></td><td>Preview Meta's paid subscriber features without subscribing (including the Story diamond/heart reaction); Direct or Trial unlock, off by default with a warning</td></tr>
+    <tr><td nowrap rowspan="5">📰 <b>Feed</b></td><td>Remove ads &amp; sponsored posts across feed, video, Stories and Marketplace</td></tr>
     <tr><td>Hide "People you may know", Group and Page suggestions</td></tr>
     <tr><td>Hide Reels in the feed, Top Stories tray, Threads promo</td></tr>
     <tr><td>Remove survey prompts ("Are you interested in this post?")</td></tr>
-    <tr><td>Remove the affiliate / product banner, in the comment sheet and on the Reel itself</td></tr>
+    <tr><td>Remove the affiliate / product banner: under a video post, in the comment sheet and on the Reel itself</td></tr>
     <tr><td nowrap rowspan="2">🧭 <b>Links</b></td><td>Open external links in your default browser</td></tr>
-    <tr><td>"Open in Facebook" Safari extension — reopens facebook.com links in the app, at the exact destination</td></tr>
-    <tr><td nowrap rowspan="3">🎬 <b>Reels</b></td><td>Cinema mode — one tap hides the overlay and the tab bar</td></tr>
+    <tr><td>"Open in Facebook" Safari extension: reopens facebook.com links in the app, at the exact destination</td></tr>
+    <tr><td nowrap rowspan="3">🎬 <b>Reels</b></td><td>Cinema mode: one tap hides the overlay and the tab bar</td></tr>
     <tr><td>Hide the full-screen "Recommended" card shown between Reels</td></tr>
     <tr><td>Save Reels to Photos</td></tr>
-    <tr><td nowrap rowspan="3">📖 <b>Stories</b></td><td>Ghost Mode — watch without being seen</td></tr>
+    <tr><td nowrap rowspan="2">🗂️ <b>Sidebar</b></td><td>Clean up the left menu by hiding "Upgrades" and "Also from Meta"</td></tr>
+    <tr><td>Quick-access Facebook Plus shortcut row directly in the left navigation drawer</td></tr>
+    <tr><td nowrap rowspan="4">📖 <b>Stories</b></td><td>Remove the top Stories carousel tray cleanly without leaving empty gaps or stalling feed pagination</td></tr>
+    <tr><td>Ghost Mode: watch without being seen</td></tr>
     <tr><td>Disable auto-advance and hide Story suggestions</td></tr>
     <tr><td>Save Stories, video or photo, to Photos</td></tr>
     <tr><td nowrap>🔔 <b>Updates</b></td><td>In-app update checker with changelog and one-tap download</td></tr>
   </tbody>
 </table>
 
-💡 **Dedicated Settings Page:** Access the dedicated full-screen tweak settings anytime by long-pressing any **tab bar item** (classic or modern liquid-glass bar), long-pressing the **"facebook" wordmark**, or via the **native Facebook settings entry**.
+💡 **Dedicated Settings Page:** Access the full-screen tweak settings anytime by long-pressing any **tab bar item** (classic or modern liquid-glass bar), long-pressing the **"facebook" wordmark**, via the **left sidebar menu**, or through the **native Facebook settings entry**. Row titles automatically adjust font size and wrap cleanly across all screen sizes and Display Zoom levels.
 
 ---
 
@@ -72,28 +76,28 @@
 
 Pick whichever matches your device:
 
-- **Jailbroken** — install the `.deb` for your packaging scheme (`rootless`,
+- **Jailbroken** - install the `.deb` for your packaging scheme (`rootless`,
   `rootfull` or `roothide`) from the **[Releases](../../releases)** section with
   Sileo, Zebra or `dpkg -i`. Nothing else is needed.
-- **TrollStore** — grab the **TrollFools** zip from Releases (the tweak dylib and
+- **TrollStore** - grab the **TrollFools** zip from Releases (the tweak dylib and
   its resource bundle, with no Facebook code) and inject it into your own installed
   Facebook with TrollFools.
-- **Sideloading (Feather, Ksing, AltStore, SideStore, …)** — you need an injected
-  IPA, so build one from **your own** copy of Facebook with the GitHub Actions
-  workflow below. It takes about fifteen minutes and needs no Mac.
-- **On a Mac, from source** — see [Building from Source](#️-building-from-source--automated-injection).
+- **Sideloading (Feather, Ksing, AltStore, SideStore, ...)** - build an injected
+  IPA with the GitHub Actions workflow below using a direct download link to your
+  own decrypted Facebook IPA. It takes about fifteen minutes and needs no Mac.
+- **On a Mac, from source** - see [Building from Source](#️-building-from-source--automated-injection).
   `python3 build.py` writes the injected IPA straight to `packages/`.
 
 ## ⚡ Build your own IPA with GitHub Actions
 
 No Mac required. The **Build Facebook Plus (.ipa)** workflow builds the tweak from
-source and injects it into a decrypted Facebook IPA that **you** provide, then
+source and injects it into a decrypted Facebook IPA from a direct download link you provide, then
 publishes the result as a **draft** release on your fork. A draft is visible only
 to you, which is the point: the IPA it holds is your own copy of Facebook, so keep
 it that way and do not publish it.
 
 > [!IMPORTANT]
-> You must supply your own **decrypted** Facebook `.ipa`. We cannot distribute one
+> You must supply a direct download URL to your own **decrypted** Facebook `.ipa`. We cannot distribute one
 > for legal reasons.
 
 **First time only:**
@@ -103,29 +107,19 @@ it that way and do not publish it.
 
 **To build:**
 
-1. If your fork is behind, click **Sync fork → Update branch**.
-2. Go to **Actions → Build Facebook Plus (.ipa)**.
+1. If your fork is behind, click **Sync fork -> Update branch**.
+2. Go to **Actions -> Build Facebook Plus (.ipa)**.
 3. Click **Run workflow** on the right.
-4. Fill in the inputs:
-   - **Direct download URL to the decrypted Facebook IPA** — upload your decrypted
-     `.ipa` to [**filebin.net**](https://filebin.net) and paste the **direct
-     download link** to the file. filebin is the recommended host and the one this
-     workflow has been tested with. A link to a *web page* instead of the file
-     itself will fail validation.
-   - **Bundle identifier** *(optional)* — leave blank to keep `com.facebook.Facebook`.
-     Set a custom id to install alongside the stock app. The tweak is
-     bundle-id-agnostic, so it activates under whatever id you choose — no other
-     change needed.
-5. Click **Run workflow** and wait for it to finish (≈10–15 min).
+4. In the **Direct download URL to the decrypted Facebook IPA** field, paste the **direct download link** to your decrypted `.ipa` file (for example, upload your file to [**filebin.net**](https://filebin.net) or any direct file host and copy the direct file link). A link to a *web page* instead of the direct file URL will fail validation.
+5. Click **Run workflow** and wait for it to finish (about 10-15 min).
 6. Download the IPA from your fork's **Releases** section. The release is created as
-   a **draft**, so only you can see it — open it and download the assets. (If you
+   a **draft**, so only you can see it: open it and download the assets. (If you
    don't see Releases, append `/releases` to your fork's URL, e.g.
    `github.com/<you>/Facebook-Plus/releases`.) Leave it as a draft; publishing an
    IPA is what this project does not do, and why.
 
-The workflow reuses [`build.py`](build.py), so your IPA gets the exact same
-injection as a local build — the tweak, the custom app-icons, and the bundled
-**Open in Facebook** Safari extension, all fakesigned for sideloading.
+The workflow reuses [`build.py`](build.py) in the cloud to inject the tweak, custom
+app-icons, and the bundled **Open in Facebook** Safari extension, all fakesigned for sideloading.
 
 ## 🛠️ Building from Source & Automated Injection
 
@@ -147,9 +141,10 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
    - Run `python3 build.py` to build **every variant**, or narrow it with
      `--rootless` / `--rootfull` / `--roothide` / `--trollfools`. See
      `python3 build.py --help` for the full set of flags (`--ipa`, `--install`,
-     `--ssh`, `--clean`, …).
+     `--ssh`, `--clean`, ...).
    - To also produce an injected `.ipa`, place a decrypted Facebook `.ipa` at
-     `test/com.facebook.Facebook.ipa` before running.
+     `test/com.facebook.Facebook.ipa` before running (optional: set `BUNDLE_ID=com.example.id`
+     to install alongside the stock app; the tweak is bundle-id-agnostic).
 
    **What `build.py` does:**
    - Builds each variant into `packages/`:
@@ -167,7 +162,7 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
      - builds every Safari web extension under `OpenInFacebookSafariExtension/`
        from source and injects the resulting `.appex` into the app's `PlugIns/`;
      - merges any custom app icons (`fbplus_*.png` in `resources/logo/`) into
-     `CFBundleAlternateIcons`, preserving Facebook's native icons;
+       `CFBundleAlternateIcons`, preserving Facebook's native icons;
      - fakesigns every injected binary for sideloading;
      - builds `FBPNotifyBridge/src` and adds the resulting dylib to the app's
        `NotificationServiceExtension.appex` (see
@@ -194,8 +189,8 @@ This writes a per-machine `.clangd` (with your theos path and SDK baked in) and 
 
 Whether a sideloaded build delivers real notifications or just
 *"You have a new notification"* depends on your signing certificate. The full
-explanation — how it works, what is confirmed today, and what to check on your
-certificate — lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
+explanation of how it works, what is confirmed today, and what to check on your
+certificate lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)**.
 
 ---
 
@@ -210,29 +205,31 @@ certificate — lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.
 │   ├── fonts           # Bundled custom fonts offered by the Fonts picker
 │   ├── logo            # Custom app-icons drop folder for build.py injection
 │   └── svg             # Source vector graphics
-├── scripts             # doctor.py — typecheck, link, and audit every git-tracked source
+├── scripts             # doctor.py: typecheck, link, prefs, strings, lint, and hook checks
 ├── src                 # Tweak source code
 │   ├── Core            # Constructor, preferences, logging/diagnostics, fishhook submodule
 │   ├── Features        # All hooks & feature implementations:
 │   │   ├── Ads         # Feed, video, story & Marketplace ad removal (feed chokepoint + RN/GraphQL)
 │   │   ├── AppChrome   # UI settings gesture (TabBar, Wordmark long-press & Settings Button)
 │   │   ├── AppIcons    # Custom app-icon picker logic
+│   │   ├── Cache       # Scheduled automatic cache cleaner and manual cache sweep
 │   │   ├── Calls       # Incoming Call Blocker (PushKit & CallKit interceptors)
 │   │   ├── Comments    # Remove the affiliate/product banner in the comment sheet
-│   │   ├── Confirmation # Opt-in confirmations — like/share/follow/friend (CK forwarder) & comment/post (swizzle)
+│   │   ├── Confirmation # Opt-in confirmations for like/share/follow/friend (CK forwarder) & comment/post (swizzle)
 │   │   ├── Downloads   # Quality picker, DASH manifest reader, two-stream fetch, lossless
-│   │   │               # mux, AV1/VP9→HEVC conversion, add-only Photos save, download manager
+│   │   │               # mux, AV1/VP9->HEVC conversion, add-only Photos save, download manager
 │   │   ├── FacebookPlus # Preview paid subscriber benefits (client-side gate override)
 │   │   ├── Feed        # Feed-related hooks (suggestions, Reels, Stories removal)
 │   │   ├── Fonts       # Custom UI font replacement (Core Text registration + picker)
-│   │   ├── HDR         # Force SDR rendering app-wide (Disable HDR)
+│   │   ├── HDR         # Force SDR rendering app-wide (comprehensive EDR and headroom clamp)
 │   │   ├── Language    # UI language override hooks
 │   │   ├── Links       # Open external links in default browser & inbound link bridge
 │   │   ├── Notifications # Client-sync bridge for detailed push on sideloaded builds
 │   │   ├── OLED        # True black dark mode that follows the iOS system appearance
 │   │   ├── Onboarding  # Welcome screen controller
 │   │   ├── Reels       # Cinema mode (hide overlay/tab bar), hide Recommended card & Reels download
-│   │   ├── Stories     # Story-related hooks (Ghost mode, auto-advance block)
+│   │   ├── Sidebar     # Left menu cleaner (hide Upgrades / Also from Meta, add tweak entry)
+│   │   ├── Stories     # Story-related hooks (Ghost mode, auto-advance block, remove top stories tray)
 │   │   └── Update      # In-app update checker + update screen (GitHub Releases)
 │   ├── PluginsInject   # Sideload compatibility layer (Keychain / App-Group / CloudKit)
 │   ├── Settings        # Dedicated full-screen Facebook Plus settings UI
@@ -251,7 +248,7 @@ certificate — lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.
 Planned features and fixes are tracked in **[TODO.md](TODO.md)**. The project's
 provenance, third-party attributions, and credits are documented in
 **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**. Contributions and
-suggestions are welcome — open an issue or a pull request.
+suggestions are welcome: open an issue or a pull request.
 
 ## 🔒 Security & Disclaimer
 
