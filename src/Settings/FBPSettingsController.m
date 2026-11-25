@@ -86,7 +86,10 @@ static NSString *const kActionResetVideoButtons = @"resetVideoButtons";
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
 
-static const CGFloat kContentInset = 16.0;
+// The row follows contentView's own layout margins, the guide system cells lay
+// out against, so it tracks whatever inset UIKit draws the card with. This is
+// the hard floor for when those margins come back at zero.
+static const CGFloat kContentFloor = 12.0;
 
 #pragma mark - Icon loading
 
@@ -137,7 +140,7 @@ static UIImage *FBPSettingsIcon(NSString *name) {
     if ((self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) {
         self.backgroundColor = FBPCardColor();
         self.clipsToBounds = YES;
-        self.contentView.clipsToBounds = YES;
+        self.contentView.clipsToBounds = NO;
 
         UIView *selected = [[UIView alloc] init];
         selected.backgroundColor = [UIColor colorWithWhite:1 alpha:0.06];
@@ -218,11 +221,23 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         NSLayoutConstraint *cvWidth = [self.contentView.widthAnchor constraintEqualToAnchor:self.widthAnchor];
         cvWidth.priority = UILayoutPriorityDefaultHigh;
 
+        // Equal distances on both sides, from the same guide, so the icon and the
+        // switch are always the same distance from the border as each other.
+        // Breakable, so the floor below wins if the margins are ever zero.
+        UILayoutGuide *margins = self.contentView.layoutMarginsGuide;
+        NSLayoutConstraint *iconLeadingToMargin =
+            [_iconTile.leadingAnchor constraintEqualToAnchor:margins.leadingAnchor];
+        NSLayoutConstraint *accessoryTrailingToMargin =
+            [_accessoryContainer.trailingAnchor constraintEqualToAnchor:margins.trailingAnchor];
+        iconLeadingToMargin.priority = UILayoutPriorityDefaultHigh;
+        accessoryTrailingToMargin.priority = UILayoutPriorityDefaultHigh;
+
         [NSLayoutConstraint activateConstraints:@[
             cvWidth,
 
-            [_iconTile.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor
-                                                    constant:kContentInset],
+            iconLeadingToMargin,
+            [_iconTile.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.leadingAnchor
+                                                                constant:kContentFloor],
             _iconCenterYConstraint,
             [_iconTile.widthAnchor constraintEqualToConstant:29],
             [_iconTile.heightAnchor constraintEqualToConstant:29],
@@ -240,12 +255,12 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             [_labelStack.trailingAnchor constraintLessThanOrEqualToAnchor:_accessoryContainer.leadingAnchor
                                                                  constant:-10],
 
-            [_accessoryContainer.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
-                                                               constant:-kContentInset],
+            accessoryTrailingToMargin,
+            [_accessoryContainer.trailingAnchor constraintLessThanOrEqualToAnchor:self.trailingAnchor
+                                                                        constant:-kContentFloor],
             _accessoryCenterYRegularConstraint,
             [_slider.leadingAnchor constraintEqualToAnchor:_labelStack.leadingAnchor],
-            [_slider.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
-                                                   constant:-kContentInset],
+            [_slider.trailingAnchor constraintEqualToAnchor:margins.trailingAnchor],
             [self.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:52],
         ]];
     }
@@ -282,7 +297,8 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 - (void)layoutSubviews {
     CGFloat accessoryW = self.accessoryContainer.frame.size.width;
     if (accessoryW <= 0) accessoryW = 51.0;
-    CGFloat textWidth = self.contentView.bounds.size.width - kContentInset - 29 - 12 - 10 - accessoryW - kContentInset;
+    CGFloat textWidth = self.contentView.layoutMarginsGuide.layoutFrame.size.width
+                        - 29 - 12 - 10 - accessoryW;
     if (textWidth > 0) {
         if (self.titleLabel.preferredMaxLayoutWidth != textWidth) {
             self.titleLabel.preferredMaxLayoutWidth = textWidth;
@@ -292,6 +308,35 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         }
     }
     [super layoutSubviews];
+
+#if FBP_DIAG
+    // The card is the cell's own background, so both gaps are measured against
+    // the cell. The accessory's own subview is reported too: a switch can draw
+    // itself wider than the box it was given.
+    static NSInteger reported = 0;
+    if (reported < 4 && self.window && self.bounds.size.width > 1) {
+        reported++;
+        CGRect icon = [self convertRect:self.iconTile.bounds fromView:self.iconTile];
+        CGRect acc = [self convertRect:self.accessoryContainer.bounds
+                              fromView:self.accessoryContainer];
+        UIView *inner = self.accessoryContainer.subviews.firstObject;
+        CGRect innerRect = inner ? [self convertRect:inner.bounds fromView:inner] : CGRectZero;
+        UIEdgeInsets m = self.contentView.layoutMargins;
+        UIEdgeInsets cm = self.layoutMargins;
+        FBPDiag(@"settings",
+                @"w=%.1f cv=%@ cvMargins=(%.1f,%.1f) cellMargins=(%.1f,%.1f) "
+                @"icon=%@ acc=%@ inner=%@(%@) gapL=%.1f gapR=%.1f gapRInner=%.1f",
+                self.bounds.size.width,
+                NSStringFromCGRect(self.contentView.frame),
+                m.left, m.right, cm.left, cm.right,
+                NSStringFromCGRect(icon), NSStringFromCGRect(acc),
+                NSStringFromCGRect(innerRect),
+                inner ? NSStringFromClass(inner.class) : @"none",
+                CGRectGetMinX(icon),
+                self.bounds.size.width - CGRectGetMaxX(acc),
+                inner ? self.bounds.size.width - CGRectGetMaxX(innerRect) : -1.0);
+    }
+#endif
 }
 
 - (void)prepareForReuse {
@@ -590,10 +635,13 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
         [view.topAnchor constraintGreaterThanOrEqualToAnchor:cell.accessoryContainer.topAnchor],
         [view.bottomAnchor constraintLessThanOrEqualToAnchor:cell.accessoryContainer.bottomAnchor],
     ]];
+    // The switch sizes the container, never a constant: iOS 26 made UISwitch
+    // wider than the 51x31 it had been for years, so a fixed width is a
+    // conflicting required constraint and the solver picks which one loses.
     if ([view isKindOfClass:UISwitch.class]) {
         [NSLayoutConstraint activateConstraints:@[
-            [cell.accessoryContainer.widthAnchor constraintEqualToConstant:51],
-            [cell.accessoryContainer.heightAnchor constraintEqualToConstant:31],
+            [view.topAnchor constraintEqualToAnchor:cell.accessoryContainer.topAnchor],
+            [view.bottomAnchor constraintEqualToAnchor:cell.accessoryContainer.bottomAnchor],
         ]];
     }
 }
