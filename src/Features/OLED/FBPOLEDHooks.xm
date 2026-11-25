@@ -767,7 +767,11 @@ static void FBPApplySublayers(CALayer *layer, BOOL active) {
 /// (and the header restore walk) can put the live-appearance header back.
 static void FBPBlackNavigationBar(UINavigationBar *bar) {
     if (!bar) return;
+    // On the register like everything else. Its appearance is saved separately,
+    // but without the flag FBPApplyView returns before restoring anything, and
+    // the bar is left flat black with no record that we did it.
     FBPSaveNavBar(bar);
+    FBPMarkTouched(bar);
     bar.translucent = NO;
     bar.barTintColor = UIColor.blackColor;
     bar.backgroundColor = UIColor.blackColor;
@@ -826,6 +830,10 @@ static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
                 FBPSaveViewBG(sub, sub.backgroundColor);
                 FBPSaveViewBG(content, content.backgroundColor);
                 FBPMarkTouched(sub);
+                // The content view is a view of its own and is reverted as one,
+                // so it needs its own flag. Saving it and marking only its host
+                // meant the revert returned before it ever read the save.
+                FBPMarkTouched(content);
                 sub.backgroundColor = UIColor.blackColor;
                 content.backgroundColor = UIColor.blackColor;
                 FBPApplySublayers(sub.layer, YES);
@@ -841,8 +849,7 @@ static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
                     FBPSaveViewBG(sub, sub.backgroundColor);
                     FBPMarkTouched(sub);
                     sub.backgroundColor = FBPBlackKeepingAlpha(sub.backgroundColor);
-                }
-                if (FBPCGColorIsDark(sub.layer.backgroundColor)) {
+                } else if (FBPCGColorIsDark(sub.layer.backgroundColor)) {
                     FBPSaveLayerBG(sub.layer);
                     FBPMarkTouched(sub);
                     sub.layer.backgroundColor =
@@ -959,8 +966,15 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
         }
         return color;
     }
-    if (!FBPOLEDSkip(self) && objc_getAssociatedObject(self, kFBPSavedViewBG)) {
+    // Facebook has repainted this view while OLED is disengaged, so every
+    // record of ours is stale. Dropping the saved colour but keeping the flag
+    // used to leave the layer save behind, and the next revert wrote it back
+    // over the colour Facebook had just set.
+    if (!FBPOLEDSkip(self) && FBPWasTouched(self)) {
         FBPForgetViewBG(self);
+        objc_setAssociatedObject(self.layer, kFBPSavedLayerBG, nil,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        FBPClearTouched(self);
     }
     return color;
 }
@@ -1062,12 +1076,20 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     FBPTraceFire("oled.FBMovableNavigationBarView.layoutSubviews");
     BOOL active = FBPOLEDActiveFor(self);
     if (active) {
+        // Marked, like every other painted surface: without it the revert
+        // returns at the flag and the app's most visible view stays black. And
+        // painted with the dynamic colour, so it follows the appearance by
+        // itself rather than needing to be found again.
         if (FBPColorIsDark(FBPResolve(self.backgroundColor))) {
             FBPSaveViewBG(self, self.backgroundColor);
-            self.backgroundColor = FBPBlackKeepingAlpha(self.backgroundColor);
-        }
-        if (FBPCGColorIsDark(self.layer.backgroundColor)) {
+            FBPMarkTouched(self);
+            self.backgroundColor = FBPBlackFollowingAppearance(self.backgroundColor);
+        } else if (FBPCGColorIsDark(self.layer.backgroundColor)) {
+            // Only when the view carries no colour of its own: the two are the
+            // same storage, and writing both makes the second save the first's
+            // black and hand it back as the original.
             FBPSaveLayerBG(self.layer);
+            FBPMarkTouched(self);
             self.layer.backgroundColor = FBPBlackCGKeepingAlpha(self.layer.backgroundColor);
         }
     } else {
@@ -1128,18 +1150,8 @@ typedef struct {
 /// screen would draw it. Deliberately narrower than FBPColorIsDark, which also
 /// matches Facebook's own near-black base grey (#18191A): the question here is
 /// "is this one of ours that never came back", not "is this dark".
-static BOOL FBPSurfaceIsPureBlack(UIView *view) {
-    UIColor *color = view.backgroundColor;
-    CGColorRef cg = color ? color.CGColor : view.layer.backgroundColor;
+static BOOL FBPCGIsPureBlack(CGColorRef cg) {
     if (!cg) return NO;
-    if (@available(iOS 13.0, *)) {
-        if (color && view.traitCollection) {
-            @try {
-                UIColor *shown = [color resolvedColorWithTraitCollection:view.traitCollection];
-                if (shown) cg = shown.CGColor;
-            } @catch (__unused NSException *e) {}
-        }
-    }
     if (CGColorGetAlpha(cg) < 0.2) return NO;
     CGFloat r = 0, g = 0, b = 0, a = 0;
     UIColor *flat = [UIColor colorWithCGColor:cg];
@@ -1149,6 +1161,32 @@ static BOOL FBPSurfaceIsPureBlack(UIView *view) {
     CGFloat w = 0, wa = 0;
     if ([flat getWhite:&w alpha:&wa]) return w < 0.02;
     return NO;
+}
+
+/// As above, and it asks BOTH places.
+///
+/// It used to stop at -backgroundColor whenever that was non-nil, which hid the
+/// case it most needed to catch: a view whose colour was restored correctly
+/// while its layer was left holding black. Those read as "restored" and are
+/// visibly black, so the count that was supposed to find them said zero. The two
+/// are usually the same storage, but not while a restore has written one and not
+/// the other.
+static BOOL FBPSurfaceIsPureBlack(UIView *view) {
+    UIColor *color = view.backgroundColor;
+    if (color) {
+        CGColorRef cg = color.CGColor;
+        if (@available(iOS 13.0, *)) {
+            if (view.traitCollection) {
+                @try {
+                    UIColor *shown =
+                        [color resolvedColorWithTraitCollection:view.traitCollection];
+                    if (shown) cg = shown.CGColor;
+                } @catch (__unused NSException *e) {}
+            }
+        }
+        if (FBPCGIsPureBlack(cg)) return YES;
+    }
+    return FBPCGIsPureBlack(view.layer.backgroundColor);
 }
 
 /// Re-applies the current appearance to a whole view tree.
@@ -1171,7 +1209,19 @@ static void FBPApplyTree(UIView *view, int depth, FBPWalkStats *stats) {
     FBPApplyView(view, active);
     if (!active && !FBPOLEDSkip(view)) {
         if (wasTouched) stats->restored++;
-        else if (FBPSurfaceIsPureBlack(view)) stats->stray++;
+        else if (FBPSurfaceIsPureBlack(view)) {
+            stats->stray++;
+            // Name the first few. A stray is a surface OLED is painting through
+            // a path that does not record it, and the class is the shortest
+            // route to which path that is.
+            if (stats->stray <= 6) {
+                FBPDiag(@"oled", @"  stray %@ frame=%@ bg=%@ layer=%@",
+                        NSStringFromClass(view.class),
+                        NSStringFromCGRect(view.frame),
+                        view.backgroundColor ? @"set" : @"nil",
+                        view.layer.backgroundColor ? @"set" : @"nil");
+            }
+        }
     }
     for (UIView *sub in [view.subviews copy]) {
         FBPApplyTree(sub, depth + 1, stats);
@@ -1194,6 +1244,60 @@ static void FBPNudgeOLEDRelayout(void) {
             if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
             FBPNudgeLayout(window, 0);
         }
+    }
+}
+
+/// Hands the app back to its own appearance, and lets Facebook repaint.
+///
+/// THIS IS HOW A SWITCH TO LIGHT IS FIXED, RATHER THAN BY RESTORING COLOURS.
+///
+/// Putting back what OLED saved can only reach surfaces OLED recorded, and the
+/// device kept finding ones it had not: a sweep after a switch to Light read
+/// `listed=0 left=0 stray=22` — everything we had painted was back, and
+/// twenty-two views were still black with nothing written against them. Chasing
+/// the path that paints without recording is chasing one bug at a time.
+///
+/// Facebook already owns a light appearance and knows how to draw it. So on the
+/// way out, every one of its windows is pinned to the style the system has moved
+/// to, which is a real UIKit trait change: it propagates through the whole
+/// hierarchy, re-resolves every dynamic colour Facebook holds, and makes
+/// Facebook repaint its own surfaces in its own colours — over the top of
+/// anything of ours that was left behind, recorded or not. The pin is released a
+/// moment later so the window follows iOS again and Facebook's in-app Dark Mode
+/// setting is back in charge.
+///
+/// The subtrees that were stuck are exactly the ones this reaches, because what
+/// made them stuck is that they still carried the old appearance: they reported
+/// Dark while the chrome around them reported Light. Forcing the style is what
+/// moves them.
+static void FBPAdoptAppearance(UIUserInterfaceStyle style) {
+    if (@available(iOS 13.0, *)) {
+        if (style == UIUserInterfaceStyleUnspecified) return;
+
+        NSMutableArray<UIWindow *> *pinned = [NSMutableArray array];
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if (![scene isKindOfClass:UIWindowScene.class]) continue;
+            for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+                window.overrideUserInterfaceStyle = style;
+                [window setNeedsLayout];
+                [pinned addObject:window];
+            }
+        }
+        if (!pinned.count) return;
+
+        FBPDiag(@"oled", @"handed %lu window(s) to the app's own %@ appearance",
+                (unsigned long)pinned.count, FBPStyleName(style));
+
+        // Long enough for Facebook to have repainted against the forced trait,
+        // short enough that its own Dark Mode setting is never visibly ignored.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            for (UIWindow *window in pinned) {
+                window.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+                [window setNeedsLayout];
+            }
+        });
     }
 }
 
@@ -1313,7 +1417,10 @@ static void FBPTrackWindowStyle(UIWindow *window) {
         FBPUpdateSystemStyle(style);
         FBPOLEDLogState("window-style-changed");
 
+        // Restore what OLED recorded, then hand the hierarchy to Facebook's own
+        // appearance so it repaints whatever was left behind.
         FBPSweepAppearance();
+        FBPAdoptAppearance(style);
     }
 }
 
