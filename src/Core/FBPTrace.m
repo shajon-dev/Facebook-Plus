@@ -69,7 +69,7 @@ os_log_t FBPTraceLog(void) {
 static NSString *const kFBPTraceSuite     = @"com.shajon.fbplus";
 static NSString *const kFBPTraceKeepKey   = @"logsKeep";
 // The last-clear date used to live in this suite under "logsLastClear". It is a
-// file beside the log now (FBPLogDayStampPath): the date has to be read at the
+// file beside the log now (FBPLogWindowStampPath): it has to be read at the
 // moment the record is created, and reading a defaults suite there would run the
 // tweak's own suite hook, which logs. A stale "logsLastClear" left in anyone's
 // defaults is harmless and nothing reads it.
@@ -360,52 +360,72 @@ static void FBPLogMirrorToFile(NSString *line) {
 //
 // That spam is fixed where it belonged — those reports were sitting next to
 // their FBP_ONCE install instead of inside it, and now use FBPLogOnce — so this
-// cap is a backstop rather than the answer. It is set high enough to hold a
+// ceiling is a backstop rather than the answer. It is set high enough to hold a
 // long session's real lines and low enough to stay bounded in the notification
 // extension, which has about 24 MB to live in.
+//
+// Reaching it EMPTIES the record rather than dropping the oldest lines.
+//
+// A sliding window sounds kinder and reads worse. What overruns this ceiling is
+// never steady traffic, it is a flood — and a window hands back ten thousand
+// lines of the flood with everything that explains it already pushed out of the
+// front. A device export from 2026-11-21 is exactly that: 9,171 of its 10,000
+// lines are five install reports cycling, and not one line survives from the
+// session the person actually wanted to ask about. Starting again keeps the
+// lines written after the flood, which are the ones nobody has read yet.
 static const NSUInteger kFBPLogMaxLines = 10000;
 
-// Whether the day rolled over since the last clear, decided WITHOUT
-// NSUserDefaults — the date is kept in a small file beside the log, read and
+/// How long a log is kept before it starts again: twelve hours.
+///
+/// Measured from the epoch rather than from the first launch, so the boundaries
+/// are 00:00 and 12:00 UTC and every device turns over at the same two moments.
+/// A window that started when the app did would drift with every relaunch, and
+/// two exports taken an hour apart could cover wildly different spans.
+static const time_t kFBPLogWindow = 12 * 60 * 60;
+
+// Whether the window rolled over since the last clear, decided WITHOUT
+// NSUserDefaults — the stamp is kept in a small file beside the log, read and
 // written with POSIX calls. Defaults would mean the suite hook, and the suite
 // hook logs; this runs while the record is being created, which is the one
 // moment logging cannot be allowed to re-enter.
-static NSString *FBPLogDayStampPath(NSString *logPath) {
-    return logPath.length ? [logPath stringByAppendingPathExtension:@"day"] : nil;
+static NSString *FBPLogWindowStampPath(NSString *logPath) {
+    return logPath.length ? [logPath stringByAppendingPathExtension:@"window"] : nil;
 }
 
-static NSString *FBPLogToday(void) {
-    time_t now = time(NULL);
-    struct tm parts;
-    localtime_r(&now, &parts);
-    char day[16];
-    snprintf(day, sizeof(day), "%04d-%02d-%02d", parts.tm_year + 1900, parts.tm_mon + 1,
-             parts.tm_mday);
-    return @(day);
+/// Which twelve-hour window we are in, as a decimal string.
+static NSString *FBPLogWindowStamp(void) {
+    long long window = (long long)(time(NULL) / kFBPLogWindow);
+    return [NSString stringWithFormat:@"%lld", window];
 }
 
-// YES when the kept log belongs to an earlier day. Writes today's stamp as it
-// goes, so it answers YES exactly once per day per device.
-static BOOL FBPLogDayRolledOver(NSString *logPath) {
-    NSString *stampPath = FBPLogDayStampPath(logPath);
+// YES when the kept log belongs to an earlier window. Writes this window's
+// stamp as it goes, so it answers YES exactly once per window per device.
+static BOOL FBPLogWindowRolledOver(NSString *logPath) {
+    NSString *stampPath = FBPLogWindowStampPath(logPath);
     if (!stampPath.length) return NO;
 
-    NSString *today = FBPLogToday();
+    NSString *current = FBPLogWindowStamp();
 
-    char buffer[16] = {0};
+    char buffer[32] = {0};
     int fd = open(stampPath.fileSystemRepresentation, O_RDONLY);
     if (fd >= 0) {
         ssize_t read_bytes = read(fd, buffer, sizeof(buffer) - 1);
         close(fd);
-        if (read_bytes > 0 && strcmp(buffer, today.UTF8String) == 0) return NO;
+        if (read_bytes > 0 && strcmp(buffer, current.UTF8String) == 0) return NO;
     }
 
     fd = open(stampPath.fileSystemRepresentation, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd >= 0) {
-        const char *bytes = today.UTF8String;
+        const char *bytes = current.UTF8String;
         if (bytes) (void)!write(fd, bytes, strlen(bytes));
         close(fd);
     }
+
+    // The calendar-day stamp this replaced, removed so it does not sit in the
+    // container forever. Harmless if it was never there.
+    NSString *retired = logPath.length ? [logPath stringByAppendingPathExtension:@"day"] : nil;
+    if (retired.length) (void)unlink(retired.fileSystemRepresentation);
+
     return YES;
 }
 
@@ -417,9 +437,9 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
 
         NSString *path = FBPTracePathNoResolve();
 
-        // THE DAILY CLEAR HAPPENS HERE, BEFORE THE FIRST LINE EXISTS.
+        // THE TWELVE-HOURLY CLEAR HAPPENS HERE, BEFORE THE FIRST LINE EXISTS.
         //
-        // It used to be driven by FBPLogDailyClearIfDue() from FBPEntry's
+        // It used to be driven by FBPLogClearIfDue() from FBPEntry's
         // constructor, which looked like "at launch" and is not: constructors do
         // not all run before that one, so the clear landed in the middle of
         // startup and wiped everything already recorded. A device export from
@@ -429,9 +449,10 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
         // debugging session that asked "did this hook install?" was reading a
         // log the answer had been deleted from.
         //
-        // Doing it as the record is created makes "once a day, before anything
-        // is logged" literally true, and leaves nothing to wipe afterwards.
-        if (FBPLogDayRolledOver(path)) {
+        // Doing it as the record is created makes "once a window, before
+        // anything is logged" literally true, and leaves nothing to wipe
+        // afterwards.
+        if (FBPLogWindowRolledOver(path)) {
             if (path.length) (void)truncate(path.fileSystemRepresentation, 0);
         } else if (FBPLogsKeepAcrossLaunches()) {
             // Kept across launches: seed the record from last launch's file so
@@ -443,8 +464,12 @@ static NSMutableArray<NSString *> *FBPLogLines(void) {
             for (NSString *line in [existing componentsSeparatedByString:@"\n"]) {
                 if (line.length) [lines addObject:line];
             }
-            if (lines.count > kFBPLogMaxLines) {
-                [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogMaxLines)];
+            // At the ceiling the kept log starts again, here as everywhere
+            // else. Done inline rather than through FBPLogClearLocked(),
+            // which would call back into this dispatch_once and deadlock.
+            if (lines.count >= kFBPLogMaxLines) {
+                [lines removeAllObjects];
+                if (path.length) (void)truncate(path.fileSystemRepresentation, 0);
             }
         }
     });
@@ -468,6 +493,7 @@ static os_unfair_lock gFBPLogLock = OS_UNFAIR_LOCK_INIT;
 //
 // Defined below, with the run-collapsing state it belongs to.
 static void FBPLogFlushPendingLocked(void);
+static void FBPLogClearLocked(void);
 
 // Call with gFBPLogLock held.
 static void FBPLogReloadIfChangedLocked(void) {
@@ -522,9 +548,10 @@ static void FBPLogReloadIfChangedLocked(void) {
 
     [lines setArray:onlyInMemory];
     [lines addObjectsFromArray:fromFile];
-    if (lines.count > kFBPLogMaxLines) {
-        [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogMaxLines)];
-    }
+    // Two processes writing one file can cross the ceiling here rather than at
+    // the call that recorded the last line, so the same rule applies: start
+    // again. The extension's lines count towards it exactly like the app's.
+    if (lines.count >= kFBPLogMaxLines) FBPLogClearLocked();
 }
 
 // A run of consecutive identical lines (same ok / tag / message) collapses to one
@@ -622,10 +649,21 @@ void FBPLogRecord(BOOL ok, NSString *_Nullable tag, NSString *message) {
     gFBPRepeatCount = 1;
 
     [lines addObject:line];
-    // Bounded — see kFBPLogMaxLines. Dropping from the front keeps the pending
-    // run's entry, which is always the last one, where the rewrite expects it.
-    if (lines.count > kFBPLogMaxLines) {
-        [lines removeObjectsInRange:NSMakeRange(0, lines.count - kFBPLogMaxLines)];
+
+    // The ceiling — see kFBPLogMaxLines. The record starts again rather than
+    // sliding, and says so in its first line, because a log that silently went
+    // short reads like logging broke.
+    if (lines.count >= kFBPLogMaxLines) {
+        FBPLogClearLocked();
+        NSString *reason =
+            [NSString stringWithFormat:@"log cleared: reached %lu lines",
+                                       (unsigned long)kFBPLogMaxLines];
+        gFBPRunOK = YES;
+        gFBPRunTag = nil;
+        gFBPRunMessage = [reason copy];
+        gFBPPendingLine = FBPLogFormatLine(YES, nil, reason);
+        gFBPRepeatCount = 1;
+        [lines addObject:gFBPPendingLine];
     }
     os_unfair_lock_unlock(&gFBPLogLock);
 }
@@ -643,19 +681,9 @@ NSUInteger FBPLogLineCount(void) {
     return count;
 }
 
-void FBPLogClear(void) {
-    os_unfair_lock_lock(&gFBPLogLock);
-    [FBPLogLines() removeAllObjects];
-    // End any run in progress so a repeat after the clear starts a fresh line
-    // rather than counting into one that no longer exists.
-    gFBPPendingLine = nil;
-    gFBPRunTag = nil;
-    gFBPRunMessage = nil;
-    gFBPRepeatCount = 0;
-    os_unfair_lock_unlock(&gFBPLogLock);
-
-    // Empty the file mirror too, so a kept-across-launches log does not bring the
-    // cleared lines back and an export right after Clear is empty.
+// Empties the file mirror, so a kept-across-launches log does not bring the
+// cleared lines back and an export right after a clear is empty.
+static void FBPLogEmptyFileMirror(void) {
     os_unfair_lock_lock(&gFBPTraceFileLock);
     if (gFBPTraceFD >= 0) {
         if (ftruncate(gFBPTraceFD, 0) == 0) lseek(gFBPTraceFD, 0, SEEK_SET);
@@ -666,9 +694,31 @@ void FBPLogClear(void) {
     os_unfair_lock_unlock(&gFBPTraceFileLock);
 }
 
-// Clears the log once per calendar day, on the first call after local midnight.
-// Call at launch; a same-day call returns at once.
-void FBPLogDailyClearIfDue(void) {
+// The clear itself. Call with gFBPLogLock held.
+//
+// Taking the file lock inside the record lock is the order the rest of this
+// file already uses — FBPLogFlushPendingLocked writes the mirror while holding
+// the record lock — so nothing new can deadlock here.
+static void FBPLogClearLocked(void) {
+    [FBPLogLines() removeAllObjects];
+    // End any run in progress so a repeat after the clear starts a fresh line
+    // rather than counting into one that no longer exists.
+    gFBPPendingLine = nil;
+    gFBPRunTag = nil;
+    gFBPRunMessage = nil;
+    gFBPRepeatCount = 0;
+    FBPLogEmptyFileMirror();
+}
+
+void FBPLogClear(void) {
+    os_unfair_lock_lock(&gFBPLogLock);
+    FBPLogClearLocked();
+    os_unfair_lock_unlock(&gFBPLogLock);
+}
+
+// Clears the log once every twelve hours, on the first call after the window
+// turns over. Call at launch; a call inside the same window returns at once.
+void FBPLogClearIfDue(void) {
     // The clear itself now happens where the record is created, which is the
     // only place that is genuinely "before anything is logged" — see the long
     // note in FBPLogLines(). Calling this from a constructor, as FBPEntry does,
@@ -676,9 +726,9 @@ void FBPLogDailyClearIfDue(void) {
     // constructor order is not something a call site can choose.
     //
     // The call is kept and still does the right thing: touching the record is
-    // what runs the day check, so a launch that reaches here has had its clear
-    // decided exactly once. Priming first keeps the preference read out of the
-    // locked path.
+    // what runs the window check, so a launch that reaches here has had its
+    // clear decided exactly once. Priming first keeps the preference read out
+    // of the locked path.
     FBPLogsPrimeKeepPreference();
 
     os_unfair_lock_lock(&gFBPLogLock);

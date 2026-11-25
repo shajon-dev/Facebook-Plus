@@ -622,7 +622,7 @@ static void fbpNotifyObserveText(NSString *text, NSString *where) {
 	// run can be told apart from a run that never installed.
 	//
 	// It is emitted TWICE, and the second one is the one that can actually be
-	// read. FBPLogDailyClearIfDue() runs from FBPEntry's constructor and wipes
+	// read. FBPLogClearIfDue() runs from FBPEntry's constructor and wipes
 	// the record, and constructors do not all run before it — a device export
 	// from 2026-11-21 contains not one line written by any constructor in the
 	// tweak, its own "launch ·" line included. Anything a constructor records is

@@ -79,6 +79,44 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
     FBPInstallHooks();
 }
 
+/// How many copies of this tweak are in the process, and says so when it is
+/// more than one.
+///
+/// A device export from 2026-11-21 carried two different builds' install
+/// reports in a single session: one set once per launch, in this build's
+/// wording, and another 305 times per launch in wording this build stopped
+/// using. Two dylibs, two sets of statics, and an injected IPA is the easy way
+/// to end up with them — re-injecting a newer build into an IPA that was
+/// already injected leaves the older one in Frameworks/ and in the load
+/// commands, and dyld loads both.
+///
+/// The second copy is the older one, so it cannot report itself; this build
+/// has to. One line, at launch, naming every copy, because working this out
+/// from the outside took a long time and an export that could not answer it.
+static void FBPReportDuplicateLoads(void) {
+    NSMutableArray<NSString *> *copies = [NSMutableArray array];
+    uint32_t count = _dyld_image_count();
+    for (uint32_t i = 0; i < count; i++) {
+        const char *name = _dyld_get_image_name(i);
+        if (!name) continue;
+        NSString *path = @(name);
+        // By file name, not by prefix: the same dylib is called
+        // FacebookPlus.dylib wherever it is installed from, and a copy left in
+        // an IPA's Frameworks/ sits under a different directory, not a
+        // different name.
+        if ([path.lastPathComponent rangeOfString:@"FacebookPlus"
+                                          options:NSCaseInsensitiveSearch].location != NSNotFound) {
+            [copies addObject:path];
+        }
+    }
+    if (copies.count < 2) return;
+
+    FBPTraceLine(@"%lu copies of the tweak are loaded — the oldest one wins "
+                 @"wherever they disagree, and both log",
+                 (unsigned long)copies.count);
+    for (NSString *path in copies) FBPTraceLine(@"  loaded · %@", path);
+}
+
 %ctor {
     @autoreleasepool {
         // Bound to the app it ships in, not to a fixed bundle id: the Filter
@@ -90,12 +128,14 @@ static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
         // Registers defaults before any hook can read a preference.
         (void)FBPPrefs.shared;
 
-        // Clear the kept log once a day (local midnight), then prime the
+        // Clear the kept log once every twelve hours, then prime the
         // device-name lookup and open the diagnostic log.
-        FBPLogDailyClearIfDue();
+        FBPLogClearIfDue();
         FBPResolveDeviceName();
         FBPTraceLine(@"launch · on %@ into %@", FBPDeviceDisplayName(),
                      NSBundle.mainBundle.bundleIdentifier);
+
+        FBPReportDuplicateLoads();
 
         // Installs what is available now, and again as each framework arrives.
         FBPInstallHooks();

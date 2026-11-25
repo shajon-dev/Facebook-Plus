@@ -52,9 +52,13 @@ BOOL FBPTraceFileIsShared(void);
 /// Empties the in-memory record and truncates the file mirror.
 void FBPLogClear(void);
 
-/// Clears the log once per calendar day, on the first call after local midnight.
-/// Call at launch.
-void FBPLogDailyClearIfDue(void);
+/// Clears the log once every twelve hours, on the first call after the window
+/// turns over (00:00 and 12:00 UTC). Call at launch.
+///
+/// The record also starts again on its own the moment it reaches 10,000 lines,
+/// so neither a long session nor a call site gone wrong can leave an export
+/// holding nothing but the flood that filled it.
+void FBPLogClearIfDue(void);
 
 #pragma mark - Feature diagnostics
 
