@@ -56,12 +56,12 @@
 // composer container cleanly from 104.3pt to 52pt with zero empty gap while
 // keeping the top hairline border, text box, media button, and '+' button intact.
 
-@protocol FBPStaticEmojiBannerControllerMethods <NSObject>
+@interface FBStaticEmojiBannerController : NSObject
 - (void)hideBannerDueToPrimaryBanner;
 - (void)commentComposerComponentDidMount;
 @end
 
-static NSHashTable<id> *gEmojiBannerControllers = nil;
+static NSHashTable<FBStaticEmojiBannerController *> *gEmojiBannerControllers = nil;
 
 static NSObject *FBPEmojiBannerSyncToken(void) {
     static NSObject *token = nil;
@@ -70,7 +70,7 @@ static NSObject *FBPEmojiBannerSyncToken(void) {
     return token;
 }
 
-static void FBPTrackEmojiBannerController(id ctrl) {
+static void FBPTrackEmojiBannerController(FBStaticEmojiBannerController *ctrl) {
     if (!ctrl) return;
     @synchronized (FBPEmojiBannerSyncToken()) {
         if (!gEmojiBannerControllers) {
@@ -81,12 +81,12 @@ static void FBPTrackEmojiBannerController(id ctrl) {
 }
 
 static void FBPApplyEmojiBannerPreferenceLive(void) {
-    NSArray *live = nil;
+    NSArray<FBStaticEmojiBannerController *> *live = nil;
     @synchronized (FBPEmojiBannerSyncToken()) {
         live = gEmojiBannerControllers.allObjects;
     }
     BOOL blockBar = FBPEnabled(FBPKeyNoCommentEmojiBar);
-    for (id<FBPStaticEmojiBannerControllerMethods> ctrl in live) {
+    for (FBStaticEmojiBannerController *ctrl in live) {
         if (blockBar) {
             if ([ctrl respondsToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
                 [ctrl hideBannerDueToPrimaryBanner];
@@ -111,7 +111,7 @@ static void FBPApplyEmojiBannerPreferenceLive(void) {
                       logger:(id)logger {
     id instance = %orig;
     if (instance) {
-        FBPTrackEmojiBannerController(instance);
+        FBPTrackEmojiBannerController((FBStaticEmojiBannerController *)instance);
     }
     return instance;
 }
@@ -121,7 +121,7 @@ static void FBPApplyEmojiBannerPreferenceLive(void) {
     if (FBPEnabled(FBPKeyNoCommentEmojiBar)) {
         FBPTraceFire("comments.FBStaticEmojiBannerController.didMount.suppressed");
         if ([self respondsToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
-            [(id<FBPStaticEmojiBannerControllerMethods>)self hideBannerDueToPrimaryBanner];
+            [self hideBannerDueToPrimaryBanner];
         }
         return;
     }
@@ -133,7 +133,7 @@ static void FBPApplyEmojiBannerPreferenceLive(void) {
     if (FBPEnabled(FBPKeyNoCommentEmojiBar)) {
         FBPTraceFire("comments.FBStaticEmojiBannerController.showBanner.suppressed");
         if ([self respondsToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
-            [(id<FBPStaticEmojiBannerControllerMethods>)self hideBannerDueToPrimaryBanner];
+            [self hideBannerDueToPrimaryBanner];
         }
         return;
     }
