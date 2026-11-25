@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "Resetuj pozycję przycisków wideo";
 "row.suspend.desc" = "Wymusza zamknięcie Facebooka; otwórz go ponownie, aby zastosować zmiany.";
 "row.suspend.title" = "Zamknij aplikację";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "Dostosuj przezroczystość pływających przycisków Oko i Pobierz.";
 "row.videobuttonsopacity.title" = "Przezroczystość przycisków wideo";
 "row.welcome.title" = "Pokaż ekran powitalny";

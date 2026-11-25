@@ -195,15 +195,22 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     [FBPToastManager.shared showMessage:@"Marked as seen" success:YES];
 }
 
+- (void)storyEyeTouchDown:(UIButton *)sender {
+    if (FBPIsButtonDragging(sender)) return;
+    FBPNoteVideoButtonsInteraction();
+    sender.alpha = MAX(0.25, FBPVideoButtonsAlpha() * 0.72);
+}
+
 /// Asks first, then marks seen. Mark-as-seen is the eye button's only action, so
 /// it is wired straight to a confirmation prompt — matching the like confirmation
 /// — rather than an intermediate one-item menu.
 - (void)confirmAndMarkAsSeen:(UIButton *)sender {
+    FBPNoteVideoButtonsInteraction();
     if (FBPShouldSuppressTapAfterDrag(sender)) {
-        sender.alpha = FBPVideoButtonsAlpha();
+        sender.alpha = FBPVideoButtonsEffectiveAlpha();
         return;
     }
-    sender.alpha = FBPVideoButtonsAlpha();
+    sender.alpha = FBPVideoButtonsEffectiveAlpha();
     UIViewController *host = self.controller;
     if (!host) return;
     while (host.presentedViewController) host = host.presentedViewController;
@@ -419,6 +426,9 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
         // A single dedicated action: tap the eye, confirm, done — no intermediate
         // one-item menu.
         [button addTarget:target
+                   action:@selector(storyEyeTouchDown:)
+         forControlEvents:UIControlEventTouchDown];
+        [button addTarget:target
                    action:@selector(confirmAndMarkAsSeen:)
          forControlEvents:UIControlEventTouchUpInside];
         button.layer.shadowColor = UIColor.blackColor.CGColor;
@@ -427,6 +437,7 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
         button.layer.shadowRadius = 3.0;
         FBPAttachDraggableBehavior(button, FBPKeyStoryEyePosition);
         [host addSubview:button];
+        FBPNoteVideoButtonsInteraction();
     }
 
     // A second row rather than a fourth slot in the first.
@@ -450,10 +461,20 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
                                                    CGPointMake(cx, cy),
                                                    CGSizeMake(kButtonBox, kButtonBox),
                                                    host);
-        button.bounds = CGRectMake(0, 0, kButtonBox, kButtonBox);
-        button.center = resolved;
-        button.frame = CGRectIntegral(button.frame);
-        button.alpha = FBPVideoButtonsAlpha();
+        button.frame = CGRectMake(round(resolved.x - kButtonBox * 0.5),
+                                  round(resolved.y - kButtonBox * 0.5),
+                                  kButtonBox, kButtonBox);
+        CGFloat targetAlpha = FBPVideoButtonsEffectiveAlpha();
+        if (fabs(button.alpha - targetAlpha) >= 0.004) {
+            NSTimeInterval dur = (targetAlpha < button.alpha) ? 0.32 : 0.12;
+            [UIView animateWithDuration:dur
+                                  delay:0.0
+                                options:UIViewAnimationOptionBeginFromCurrentState |
+                                        UIViewAnimationOptionAllowUserInteraction |
+                                        UIViewAnimationOptionCurveEaseOut
+                             animations:^{ button.alpha = targetAlpha; }
+                             completion:nil];
+        }
     }
     [host bringSubviewToFront:button];
 }

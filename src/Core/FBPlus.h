@@ -120,11 +120,13 @@ extern NSString *const FBPKeyDownloadQualityPicker;
 
 // Reels & floating video controls
 extern NSString *const FBPKeyReelsHideOverlay;  // Strip the Reels overlay (always on; no toggle)
-extern NSString *const FBPKeyVideoButtonsOpacity;    // Floating Eye & Download button opacity [0.15 .. 1.0]
-extern NSString *const FBPKeyVideoDownloadPosition;  // Normalized "x,y" center for Reels Download button
-extern NSString *const FBPKeyVideoEyePosition;       // Normalized "x,y" center for Reels Eye button
-extern NSString *const FBPKeyStoryDownloadPosition;  // Normalized "x,y" center for Story Download button
-extern NSString *const FBPKeyStoryEyePosition;       // Normalized "x,y" center for Story Eye button
+extern NSString *const FBPKeyVideoButtonsOpacity;      // Active floating Eye & Download button opacity [0.15 .. 1.0]
+extern NSString *const FBPKeyVideoButtonsAutoDim;      // Auto-fade Eye & Download buttons after 2s without touch
+extern NSString *const FBPKeyVideoButtonsIdleOpacity;  // Idle opacity after 2s [0.01 .. 1.0], default 0.05 (5%)
+extern NSString *const FBPKeyVideoDownloadPosition;    // Normalized "x,y" center for Reels Download button
+extern NSString *const FBPKeyVideoEyePosition;         // Normalized "x,y" center for Reels Eye button
+extern NSString *const FBPKeyStoryDownloadPosition;    // Normalized "x,y" center for Story Download button
+extern NSString *const FBPKeyStoryEyePosition;         // Normalized "x,y" center for Story Eye button
 
 // Stories
 extern NSString *const FBPKeyAnonymousStories;
@@ -244,6 +246,11 @@ typedef NS_ENUM(NSInteger, FBPViewTag) {
 extern "C" {
 #endif
 CGFloat FBPVideoButtonsAlpha(void);
+CGFloat FBPVideoButtonsConfiguredIdleOpacity(void);
+CGFloat FBPVideoButtonsIdleAlpha(void);
+CGFloat FBPVideoButtonsEffectiveAlpha(void);
+BOOL FBPVideoButtonsAreIdle(void);
+void FBPNoteVideoButtonsInteraction(void);
 void FBPAttachDraggableBehavior(UIButton *button, NSString *prefKey);
 BOOL FBPIsButtonDragging(UIButton *button);
 BOOL FBPShouldSuppressTapAfterDrag(UIButton *button);

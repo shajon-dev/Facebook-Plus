@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "Đặt lại vị trí nút Video";
 "row.suspend.desc" = "Buộc đóng Facebook; mở lại để áp dụng thay đổi.";
 "row.suspend.title" = "Thoát ứng dụng";
+"row.videobuttons_idle.desc" = "Độ rõ còn lại sau 2 giây không chạm (mặc định 5% — gần như trong suốt).";
+"row.videobuttons_idle.title" = "Độ rõ sau 2 giây không chạm";
+"row.videobuttonsautodim.desc" = "Tự động làm trong suốt nút Con mắt và nút Tải video sau 2 giây không chạm vào.";
+"row.videobuttonsautodim.title" = "Tự làm trong suốt sau 2 giây";
 "row.videobuttonsopacity.desc" = "Chỉnh độ trong suốt của nút Con mắt và nút Tải về khi xem video.";
 "row.videobuttonsopacity.title" = "Độ trong suốt nút Video";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";

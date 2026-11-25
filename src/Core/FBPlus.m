@@ -50,11 +50,13 @@ NSString *const FBPKeyReelsDownloaderEnabled = @"reelsDownloaderEnabled";
 NSString *const FBPKeyStoryDownloaderEnabled = @"storyDownloaderEnabled";
 NSString *const FBPKeyDownloadQualityPicker = @"downloadQualityPicker";
 NSString *const FBPKeyReelsHideOverlay = @"reelsHideOverlay";
-NSString *const FBPKeyVideoButtonsOpacity   = @"videoButtonsOpacity";
-NSString *const FBPKeyVideoDownloadPosition = @"videoDownloadPosition";
-NSString *const FBPKeyVideoEyePosition      = @"videoEyePosition";
-NSString *const FBPKeyStoryDownloadPosition = @"storyDownloadPosition";
-NSString *const FBPKeyStoryEyePosition      = @"storyEyePosition";
+NSString *const FBPKeyVideoButtonsOpacity     = @"videoButtonsOpacity";
+NSString *const FBPKeyVideoButtonsAutoDim     = @"videoButtonsAutoDim";
+NSString *const FBPKeyVideoButtonsIdleOpacity = @"videoButtonsIdleOpacity";
+NSString *const FBPKeyVideoDownloadPosition   = @"videoDownloadPosition";
+NSString *const FBPKeyVideoEyePosition        = @"videoEyePosition";
+NSString *const FBPKeyStoryDownloadPosition   = @"storyDownloadPosition";
+NSString *const FBPKeyStoryEyePosition        = @"storyEyePosition";
 NSString *const FBPKeyAnonymousStories = @"anonymousStories";
 NSString *const FBPKeyNoAutoNext       = @"noAutoNext";
 NSString *const FBPKeyFeedLike         = @"feedLike";
@@ -93,7 +95,16 @@ static const void *kFBPDragEndTimeKey     = &kFBPDragEndTimeKey;
 
 static const CGFloat kFBPVideoButtonMinAlpha = 0.15;
 static const CGFloat kFBPVideoButtonMaxAlpha = 1.00;
-static const CGFloat kFBPVideoButtonEdgeMargin = 6.0;
+static const CGFloat kFBPVideoButtonMinIdleRatio = 0.01;
+// UIKit -[UIView hitTest:withEvent:] ignores views whose alpha <= 0.01, so the
+// rendered layer floor stays at 0.015 (visually indistinguishable from 1%) so
+// the button never becomes untouchable or undraggable at minimum opacity.
+static const CGFloat kFBPVideoButtonHitTestableAlphaFloor = 0.015;
+static const CFTimeInterval kFBPVideoButtonIdleDelay = 2.0;
+
+static CFTimeInterval gFBPLastButtonInteractionTime = 0.0;
+static uint64_t gFBPIdleTimerGeneration = 0;
+static NSInteger gFBPActiveDragCount = 0;
 
 CGFloat FBPVideoButtonsAlpha(void) {
     double raw = [FBPPrefs.shared doubleForKey:FBPKeyVideoButtonsOpacity];
@@ -103,19 +114,97 @@ CGFloat FBPVideoButtonsAlpha(void) {
     return (CGFloat)raw;
 }
 
+CGFloat FBPVideoButtonsConfiguredIdleOpacity(void) {
+    double raw = [FBPPrefs.shared doubleForKey:FBPKeyVideoButtonsIdleOpacity];
+    if (raw <= 0.0001) raw = 0.05;
+    if (raw < kFBPVideoButtonMinIdleRatio) raw = kFBPVideoButtonMinIdleRatio;
+    if (raw > kFBPVideoButtonMaxAlpha) raw = kFBPVideoButtonMaxAlpha;
+    return (CGFloat)raw;
+}
+
+CGFloat FBPVideoButtonsIdleAlpha(void) {
+    CGFloat configured = FBPVideoButtonsConfiguredIdleOpacity();
+    return MAX(kFBPVideoButtonHitTestableAlphaFloor, configured);
+}
+
+static void FBPScheduleIdleFadeCheck(void) {
+    uint64_t expectedGen = ++gFBPIdleTimerGeneration;
+    int64_t delayNs = (int64_t)((kFBPVideoButtonIdleDelay + 0.03) * (double)NSEC_PER_SEC);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delayNs), dispatch_get_main_queue(), ^{
+        if (expectedGen != gFBPIdleTimerGeneration) return;
+        [NSNotificationCenter.defaultCenter
+            postNotificationName:FBPVideoButtonsDidChangeNotification
+                          object:nil];
+    });
+}
+
+void FBPNoteVideoButtonsInteraction(void) {
+    void (^work)(void) = ^{
+        gFBPLastButtonInteractionTime = CACurrentMediaTime();
+        FBPScheduleIdleFadeCheck();
+        [NSNotificationCenter.defaultCenter
+            postNotificationName:FBPVideoButtonsDidChangeNotification
+                          object:nil];
+    };
+    if (NSThread.isMainThread) {
+        work();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), work);
+    }
+}
+
+BOOL FBPVideoButtonsAreIdle(void) {
+    if (!FBPEnabled(FBPKeyVideoButtonsAutoDim)) return NO;
+    if (gFBPActiveDragCount > 0) return NO;
+    CFTimeInterval now = CACurrentMediaTime();
+    if (gFBPLastButtonInteractionTime <= 0.0) {
+        gFBPLastButtonInteractionTime = now;
+        if (NSThread.isMainThread) {
+            FBPScheduleIdleFadeCheck();
+        } else {
+            dispatch_async(dispatch_get_main_queue(), ^{ FBPScheduleIdleFadeCheck(); });
+        }
+        return NO;
+    }
+    return (now - gFBPLastButtonInteractionTime) >= kFBPVideoButtonIdleDelay;
+}
+
+CGFloat FBPVideoButtonsEffectiveAlpha(void) {
+    CGFloat active = FBPVideoButtonsAlpha();
+    if (!FBPVideoButtonsAreIdle()) return active;
+    return MIN(active, FBPVideoButtonsIdleAlpha());
+}
+
 static CGPoint FBPClampButtonCenter(CGPoint desired, CGSize buttonSize, UIView *container) {
     if (!container) return desired;
     CGRect bounds = container.bounds;
     if (bounds.size.width <= 1.0 || bounds.size.height <= 1.0) return desired;
 
     UIEdgeInsets safe = container.safeAreaInsets;
-    CGFloat halfW = MAX(16.0, buttonSize.width * 0.5);
-    CGFloat halfH = MAX(16.0, buttonSize.height * 0.5);
+    UIWindow *win = [container isKindOfClass:UIWindow.class]
+        ? (UIWindow *)container
+        : container.window;
+    CGFloat hwTop = win ? win.safeAreaInsets.top : safe.top;
+    CGFloat hwBottom = win ? win.safeAreaInsets.bottom : safe.bottom;
 
-    CGFloat minX = safe.left + halfW + kFBPVideoButtonEdgeMargin;
-    CGFloat maxX = bounds.size.width - safe.right - halfW - kFBPVideoButtonEdgeMargin;
-    CGFloat minY = safe.top + halfH + kFBPVideoButtonEdgeMargin;
-    CGFloat maxY = bounds.size.height - safe.bottom - halfH - kFBPVideoButtonEdgeMargin;
+    CGFloat edgePadX = MAX(18.0, buttonSize.width * 0.42);
+    CGFloat edgePadY = MAX(20.0, buttonSize.height * 0.45);
+
+    CGFloat minX = safe.left + edgePadX;
+    CGFloat maxX = bounds.size.width - safe.right - edgePadX;
+
+    // Allow moving freely all the way up into Facebook's top header row (where
+    // the Back "<" and Magnifying Glass search buttons sit at centerY ~ 76..85pt
+    // right below the status bar / Dynamic Island), instead of trapping buttons
+    // below safe.top + halfH + margin (~90pt).
+    CGFloat topCeilingInWin = MAX(edgePadY, hwTop - 28.0);
+    CGFloat minY = topCeilingInWin;
+    if (win && container != win) {
+        CGPoint convertedTop = [win convertPoint:CGPointMake(0.0, topCeilingInWin)
+                                          toView:container];
+        minY = MAX(edgePadY, convertedTop.y);
+    }
+    CGFloat maxY = bounds.size.height - MAX(edgePadY, hwBottom + 14.0);
 
     if (maxX < minX) minX = maxX = CGRectGetMidX(bounds);
     if (maxY < minY) minY = maxY = CGRectGetMidY(bounds);
@@ -196,48 +285,54 @@ BOOL FBPShouldSuppressTapAfterDrag(UIButton *button) {
 
     CGSize buttonSize = button.bounds.size;
     if (buttonSize.width <= 1.0 || buttonSize.height <= 1.0) {
-        buttonSize = CGSizeMake(48.0, 48.0);
+        buttonSize = CGSizeMake(44.0, 44.0);
     }
 
     switch (pan.state) {
         case UIGestureRecognizerStateBegan: {
+            if (![objc_getAssociatedObject(button, kFBPDragActiveKey) boolValue]) {
+                gFBPActiveDragCount += 1;
+            }
             objc_setAssociatedObject(button, kFBPDragActiveKey, @YES,
                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(button, kFBPDragStartCenterKey,
                                      [NSValue valueWithCGPoint:button.center],
                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            FBPNoteVideoButtonsInteraction();
             [container bringSubviewToFront:button];
-            button.alpha = MAX(0.25, FBPVideoButtonsAlpha());
+            button.alpha = MAX(0.30, FBPVideoButtonsAlpha());
             UIImpactFeedbackGenerator *feedback =
                 [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
             [feedback impactOccurred];
             break;
         }
         case UIGestureRecognizerStateChanged: {
+            gFBPLastButtonInteractionTime = CACurrentMediaTime();
             NSValue *startVal = objc_getAssociatedObject(button, kFBPDragStartCenterKey);
             CGPoint start = startVal ? startVal.CGPointValue : button.center;
             CGPoint delta = [pan translationInView:container];
             CGPoint desired = CGPointMake(start.x + delta.x, start.y + delta.y);
-            button.center = FBPClampButtonCenter(desired, buttonSize, container);
-            [NSNotificationCenter.defaultCenter
-                postNotificationName:FBPVideoButtonsDidChangeNotification
-                              object:button];
+            CGPoint clamped = FBPClampButtonCenter(desired, buttonSize, container);
+            button.frame = CGRectMake(round(clamped.x - buttonSize.width * 0.5),
+                                      round(clamped.y - buttonSize.height * 0.5),
+                                      buttonSize.width, buttonSize.height);
             break;
         }
         case UIGestureRecognizerStateEnded:
         case UIGestureRecognizerStateCancelled:
         case UIGestureRecognizerStateFailed: {
             CGPoint clamped = FBPClampButtonCenter(button.center, buttonSize, container);
-            button.center = clamped;
-            button.frame = CGRectIntegral(button.frame);
+            button.frame = CGRectMake(round(clamped.x - buttonSize.width * 0.5),
+                                      round(clamped.y - buttonSize.height * 0.5),
+                                      buttonSize.width, buttonSize.height);
 
             NSString *prefKey = objc_getAssociatedObject(button, kFBPDragPrefKeyKey);
             CGRect bounds = container.bounds;
             if (prefKey.length && bounds.size.width > 1.0 && bounds.size.height > 1.0 &&
                 (pan.state == UIGestureRecognizerStateEnded ||
                  pan.state == UIGestureRecognizerStateCancelled)) {
-                double rx = MIN(MAX(clamped.x / bounds.size.width, 0.0), 1.0);
-                double ry = MIN(MAX(clamped.y / bounds.size.height, 0.0), 1.0);
+                double rx = MIN(MAX(button.center.x / bounds.size.width, 0.0), 1.0);
+                double ry = MIN(MAX(button.center.y / bounds.size.height, 0.0), 1.0);
                 NSString *encoded = [NSString stringWithFormat:@"%.6f,%.6f", rx, ry];
                 [FBPPrefs.shared setString:encoded forKey:prefKey];
             }
@@ -245,14 +340,15 @@ BOOL FBPShouldSuppressTapAfterDrag(UIButton *button) {
             objc_setAssociatedObject(button, kFBPDragEndTimeKey,
                                      @(CACurrentMediaTime()),
                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            if ([objc_getAssociatedObject(button, kFBPDragActiveKey) boolValue]) {
+                gFBPActiveDragCount = MAX(0, gFBPActiveDragCount - 1);
+            }
             objc_setAssociatedObject(button, kFBPDragActiveKey, nil,
                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
             CGFloat baseAlpha = FBPVideoButtonsAlpha();
             button.alpha = button.enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
-            [NSNotificationCenter.defaultCenter
-                postNotificationName:FBPVideoButtonsDidChangeNotification
-                              object:button];
+            FBPNoteVideoButtonsInteraction();
             break;
         }
         default:
@@ -272,6 +368,9 @@ void FBPAttachDraggableBehavior(UIButton *button, NSString *prefKey) {
         initWithTarget:FBPDraggableButtonCoordinator.shared
                 action:@selector(handlePan:)];
     pan.cancelsTouchesInView = YES;
+    pan.delaysTouchesBegan = NO;
+    pan.delaysTouchesEnded = NO;
+    pan.maximumNumberOfTouches = 1;
     [button addGestureRecognizer:pan];
     objc_setAssociatedObject(button, kFBPDragInstalledKey, @YES,
                              OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -283,7 +382,5 @@ void FBPResetVideoButtonPositions(void) {
     [FBPPrefs.shared setString:nil forKey:FBPKeyStoryDownloadPosition];
     [FBPPrefs.shared setString:nil forKey:FBPKeyStoryEyePosition];
     [FBPPrefs.shared commit];
-    [NSNotificationCenter.defaultCenter
-        postNotificationName:FBPVideoButtonsDidChangeNotification
-                      object:nil];
+    FBPNoteVideoButtonsInteraction();
 }

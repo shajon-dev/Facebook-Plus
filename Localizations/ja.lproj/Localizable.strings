@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "動画ボタンの位置をリセット";
 "row.suspend.desc" = "Facebook を強制終了します。変更を適用するには開き直してください。";
 "row.suspend.title" = "アプリを終了";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "動画上の目のボタンと保存ボタンの透明度を調整します。";
 "row.videobuttonsopacity.title" = "動画ボタンの不透明度";
 "row.welcome.title" = "ようこそ画面を表示";

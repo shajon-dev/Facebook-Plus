@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "重設影片按鈕位置";
 "row.suspend.desc" = "強制關閉 Facebook；重新開啟以套用變更。";
 "row.suspend.title" = "關閉 App";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "調整影片畫面上懸浮「眼睛」和「下載」按鈕的不透明度。";
 "row.videobuttonsopacity.title" = "影片按鈕不透明度";
 "row.welcome.title" = "顯示歡迎畫面";

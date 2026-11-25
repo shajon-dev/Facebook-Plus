@@ -441,21 +441,28 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
 
     if ([type isEqualToString:kTypeSlider]) {
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        CGFloat current = FBPVideoButtonsAlpha();
+        NSString *sliderKey = row[kRowKey];
+        BOOL isIdleSlider = [sliderKey isEqualToString:FBPKeyVideoButtonsIdleOpacity];
+        CGFloat minVal = isIdleSlider ? 0.01 : 0.15;
+        CGFloat maxVal = 1.00;
+        CGFloat current = isIdleSlider
+            ? FBPVideoButtonsConfiguredIdleOpacity()
+            : FBPVideoButtonsAlpha();
 
         UILabel *pctLabel = [[UILabel alloc] init];
         pctLabel.font = [UIFont monospacedDigitSystemFontOfSize:15 weight:UIFontWeightSemibold];
-        pctLabel.textColor = FBPTintColor();
+        pctLabel.textColor = disabled ? UIColor.tertiaryLabelColor : FBPTintColor();
         pctLabel.textAlignment = NSTextAlignmentRight;
         pctLabel.text = [NSString stringWithFormat:@"%d%%", (int)lround(current * 100.0)];
         [self setAccessory:pctLabel inCell:cell];
 
-        cell.slider.minimumValue = 0.15f;
-        cell.slider.maximumValue = 1.00f;
+        cell.slider.enabled = !disabled;
+        cell.slider.minimumValue = (float)minVal;
+        cell.slider.maximumValue = (float)maxVal;
         cell.slider.value = (float)current;
-        cell.slider.minimumTrackTintColor = FBPTintColor();
+        cell.slider.minimumTrackTintColor = disabled ? UIColor.tertiaryLabelColor : FBPTintColor();
         cell.slider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.18];
-        objc_setAssociatedObject(cell.slider, @selector(tag), row[kRowKey],
+        objc_setAssociatedObject(cell.slider, @selector(tag), sliderKey,
                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         objc_setAssociatedObject(cell.slider, kFBPSliderValueLabelKey, pctLabel,
                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -636,8 +643,10 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
     NSString *key = objc_getAssociatedObject(sender, @selector(tag));
     if (!key) return;
 
+    BOOL isIdleSlider = [key isEqualToString:FBPKeyVideoButtonsIdleOpacity];
+    double minVal = isIdleSlider ? 0.01 : 0.15;
     double snapped = round((double)sender.value * 100.0) / 100.0;
-    if (snapped < 0.15) snapped = 0.15;
+    if (snapped < minVal) snapped = minVal;
     if (snapped > 1.00) snapped = 1.00;
 
     UILabel *pctLabel = objc_getAssociatedObject(sender, kFBPSliderValueLabelKey);
@@ -653,6 +662,7 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
 
 - (void)fbpSliderFinished:(__unused UISlider *)sender {
     [FBPPrefs.shared commit];
+    FBPNoteVideoButtonsInteraction();
 }
 
 #pragma mark Photos permission
@@ -813,11 +823,22 @@ static NSDictionary *FBPCacheScheduleRow(void) {
     return row;
 }
 
+static NSDictionary *FBPVideoIdleOpacityRow(void) {
+    NSMutableDictionary *row =
+        [FBPSliderRow(FBPKeyVideoButtonsIdleOpacity,
+                      FBPL(@"row.videobuttons_idle.title"),
+                      FBPL(@"row.videobuttons_idle.desc"),
+                      @"eye") mutableCopy];
+    if (!FBPEnabled(FBPKeyVideoButtonsAutoDim)) row[kRowDisabled] = @YES;
+    return row;
+}
+
 /// YES when turning this switch changes whether *other* rows are usable, so the
 /// table has to be redrawn rather than just the switch moved.
 static BOOL FBPRowGatesOtherRows(NSString *key) {
     return [key isEqualToString:FBPKeyMetaPlus] ||
-           [key isEqualToString:FBPKeyAutoClearCache];
+           [key isEqualToString:FBPKeyAutoClearCache] ||
+           [key isEqualToString:FBPKeyVideoButtonsAutoDim];
 }
 
 #pragma mark - Category definitions
@@ -885,6 +906,8 @@ static NSArray<NSDictionary *> *FBPCategoryCatalog(void) {
                 FBPSwitchRow(FBPKeyDownloadQualityPicker, FBPL(@"row.downloadquality.title"), FBPL(@"row.downloadquality.desc"), @"arrow.down.circle"),
             ]),
             FBPSection(FBPL(@"footer.videobuttons"), @[
+                FBPSwitchRow(FBPKeyVideoButtonsAutoDim, FBPL(@"row.videobuttonsautodim.title"), FBPL(@"row.videobuttonsautodim.desc"), @"eye"),
+                FBPVideoIdleOpacityRow(),
                 FBPSliderRow(FBPKeyVideoButtonsOpacity, FBPL(@"row.videobuttonsopacity.title"), FBPL(@"row.videobuttonsopacity.desc"), @"eye"),
                 FBPActionRow(kActionResetVideoButtons, FBPL(@"row.resetvideobuttons.title"), FBPL(@"row.resetvideobuttons.desc"), @"arrow.counterclockwise", NO),
             ]),
