@@ -456,6 +456,24 @@ static void FBPClearTouched(UIView *view) {
     @synchronized (touched) { [touched removeObject:view]; }
 }
 
+/// Set while a restore is putting Facebook's own colour back.
+///
+/// A RESTORE MUST NEVER RE-ENTER THE PAINT PATH.
+///
+/// FBPRestoreViewBG writes through -[UIView setBackgroundColor:], which is
+/// hooked, so the colour it is putting back arrives at FBPBGForSet like any
+/// other. While OLED is still engaged that colour is judged dark all over
+/// again, saved all over again, and written back as black — and the restore
+/// then clears the flag on its way out. The result is a black view with no
+/// record of being painted, which is exactly what `stray` counts.
+///
+/// Reversing Nexus found the same trap and the same answer: every one of its
+/// restores calls the original implementation directly, deliberately bypassing
+/// its own hook. Logos gives no handle on %orig from outside the hook body, so
+/// the hook is told to stand aside instead. Main thread only, which is where
+/// every one of these paths runs.
+static BOOL gFBPRestoring = NO;
+
 // -- view background (Facebook's dynamic colour, saved unresolved) --
 static void FBPSaveViewBG(UIView *view, UIColor *orig) {
     if (!objc_getAssociatedObject(view, kFBPSavedViewBG)) {
@@ -469,7 +487,10 @@ static void FBPForgetViewBG(UIView *view) {
 static BOOL FBPRestoreViewBG(UIView *view) {
     id saved = objc_getAssociatedObject(view, kFBPSavedViewBG);
     if (!saved) return NO;
+    BOOL was = gFBPRestoring;
+    gFBPRestoring = YES;
     view.backgroundColor = (saved == NSNull.null) ? nil : saved;
+    gFBPRestoring = was;
     FBPForgetViewBG(view);
     return YES;
 }
@@ -539,6 +560,9 @@ static void FBPSaveNavBar(UINavigationBar *bar) {
 static void FBPRestoreNavBar(UINavigationBar *bar) {
     NSDictionary *s = objc_getAssociatedObject(bar, kFBPSavedNav);
     if (!s) return;
+    // -setBackgroundColor: below is hooked like any other; see gFBPRestoring.
+    BOOL was = gFBPRestoring;
+    gFBPRestoring = YES;
     bar.translucent  = [s[@"translucent"] boolValue];
     bar.barTintColor = s[@"barTint"] == NSNull.null ? nil : s[@"barTint"];
     bar.backgroundColor = s[@"bg"] == NSNull.null ? nil : s[@"bg"];
@@ -551,6 +575,7 @@ static void FBPRestoreNavBar(UINavigationBar *bar) {
                 s[@"compactScroll"] == NSNull.null ? nil : s[@"compactScroll"];
         }
     }
+    gFBPRestoring = was;
     objc_setAssociatedObject(bar, kFBPSavedNav, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
@@ -956,6 +981,9 @@ static void FBPApplyView(UIView *view, BOOL active) {
 /// app's own colour passes through and any stash is dropped, so a later relayout
 /// does not put the black-era colour back over a freshly repainted view.
 static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
+    // A colour on its way back from a restore passes straight through. Judging
+    // it again here is how a restored view ends up black and unrecorded.
+    if (gFBPRestoring) return color;
     if (FBPOLEDActiveFor(self) && !FBPOLEDSkip(self)) {
         if (FBPColorIsDark(FBPResolve(color))) {
             // Still saved and flagged, because the layer and sublayer paths
