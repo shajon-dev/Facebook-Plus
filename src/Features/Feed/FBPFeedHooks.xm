@@ -451,7 +451,7 @@ static BOOL FBPShouldFilterModel(id model) {
 void FBPInitFeedHooks(void) {
     Class model = objc_getClass("FBMemModelObject");
     if (!model) {
-        FBPLog(@"FBMemModelObject not found — feed filtering disabled");
+        FBPLogOnce(@"FBMemModelObject not found — feed filtering disabled");
         return;
     }
 

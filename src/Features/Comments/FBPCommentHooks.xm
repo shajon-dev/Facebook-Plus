@@ -331,7 +331,7 @@ void FBPInitCommentHooks(void) {
         FBP_ONCE(gReelsProductTag) { %init(FBPReelsProductTag, FBPShortsProductTagResolver = resolver); }
         FBPLogOnce(@"reels: creator-storefront product-tag gate installed");
     } else {
-        FBPLog(@"reels: FBShortsCreatorStorefrontProductTagResolver not found");
+        FBPLogOnce(@"reels: FBShortsCreatorStorefrontProductTagResolver not found");
     }
 
     // Video post affiliate/product banner layout collapse (Issue #13).
