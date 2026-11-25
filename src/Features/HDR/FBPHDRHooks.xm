@@ -529,25 +529,44 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 #pragma mark - Init
 
-/// YES when @c cls has every one of these selectors. Through the runtime's C
-/// API, not -instancesRespondToSelector:, for two reasons.
+/// Does @c cls or any class it inherits from define @c sel?
 ///
-/// Correctness: hooking a selector a class lacks ADDS it, so a blind install
-/// makes -respondsToSelector: answer YES for an API the platform does not have.
-/// CALayer.preferredDynamicRange is that case, absent on iOS 18.
-///
-/// And this runs from a dyld initializer, before main, where a message send
-/// triggers +initialize — and +[UIScreen initialize] waits on UIKit's
-/// application configuration, which does not exist yet, so the app hangs until
-/// the launch watchdog kills it. class_getInstanceMethod realizes a class
-/// without running +initialize; objc_getClass looks one up without messaging.
+/// Reads the method lists rather than asking class_getInstanceMethod, which
+/// resolves through lookUpImpOrForward and so runs the class's +initialize.
+/// This is called from a dyld initializer, and +[UIScreen initialize] waits on
+/// a UIKit dispatch_once that cannot complete before main: the app then sits
+/// there until the launch watchdog kills it at twenty seconds. Reported from
+/// iOS 16.3.1. class_copyMethodList touches no class state.
+static BOOL FBPClassDefinesSelector(Class cls, SEL sel) {
+    for (Class c = cls; c; c = class_getSuperclass(c)) {
+        unsigned int count = 0;
+        Method *methods = class_copyMethodList(c, &count);
+        if (!methods) continue;
+        BOOL found = NO;
+        for (unsigned int i = 0; i < count; i++) {
+            if (method_getName(methods[i]) == sel) {
+                found = YES;
+                break;
+            }
+        }
+        free(methods);
+        if (found) return YES;
+    }
+    return NO;
+}
+
+/// YES when @c cls has every one of these selectors, read from the runtime
+/// rather than asked with -instancesRespondToSelector:: hooking a selector a
+/// class lacks ADDS it, so a blind install makes -respondsToSelector: answer
+/// YES for an API the platform does not have. CALayer.preferredDynamicRange is
+/// that case, absent on iOS 18.
 static BOOL FBPHDRHasAll(const char *className, NSArray<NSString *> *selectorNames) {
     Class cls = objc_getClass(className);
     if (!cls) {
         return NO;
     }
     for (NSString *name in selectorNames) {
-        if (!class_getInstanceMethod(cls, NSSelectorFromString(name))) {
+        if (!FBPClassDefinesSelector(cls, NSSelectorFromString(name))) {
             return NO;
         }
     }
