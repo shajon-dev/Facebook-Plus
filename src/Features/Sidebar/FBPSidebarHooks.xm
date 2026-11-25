@@ -473,6 +473,21 @@ static FBPSidebarPlan *FBPSidebarPlanFor(UICollectionViewLayout *layout) {
     return plan;
 }
 
+/// Moves a hidden section's gathered rows into the plan, now that something has
+/// marked the end of it. Leaves the gathering lists empty either way.
+static void FBPSidebarCloseRun(NSMutableArray<NSValue *> *cuts,
+                               NSMutableArray<NSNumber *> *cutTops,
+                               NSMutableArray<NSValue *> *pending,
+                               NSMutableArray<NSNumber *> *pendingTops,
+                               CGFloat *collapsed, CGFloat *pendingHeight) {
+    [cuts addObjectsFromArray:pending];
+    [cutTops addObjectsFromArray:pendingTops];
+    *collapsed += *pendingHeight;
+    [pending removeAllObjects];
+    [pendingTops removeAllObjects];
+    *pendingHeight = 0.0;
+}
+
 /// Works out the plan from the menu's own layout and models. Rebuilt only when
 /// the menu's content or the hide switches change.
 static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
@@ -523,7 +538,27 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
     // Collapsing the section instead, by answering NO from
     // FBBookmarkDropdownButtonModel.isExpanded, does not work: the contents are
     // already in the data source and that flag does not put them there.
+    //
+    // THE RUN HAS TO BE CLOSED BY SOMETHING
+    //
+    // "From this header to the next" is only safe while a next one arrives. A
+    // user on an iPhone 17 Pro Max reported the menu coming back nearly empty,
+    // with grey blocks where the rows had been, and turning "Hide Also from
+    // Meta" off put it right: that section's run was never closed, so it took
+    // the whole rest of the list with it. Nothing in the walk said no.
+    //
+    // So a run's contents are held back until a boundary actually arrives, and
+    // dropped if none does. The header's own row is cut the moment it is seen:
+    // hiding a header alone is what this did before its contents were ever
+    // involved, it is what a shut section still gets, and it cannot run away.
+    // The outcome on a list this walk cannot read is therefore the old
+    // behaviour — a hidden heading with its rows left in place — rather than a
+    // menu with most of it missing.
     BOOL insideHidden = NO;
+    NSMutableArray<NSValue *> *pending = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *pendingTops = [NSMutableArray array];
+    CGFloat pendingHeight = 0.0;
+
     for (UICollectionViewLayoutAttributes *attributes in ordered) {
         if (attributes.representedElementCategory != UICollectionElementCategoryCell) continue;
         CGFloat height = CGRectGetHeight(attributes.frame);
@@ -532,14 +567,21 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
         if (!list) continue;
 
         BOOL isRule = height <= kFBPSidebarRuleMaxHeight;
+        BOOL isHeader = NO;
         if (!isRule) {
             NSString *identifier = nil;
             switch (FBPSidebarRowKindAt(list, attributes.indexPath, &identifier)) {
                 case FBPSidebarRowSection:
+                    // Whatever this header is, it ends the run before it.
+                    isHeader = YES;
+                    FBPSidebarCloseRun(cuts, cutTops, pending, pendingTops,
+                                       &collapsed, &pendingHeight);
                     insideHidden = FBPSidebarIdentifierIsHidden(identifier, mask);
                     break;
                 case FBPSidebarRowBookmark:
                     // The log-out row: past the last section.
+                    FBPSidebarCloseRun(cuts, cutTops, pending, pendingTops,
+                                       &collapsed, &pendingHeight);
                     insideHidden = NO;
                     break;
                 case FBPSidebarRowOther:
@@ -548,10 +590,24 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
         }
         if (!insideHidden || height <= 0.0) continue;
 
-        [cuts addObject:[NSValue valueWithCGPoint:CGPointMake(top, height)]];
-        if (!isRule) [cutTops addObject:@(top)];
-        collapsed += height;
+        if (isHeader) {
+            [cuts addObject:[NSValue valueWithCGPoint:CGPointMake(top, height)]];
+            [cutTops addObject:@(top)];
+            collapsed += height;
+            continue;
+        }
+
+        [pending addObject:[NSValue valueWithCGPoint:CGPointMake(top, height)]];
+        if (!isRule) [pendingTops addObject:@(top)];
+        pendingHeight += height;
     }
+
+    // Still open at the end of the list: nothing ever closed it, so the rows it
+    // gathered stay where they are. Only the heading goes.
+    BOOL unclosed = pending.count > 0;
+    [pending removeAllObjects];
+    [pendingTops removeAllObjects];
+    pendingHeight = 0.0;
 
     // Each of Facebook's rows carries a hairline at its own top. Taking only the
     // row out would leave that line behind, stacked against the next one.
@@ -574,6 +630,31 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
             collapsed += height;
             break;
         }
+    }
+
+    // THE BACKSTOP
+    //
+    // Two hide switches, each covering one heading, cannot honestly account for
+    // half a menu. If the walk says they do, it misread this list — a build
+    // whose models are arranged differently, a rendering it has not seen — and
+    // the right answer is then to change nothing at all. A menu left exactly as
+    // Facebook drew it is a switch that did not work; a menu with most of it
+    // removed is the bug a user reported from an iPhone 17 Pro Max — and the
+    // tweak's own row goes with it, so the most obvious way back into the
+    // settings panel is gone too.
+    BOOL abandoned = NO;
+    if (content.height > 0.0 && collapsed > content.height * 0.5) {
+        abandoned = YES;
+        [cuts removeAllObjects];
+        collapsed = 0.0;
+    }
+
+    if (abandoned || unclosed) {
+        FBPDiag(@"sidebar", @"hide mask=%lu: %@ (cut %.0f of %.0f points, %lu rows)",
+                (unsigned long)mask,
+                abandoned ? @"abandoned, menu left alone"
+                          : @"section never closed, heading only",
+                collapsed, content.height, (unsigned long)cuts.count);
     }
 
     [cuts sortUsingComparator:^NSComparisonResult(NSValue *a, NSValue *b) {
