@@ -2,18 +2,12 @@
 // rationale and why this is separate from FBPMediaMuxer.
 //
 // The muxer's pipeline with the video input changed to decode-and-encode:
-//
-//   video:  AVAssetReaderTrackOutput(pixel buffers)  ->  AVAssetWriterInput(HEVC)
-//   audio:  AVAssetReaderTrackOutput(nil settings)   ->  AVAssetWriterInput(nil)
-//
-// Pixel-format output settings on the reader force a decode; compression
-// settings on the writer input force an encode. Audio is the muxer's
-// passthrough: Facebook's audio is already AAC, so re-encoding gains nothing.
-//
-// Structural parts (control queue, per-input queues, peeked first sample for
-// the session start time, single exit, in-flight registry for +cancelAll) are
-// the muxer's and commented there. New here: the two capability probes (AV1
-// decode, HEVC encode) and the bitrate policy, all measured. Below.
+// pixel-format output settings on the reader force a decode, compression
+// settings on the writer input force an encode, and the audio input stays the
+// muxer's passthrough because Facebook's audio is already AAC. The structural
+// parts — control queue, per-input queues, peeked first sample for the session
+// start time, single exit, in-flight registry for +cancelAll — are the muxer's
+// and commented there.
 
 #import "FBPMediaConverter.h"
 
@@ -64,45 +58,16 @@ static NSString *FBPConvertFourCC(CMFormatDescriptionRef format) {
 
 #pragma mark - Capability probe
 
-// Can this device decode AV1 at all? The picker must answer this before
-// offering an AV1 rung, with no file in hand. Three obvious checks are all
-// wrong, two of them misleadingly so.
+// Can this device decode AV1 at all? The picker must answer with no file in
+// hand, and the obvious checks are wrong: isExportable and
+// exportPresetsCompatibleWithAsset: judge the container and track types, so
+// both say yes on hardware with no AV1 decoder, and
+// VTIsHardwareDecodeSupported is false on devices that decode AV1 in software.
+// isPlayable is correct but needs a file, and -canDecodeVideoAtURL: uses it.
 //
-// Measured inside Facebook on an iPhone SE (A13, iOS 18.6.1), against a remuxed
-// AV1 file the same device's Photos had already refused:
-//
-//     isPlayable                         false   <- correct
-//     isExportable                       true    <- wrong
-//     exportPresetsCompatibleWithAsset:  all 12  <- wrong
-//     AVAssetExportSession 1920x1080     status 4, "Operation Stopped"
-//
-// isExportable and exportPresetsCompatibleWithAsset: judge the container and
-// track types, not whether anything can decode them: both say yes on hardware
-// with no AV1 decoder. (isPlayable is correct and -canDecodeVideoAtURL: uses it,
-// but it needs a file, so it cannot gate the picker.)
-//
-// VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1) is honest but too narrow:
-// false on any device without a *hardware* AV1 block, so it refuses devices that
-// decode AV1 in software.
-//
-// What works: ask VideoToolbox for a decompression session and read the refusal
-// status. A bare CMVideoFormatDescription — no av1C record, no bitstream here to
-// take one from — can never decode, so the call always fails. The reason is the
-// answer:
-//
-//     kVTCouldNotFindVideoDecoderErr (-12906)  no decoder for this codec
-//     anything else                            a decoder exists, description
-//                                              just unusable
-//
-// Measured both ways:
-//
-//     A13 / iOS 18.6.1   av01 -12906   vp09 -12906   avc1 0       hvc1 -8971
-//     Apple silicon Mac  av01 -8971    vp09 -12906   avc1 0       hvc1 -1000
-//
-// The A13, which cannot play these files, reports no AV1 decoder; the Mac, which
-// decodes them (verified against the fixture), reports one. A codec that exists
-// nowhere ('zzzz') reports -12906 on both, so the signal is not an artifact of
-// the bare description.
+// So: ask for a decompression session with a bare format description, which can
+// never decode, and read the refusal. kVTCouldNotFindVideoDecoderErr (-12906)
+// means no decoder for this codec; any other status means one exists.
 static BOOL FBPConverterVideoToolboxDecodes(CMVideoCodecType codec) {
     CMVideoFormatDescriptionRef format = NULL;
     // Dimensions are arbitrary: nothing is decoded, and a decoder's existence
@@ -150,23 +115,13 @@ BOOL FBPMediaConversionIsAvailable(void) {
 
 #pragma mark - Encoder probe
 
-// Can this device encode HEVC? Unlike the decode probe, VideoToolbox answers
-// directly: VTCopySupportedPropertyDictionaryForEncoder picks an encoder for a
-// (size, codec) pair and returns its supported properties, failing with
-// kVTCouldNotFindVideoEncoderErr when the codec has no encoder at all.
-//
-// Not any of these:
-//
-//   * a device-model or OS-version table — would have to be maintained against
-//     hardware that does not exist yet;
-//   * VTIsHardwareDecodeSupported — wrong direction, and hardware-only;
-//   * trying the AVAssetWriterInput and watching it fail — needs a track and an
-//     output file in hand, so it cannot answer for a picker row that states a
-//     size before anything is fetched.
-//
-// 1920x1080 because an encoder's existence does not depend on the dimensions;
-// nothing is encoded here. A device that answers yes then refuses the real
-// settings is still caught: -canAddInput: is checked at setup.
+// Can this device encode HEVC? VTCopySupportedPropertyDictionaryForEncoder
+// picks an encoder for a (size, codec) pair and fails with
+// kVTCouldNotFindVideoEncoderErr when the codec has no encoder at all. Not a
+// device-model table (unmaintainable), not VTIsHardwareDecodeSupported (wrong
+// direction and hardware-only), and not a trial AVAssetWriterInput (needs a
+// track and an output file, so it cannot answer for a picker row). 1920x1080 is
+// arbitrary; a device that answers yes is still re-checked by -canAddInput:.
 static BOOL FBPConverterVideoToolboxEncodesHEVC(void) {
     CFDictionaryRef supported = NULL;
     CFStringRef encoderIdentifier = NULL;
@@ -208,93 +163,19 @@ void FBPMediaConversionPrewarm(void) {
 
 #pragma mark - Bitrate policy
 
-// Output bitrate: why not a preset, and why the two codecs differ.
+// Output bitrate derives from the source representation's own bandwidth, stated
+// per rung in the manifest, and not from an AVAssetExportSession preset: a
+// preset targets a quality tier for ordinary camera footage, and turned a
+// 4.55 MB, 286 kbit/s AV1 rung into 89 MB.
 //
-// AVAssetExportSession's presets are unusable here. Measured on the 127-second
-// 1080x1920 AV1 fixture (av01.0.08M.08, 285 769 bits/s, 4.55 MB):
+// Each multiplier below was swept with VMAF against the decoded source and sits
+// where a further doubling buys under a point of quality: 3x for H.264, 2x for
+// HEVC. 2x is not inherited from 3x — it was measured separately, for HEVC.
 //
-//     AVAssetExportPreset1920x1080  ->  88.95 MB   (5.47 Mbit/s)   ~19x
-//
-// A preset targets a quality tier for ordinary camera footage, not knowing
-// Meta's ladder encodes this rung at 286 kbit/s. So the output bitrate is
-// derived from the source representation's own bandwidth, stated per rung in the
-// manifest and already carried by FBPDownloadVariant.
-//
-// H.264: 3x, measured
-// ------------------------------------------------------------------------
-// The first 20s of the fixture, re-encoded at eight bitrates with the settings
-// below, each scored with VMAF against the decoded AV1 source (100 = indistin-
-// guishable from what Facebook plays):
-//
-//     bits/s    x source   VMAF    SSIM     extrapolated size for 127s
-//      400 000     1.40    91.31   0.9941      6.9 MB
-//      600 000     2.10    92.87   0.9950      9.9 MB
-//      800 000     2.80    93.49   0.9954     12.9 MB
-//    1 100 000     3.85    94.07   0.9957     16.7 MB
-//    1 555 200     5.44    94.70   0.9963     22.2 MB
-//    2 200 000     7.70    95.25   0.9968     29.9 MB
-//    3 000 000    10.50    95.37   0.9969     33.0 MB
-//    5 469 299    19.14    95.57   0.9972     38.7 MB   <- what the preset chose
-//
-// The curve is smooth with no knee, so this is a cost decision, not a
-// threshold: past ~3x, each further doubling buys under a point of VMAF.
-//
-// HEVC: 2x, measured the same way and not inherited
-// ------------------------------------------------------------------------
-// 3x was fitted to H.264, so the sweep was re-run for HEVC — same fixture, same
-// 20s excerpt, same VMAF reference, only AVVideoCodecKey and the profile
-// changed:
-//
-//     bits/s    x source   VMAF    SSIM     extrapolated size for 127s
-//      142 885     0.50    87.39   0.9901      5.0 MB   <- encoder floors out
-//      214 327     0.75    87.47   0.9901      5.0 MB      here: it will not go
-//      285 769     1.00    88.03   0.9906      5.1 MB      below ~314 kbit/s
-//      400 077     1.40    92.57   0.9940      6.8 MB
-//      500 096     1.75    94.31   0.9952      8.3 MB
-//      571 538     2.00    94.89   0.9954      9.2 MB   <- chosen
-//      800 000     2.80    95.32   0.9960     11.3 MB
-//    1 143 076     4.00    95.60   0.9963     12.5 MB
-//    1 600 306     5.60    95.65   0.9963     12.9 MB
-//    2 200 000     7.70    95.67   0.9963     13.0 MB
-//    3 000 000    10.50    95.76   0.9965     13.8 MB
-//
-// Same rule — the point past which a further doubling buys under a point of
-// VMAF — and here that is 2x: 2.00x -> 4.00x is +0.71, while 1.40x -> 2.80x is
-// still +2.75. The curve saturates around 95.7 because above 2x the encoder
-// stops spending what it is offered.
-//
-// The same sweep on a second fixture (640x360 avc1 rung from call-003,
-// 168 561 bits/s, five times the pixel density — the opposite end of what Meta
-// serves) puts the knee at or below 2x:
-// 1.00x 92.73, 1.40x 93.81, 1.75x 94.35, 2.00x 94.52, 2.80x 94.73, 4.00x 95.10.
-// There 1.40x -> 2.80x is already +0.92. 2x is the conservative choice, so it
-// is taken.
-//
-// Both sweeps score a 20s excerpt, so the two multipliers were then run over the
-// whole 127s fixture and the finished files scored end to end — real bytes:
-//
-//                  bytes       MB      VMAF mean   harmonic
-//     H.264 3.00x  13 766 478  14.36     92.54      92.29
-//     HEVC  2.00x   9 382 281   9.98     92.94      92.66
-//
-// Marginally better for 32% fewer bytes of video (30% of the finished file,
-// audio included and passed through either way). Both numbers are lower than the
-// excerpt's because the back of the clip is harder than its first 20s; they move
-// together, so the two multipliers are the same quality tier in two codecs.
-//
-// Per-pixel bounds
-// ------------------------------------------------------------------------
-// Floor and ceiling are in bits per pixel per frame, not absolute, since a 240p
-// and a 1080p rung share nothing in absolute terms. Both are pathology guards
-// set to bind on nothing Meta has been observed to serve: across 29 real AV1
-// representations in the six captured manifests the source density runs 0.0042
-// to 0.0944 bpp/frame. 3x runs 0.0127…0.2833 and 2x runs 0.0084…0.1888, so each
-// codec gets its own pair just outside its own range. They cannot be shared: the
-// H.264 floor of 0.012 would clamp the HEVC target upward on the lowest rungs,
-// undoing the measurement above and making every promised size wrong.
-//
-// They stop a future manifest with an absurd rung producing an absurd file, not
-// second-guess the measurement.
+// Floor and ceiling are in bits per pixel per frame so they scale across the
+// ladder, and each codec gets its own pair. They cannot be shared: the H.264
+// floor would clamp the HEVC target upward on the lowest rungs and make every
+// promised size wrong. They are pathology guards, not part of the measurement.
 typedef struct {
     double multiplier;
     double floorBPP;

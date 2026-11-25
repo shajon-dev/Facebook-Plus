@@ -1,22 +1,20 @@
 // Custom app font.
 //
-// Facebook renders its text through UIKit, so every visible label ultimately
-// asks UIFont for a face — either a system font (systemFontOfSize:, …) or a
-// named one (fontWithName:/fontWithDescriptor:, e.g. the bundled "Optimistic"
-// family). Those factory methods are the single chokepoint, so they are hooked
-// and, when the user has picked a custom font, re-pointed at it at the same size
-// and nearest weight.
+// Every visible label asks UIFont for a face, either a system font or a named
+// one (the bundled "Optimistic" family), so those factory methods are the
+// single chokepoint: they are hooked and re-pointed at the user's font at the
+// same size and nearest weight.
 //
 // Only *text* is swapped. Facebook draws its tab-bar and button glyphs from a
-// private icon font ("Facebook-Icons"); replacing that would turn every icon
-// into garbage, so icon, emoji and symbol faces are deliberately left untouched —
-// the hooks replace a face only when its name is a known Facebook text family or
-// a system font. Unknown third-party faces are passed through unchanged too.
+// private "Facebook-Icons" font, and replacing that turns every icon into
+// garbage, so a face is replaced only when its name is a known Facebook text
+// family or a system font; icon, emoji, symbol and unknown third-party faces
+// pass through.
 //
-// The tweak's own UI (FBPFont) and the replacement-building below both create
-// UIFont objects; a thread-local scope latch (FBPFontScopeActive) makes those
-// requests fall through to the original so the tweak UI keeps its own look and
-// the hooks never recurse.
+// The tweak's own UI and the replacement-building below both create UIFont
+// objects, so a thread-local latch (FBPFontScopeActive) makes those fall
+// through to the original — the tweak UI keeps its look and the hooks never
+// recurse.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -28,12 +26,10 @@
 
 #pragma mark - Registered custom fonts
 
-// Family names of every available font, in load order. Built at launch and
-// rebuilt when the user imports or deletes one; read by the Fonts picker.
+// Every available family, in load order; rebuilt on import or delete.
 static NSArray<NSString *> *gFamilies = nil;
 
-// Which families came from the user-imported folder (so only those are
-// deletable), and the file(s) backing each — a family can span several files.
+// The user-imported families (the only deletable ones) and their files.
 static NSMutableArray<NSString *> *gUserFamilies = nil;
 static NSMutableDictionary<NSString *, NSMutableArray<NSString *> *> *gUserFiles = nil;
 
@@ -49,9 +45,8 @@ extern "C" NSString *FBPUserFontsDirectoryPath(void) {
 }
 
 /// Registers every .ttf/.otf/.ttc under a directory with Core Text and appends
-/// their family names (de-duplicated). Re-registering an already-registered file
-/// is harmless — Core Text reports it and the result is ignored. When
-/// @c isUser is set, the family and its file are also recorded as deletable.
+/// their family names, de-duplicated. Re-registering is harmless. With
+/// @c isUser the family and its file are also recorded as deletable.
 static void FBPRegisterFontsIn(NSString *path, BOOL isUser,
                               NSMutableArray<NSString *> *families) {
     NSArray<NSString *> *names =
@@ -66,8 +61,7 @@ static void FBPRegisterFontsIn(NSString *path, BOOL isUser,
         CTFontManagerRegisterFontsForURL((__bridge CFURLRef)url,
                                          kCTFontManagerScopeProcess, NULL);
 
-        // Read the family name from the file, not the filename, so e.g.
-        // "Stay With Me.otf" lists under its real family name.
+        // From the file, not the filename, so it lists under its real family.
         NSArray *descriptors = (__bridge_transfer NSArray *)
             CTFontManagerCreateFontDescriptorsFromURL((__bridge CFURLRef)url);
         for (id d in descriptors) {
@@ -107,8 +101,8 @@ extern "C" NSArray<NSString *> *FBPUserFontFamilies(void) {
     return gUserFamilies ?: @[];
 }
 
-/// Removes an imported family: unregisters and deletes every file backing it,
-/// then rebuilds the registry. Bundled families are ignored (nothing matches).
+/// Unregisters and deletes every file backing an imported family, then
+/// rebuilds. Bundled families match nothing and are ignored.
 extern "C" void FBPDeleteUserFont(NSString *family) {
     NSArray<NSString *> *paths = gUserFiles[family];
     for (NSString *path in paths) {
@@ -140,17 +134,12 @@ static CGFloat FBPFontScale(void) {
     return scale;
 }
 
-/// Sizes we have already emitted as scaled. The comment composer reads back its
-/// text view's current (already-scaled) point size and asks us for a font at
-/// that size on every keystroke; without remembering what we scaled, the scale
-/// would compound — size -> size*S -> size*S^2 -> … — growing the text with each
-/// character typed (and continuing from the inflated value after a backspace).
-/// Keyed to 0.1pt so a float round-trip still matches, bounded so it cannot grow
-/// without limit, and reset when the user changes the scale. Only consulted when
-/// a scale is actually in effect (S != 1.0), so the default path is unchanged.
-///
-/// Edge case (cosmetic, never growth or a crash): a label whose design size
-/// happens to equal a size we previously emitted as scaled renders unscaled.
+/// Sizes already emitted as scaled. The comment composer reads back its text
+/// view's already-scaled point size and asks for a font at that size on every
+/// keystroke, so without this the scale compounds and the text grows per
+/// character. Keyed to 0.1pt so a float round-trip matches, bounded, reset when
+/// the scale changes, and consulted only while a scale is in effect. A label
+/// whose design size equals one already emitted renders unscaled: cosmetic.
 static NSMutableSet<NSNumber *> *gFBPScaledSizes;
 static CGFloat gFBPScaledForScale = 1.0;
 static dispatch_once_t gFBPScaledOnce;
@@ -205,9 +194,8 @@ static UIFontWeight FBPWeightFromName(NSString *lower) {
     return UIFontWeightRegular;
 }
 
-/// YES when a face named @c name is Facebook body/UI text that may be swapped.
-/// Icon, emoji and symbol faces return NO so they are never touched; so do
-/// unknown third-party faces, which are left exactly as the app asked for them.
+/// YES when @c name is Facebook body/UI text that may be swapped. Icon, emoji,
+/// symbol and unknown third-party faces return NO.
 static BOOL FBPShouldReplaceName(NSString *name) {
     if (name.length == 0) return NO;
     NSString *lower = name.lowercaseString;

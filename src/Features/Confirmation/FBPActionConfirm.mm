@@ -1,29 +1,21 @@
-// Commit-level confirmations — an opt-in guard for publishing a post and posting
+// Commit-level confirmations: an opt-in guard for publishing a post and posting
 // a comment.
 //
-// Likes, shares, follows/joins and friend-request buttons are ComponentKit
-// controls and are guarded in the ComponentKit forwarder hook. Publishing a post
-// and posting a comment are not ComponentKit buttons: the app commits each
-// through its own concrete method, and there are several of them (one composer
-// has two post entry points, renamed between app versions), so guarding any
-// single class would cover one entry point and silently miss the rest.
+// Likes, shares, follows/joins and friend requests are ComponentKit controls
+// and are guarded in the forwarder hook instead. Post and comment are not
+// ComponentKit buttons: each is committed by its own concrete method, and there
+// are several (one composer has two post entry points, renamed between app
+// versions), so guarding a single class covers one and misses the rest.
 //
-// The table below lists the one method that actually commits each action, and
-// each is swizzled with method_setImplementation onto a shared replacement. The
-// replacement looks up which action "kind" the method belongs to and, only when
-// the user has switched that kind on, raises a prompt — running the real method
-// just once, on confirm.
+// The table below is swizzled with method_setImplementation onto a shared
+// replacement, which looks up the action "kind" and prompts only when the user
+// switched that kind on. A static %hook on a missing class fails silently, so
+// each entry installs only when its class declares the selector with the
+// expected argument shape and a void return.
 //
-// A static %hook on a class missing in a given build fails silently; an entry
-// here is installed only when its class exists and genuinely declares the
-// selector with the expected argument shape and a void return, so a build that
-// renames or drops one loses just that single entry while the rest keep working.
-//
-// A composer can route a single tap through more than one of its post methods,
-// which is what raised the prompt repeatedly. The shared "a prompt is on screen"
-// latch (FBPConfirmPromptVisible) collapses those into one: the first method
-// prompts, the siblings fired by the same tap are dropped, and the confirmed
-// replay commits the post exactly once.
+// A single tap can route through more than one of a composer's post methods, so
+// the shared FBPConfirmPromptVisible latch collapses them: the first prompts,
+// the siblings are dropped, and the confirmed replay commits once.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -49,9 +41,8 @@ static NSString *FBPConfirmPrefKey(FBPConfirmKind kind) {
     return nil;
 }
 
-// Each prompt pulls three pieces of text from the string table by key. Universal
-// words (e.g. "Confirm") resolve to a shared common.* key rather than a
-// per-kind duplicate, so the same string is defined once.
+// Universal words resolve to a shared common.* key rather than a per-kind
+// duplicate, so the same string is defined once.
 
 static NSString *FBPConfirmTitleKey(FBPConfirmKind kind) {
     switch (kind) {
@@ -158,9 +149,8 @@ static void FBPPresentConfirm(FBPConfirmKind kind, dispatch_block_t onConfirm) {
         }];
         [alert addAction:go];
         alert.preferredAction = go;
-        // System blue, not the settings tint (#B5DAFC): that pale blue is tuned
-        // for the black settings panel and is almost invisible on the system
-        // alert's light-gray background. System blue stays legible light and dark.
+        // System blue, not the settings tint: that pale blue is tuned for the
+        // black settings panel and vanishes on a light alert background.
         alert.view.tintColor = UIColor.systemBlueColor;
         FBPSetConfirmPromptVisible(YES);
         [host presentViewController:alert animated:YES completion:nil];
@@ -171,9 +161,8 @@ static void FBPPresentConfirm(FBPConfirmKind kind, dispatch_block_t onConfirm) {
 #pragma mark - Replacements
 
 // self is __unsafe_unretained: an IMP receiver is not owned by the callee, so
-// letting ARC retain/release it would over-release. The original is replayed
-// through a strong capture that keeps the receiver (and argument) alive while the
-// prompt is on screen.
+// letting ARC retain/release it would over-release. The replay uses a strong
+// capture to keep the receiver and argument alive while the prompt is up.
 
 static void FBPReplace2(__unsafe_unretained id self, SEL _cmd) {
     FBPConfirmKind kind = FBPConfirmKindPost;
@@ -184,9 +173,8 @@ static void FBPReplace2(__unsafe_unretained id self, SEL _cmd) {
     // Replay, or the kind is switched off — perform the real method untouched.
     if (gPassthrough || !FBPEnabled(FBPConfirmPrefKey(kind))) { call(self, _cmd); return; }
 
-    // A prompt is already on screen (a sibling commit method from the same tap,
-    // or the ComponentKit path). Drop this one so prompts never stack — the
-    // action still fires through the prompt that is up.
+    // A sibling commit method from the same tap, or the ComponentKit path.
+    // Dropping it does not lose the action: the prompt that is up still fires.
     if (FBPConfirmPromptVisible()) return;
 
     id keepSelf = self;

@@ -1,27 +1,11 @@
-// Call blocker: stop the sideloaded Facebook app from ringing for Messenger
-// calls, so an incoming call reaches only the real Messenger app.
+// Stop the sideloaded Facebook app ringing for Messenger calls: with both
+// installed each registers for VoIP, both ring, and neither answers cleanly.
 //
-// When Facebook and Messenger are both installed, each registers for VoIP and
-// both ring at once, and the call cannot be answered cleanly. Calls are silenced
-// in Facebook ONLY, at the two points that are specific to calling and nowhere
-// near ordinary notifications:
-//
-//   1. PushKit — strip PKPushTypeVoIP from -setDesiredPushTypes:. Facebook never
-//      registers for VoIP pushes, so Apple stops delivering call pushes to it
-//      and routes them to Messenger instead. This is the real fix, at the source.
-//
-//   2. CallKit — no-op -[CXProvider reportNewIncomingCallWithUUID:update:
-//      completion:]. A belt-and-suspenders guard: if a VoIP push still slips
-//      through (e.g. Facebook registered before this hook installed), no incoming
-//      call UI is presented. The completion is still invoked so the caller does
-//      not stall.
-//
-// This touches PushKit and CallKit only. It never touches UNUserNotificationCenter,
-// -application:didReceiveRemoteNotification:…, or APNs registration, so every
-// non-call notification (messages, reactions, reminders, …) keeps working.
-//
-// Always on — there is no preference gate. PKPushRegistry and CXProvider are
-// system classes that always exist, so the installer latches once on first run.
+// Strip PKPushTypeVoIP from -setDesiredPushTypes: so Apple routes call pushes
+// to Messenger (the real fix), and no-op -[CXProvider
+// reportNewIncomingCallWithUUID:…] for a push that slipped through before the
+// hook installed. Nothing in UNUserNotificationCenter or APNs registration is
+// touched, so non-call notifications keep working. Always on.
 
 #import "FBPlus.h"
 #import "FBPTrace.h"
@@ -52,8 +36,7 @@
                                update:(CXCallUpdate *)update
                            completion:(void (^)(NSError *error))completion {
     FBPTraceFire("calls.CXProvider.reportNewIncomingCall");
-    // Swallow the call: do not present any call UI. Still invoke the completion
-    // (with no error) so Facebook's call-setup code does not hang waiting on it.
+    // Still invoke the completion so Facebook's call setup does not hang on it.
     if (completion) completion(nil);
 }
 

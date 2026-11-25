@@ -1,55 +1,22 @@
 // OLED Dark Mode: deepen Facebook's dark theme to true-black.
 //
-// An enhancement of dark mode, not a light→dark forcer. OLED follows the iOS
-// system appearance: while the toggle is on it engages when iOS is in Dark Mode
-// and disengages in Light Mode. In light mode it is inert and leaves every
-// surface alone. The gate is FBPOLEDActiveFor(view): the toggle AND the
-// appearance that view is actually drawn with. The per-colour darkness tests
-// still run, so even in Dark Mode only genuinely dark surfaces are blackened.
+// An enhancement of dark mode, not a light to dark forcer. OLED engages while
+// the toggle is on and iOS is in Dark Mode, and disengages in Light. The
+// per-colour darkness test still runs, so only Facebook's own dark surface
+// greys are blackened.
 //
-// "The iOS system appearance" is a narrower thing than it sounds, and getting it
-// from the wrong place is what kept issue #10 open. It is not any window's
-// appearance and not the screen's: it is the window *scene's*, the one trait
-// environment Facebook's own Dark Mode setting cannot override. See
-// FBPSystemStyleFromScenes for the measurements.
+// Three surfaces need more than a -setBackgroundColor: hook, because Facebook
+// never sets a colour on the view itself:
 //
-// Reverting cleanly is as important as blackening. Facebook does not repaint
-// several of the surfaces OLED touches — a view's own layer colour, a
-// sublayer's gradient/shape/plain colour, and above all the top header's
-// navigation-bar appearance (which replaces appearance objects outright and
-// persists until something sets them again). So each surface's original value
-// is stashed in an associated object the first time it is darkened and put back
-// the moment OLED disengages — turning the toggle off, or switching iOS to Light.
-// Facebook's own colours are dynamic and are saved unresolved, so a restored
-// colour tracks the live appearance by itself. Without this the header (and any
-// still-mounted card) stayed black after switching to Light, which read as "OLED
-// won't turn off". On a live Light↔Dark switch FBPTrackWindowStyle re-runs the
-// layout logic over every mounted view itself rather than waiting for each one to
-// lay out again, and a relayout nudge does the same when the toggle changes.
+//   * FBMovableNavigationBarView paints its grey onto child views, a hosted
+//     UINavigationBar's appearance objects, a blur and gradient sublayers.
+//   * ComponentKit cards paint onto a CAGradientLayer, CAShapeLayer or plain
+//     CALayer added as a sublayer.
+//   * Dynamic colours must be resolved against a dark trait collection before
+//     being judged, or the answer depends on when the hook happened to run.
 //
-// The two surfaces that used to stay grey — the top app header and the profile's
-// "Add to story / Edit profile" panel — are painted by mechanisms a plain
-// -setBackgroundColor: hook never sees. Disassembly of FBSharedFramework showed
-// why:
-//
-//   * FBMovableNavigationBarView (the app header) sets nothing on its own view.
-//     Its grey lives on child views (_fakeNavigationBar, _replacementNavigationBar
-//     which is a real UINavigationBar drawn through UINavigationBarAppearance /
-//     a UIVisualEffectView blur), a fade CAGradientLayer (_extraGradientHeight),
-//     and a raw CALayer (FBNavigationBar._statusBarBackground). None of these is
-//     the view's own -backgroundColor, so a plain -backgroundColor hook caught it
-//     only intermittently, which produced the flickering header.
-//
-//   * ComponentKit cards (the profile panel) paint their rounded background onto
-//     a CAGradientLayer / CAShapeLayer / plain CALayer added as a *sublayer*, not
-//     onto the view's -backgroundColor, so -setBackgroundColor: never fires.
-//
-// Beyond the -backgroundColor path: (1) resolve dynamic colours against a
-// forced-dark trait collection before judging darkness, removing the timing
-// dependence; (2) sweep each view's own sublayers (gradient/shape/plain) and
-// blacken the dark ones; (3) hook FBMovableNavigationBarView directly to blacken
-// its header sub-tree (blur, UINavigationBar, gradients) while leaving genuinely
-// coloured accents and photos alone.
+// Each surface's original value is stashed in an associated object before it is
+// darkened and put back when OLED disengages.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -58,13 +25,12 @@
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
 
-/// Cached toggle state, refreshed on the settings-changed notification so the hot
-/// path never touches NSUserDefaults.
+/// Cached, refreshed on the settings-changed notification: the hot path must
+/// not touch NSUserDefaults.
 static BOOL gOLEDEnabled = NO;
 
-/// Whether the faint post separators stay visible in OLED mode. On (default) the
-/// hairlines are kept so cards stay visually separated on black; off blacks them
-/// out too, for a seamless all-black feed. Only meaningful while OLED is active.
+/// Whether the faint post separators stay visible: on keeps cards separated on
+/// black, off blacks the hairlines out too.
 static BOOL gOLEDDividers = YES;
 
 static void FBPRefreshOLED(void) {
@@ -72,10 +38,8 @@ static void FBPRefreshOLED(void) {
     gOLEDDividers = FBPEnabled(FBPKeyOLEDDividers);
 }
 
-/// One of Facebook's own windows — never one of ours — preferring the key one.
-///
-/// Ours follow iOS; Facebook's carry whatever theme Facebook has chosen, which
-/// is the appearance OLED has to agree with.
+/// One of Facebook's own windows, never ours, preferring the key one: ours
+/// follow iOS, while Facebook's carry the theme OLED has to agree with.
 static UIWindow *FBPAppKeyWindow(void) {
     UIWindow *fallback = nil;
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
@@ -89,43 +53,15 @@ static UIWindow *FBPAppKeyWindow(void) {
     return fallback;
 }
 
-/// The iOS system appearance, read from a window *scene*.
-///
-/// This is the whole of issue #10. A window's traitCollection.userInterfaceStyle
-/// is the *effective* style, which is to say the style after any
-/// overrideUserInterfaceStyle the app has set on it. Facebook has its own in-app
-/// Dark Mode setting (System / On / Off), and for On or Off it pins
-/// overrideUserInterfaceStyle on its windows — so such a window answers with
-/// Facebook's forced theme however iOS is set, and never changes its answer when
-/// iOS does. Reading the style from a window therefore cached Facebook's theme as
-/// if it were the system's: with Facebook on "Dark: On" the cache sat on Dark
-/// forever, FBPOLEDActive kept saying YES after iOS went to Light, and the app
-/// stayed black. Measured on the SE (iOS 18.6.1) with the window pinned the way
-/// Facebook pins it: system Light, scene=light, window override=dark,
-/// window effective=dark.
-///
-/// Worse than merely wrong, it flip-flopped. The app has several windows at once
-/// and only some carry an override — the text-effects and keyboard windows, the
-/// style-transition snapshot window and our own toast window follow the system —
-/// so whichever window laid out last decided the answer. A user's log shows the
-/// two answers arriving within the same second, which is the reported "some areas
-/// light, others pure black".
-///
-/// A UIWindowScene is the one trait environment in the process the app cannot
-/// override: overrideUserInterfaceStyle lives on UIView and UIViewController, not
-/// on a scene, so a scene's trait collection is the unmodified system appearance.
-/// Verified on device across a live Control-Centre flip in both directions while a
-/// window was pinned Dark: the scene reported light then dark then light, tracking
-/// iOS, while the pinned window stayed dark throughout.
-///
-/// Also NOT UIScreen.mainScreen.traitCollection: on an iPhone 17 Pro Max that
-/// reports a stale "dark" after the system switches to Light (a captured log has
-/// `screen=dark` on every line, including lines where everything else says light).
+/// The iOS system appearance, from a window scene. Not from a window, whose
+/// traitCollection reports the effective style after any
+/// overrideUserInterfaceStyle — which Facebook pins when its own Dark Mode
+/// setting is On or Off — and not from UIScreen, which has been seen reporting
+/// a stale Dark. A UIWindowScene carries no override.
 static UIUserInterfaceStyle FBPSystemStyleFromScenes(void) {
     if (@available(iOS 13.0, *)) {
         for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
             if (![scene isKindOfClass:UIWindowScene.class]) continue;
-            // UITraitEnvironment is declared on UIWindowScene, not on UIScene.
             UIWindowScene *windowScene = (UIWindowScene *)scene;
             UIUserInterfaceStyle style =
                 windowScene.traitCollection.userInterfaceStyle;
@@ -135,8 +71,7 @@ static UIUserInterfaceStyle FBPSystemStyleFromScenes(void) {
     return UIUserInterfaceStyleUnspecified;
 }
 
-/// The live system appearance, cached so the hot path (every
-/// setBackgroundColor:/layoutSubviews) never walks the scene list.
+/// Cached so the hot path never walks the scene list.
 static UIUserInterfaceStyle gFBPSystemStyle = UIUserInterfaceStyleUnspecified;
 
 static void FBPUpdateSystemStyle(UIUserInterfaceStyle style) {
@@ -145,51 +80,24 @@ static void FBPUpdateSystemStyle(UIUserInterfaceStyle style) {
     }
 }
 
-/// YES when iOS itself is in Dark Mode, whatever theme Facebook has forced on its
-/// own windows. Reads the cache, falling back to a live scene until the first
-/// layout pass seeds it.
+/// YES when iOS itself is in Dark Mode, whatever Facebook forced on its own
+/// windows. Falls back to a live scene until the first layout pass seeds it.
 static BOOL FBPSystemIsDark(void) {
     if (@available(iOS 13.0, *)) {
         if (gFBPSystemStyle != UIUserInterfaceStyleUnspecified) {
             return gFBPSystemStyle == UIUserInterfaceStyleDark;
         }
-        // Nothing has laid out yet. The scene is the best guess available, and
-        // it is right whenever Facebook has not pinned a theme of its own.
+        // Nothing has laid out yet; the scene is right unless Facebook pinned.
         return FBPSystemStyleFromScenes() == UIUserInterfaceStyleDark;
     }
     return NO;
 }
 
-/// OLED follows the iOS system appearance: engaged only when the toggle is on AND
-/// iOS is in Dark Mode, disengaged the moment iOS switches to Light. Keying on the
-/// system appearance (not one view's trait) is what makes "iOS Light → OLED off,
-/// iOS Dark → OLED on" hold. The downstream FBPColorIsDark checks still mean only
-/// genuinely dark surfaces are blackened.
-/// Is OLED engaged right now?
-///
-/// ONE ANSWER FOR THE WHOLE APP, NOT ONE PER VIEW.
-///
-/// This took the view's own trait collection for a while, on the theory that
-/// the appearance a view is drawn with is the most honest thing to ask. The
-/// device disproved it: a minute after a switch to Light the sweep still read
-/// `listed=39 left=39`, meaning all thirty-nine painted views were still
-/// answering Dark while the header and tab bar around them were plainly Light.
-/// Views detached from a window keep their last traits, and Facebook's
-/// hierarchy is not of one mind during a switch. Asking each view therefore
-/// produces exactly the half-light, half-black screen this feature keeps being
-/// reported for.
-///
-/// Both tweaks that have this feature working avoid the question entirely.
-/// iQFace gates every hook on a single cached byte. Nexus gates on the colour
-/// Facebook is handing it, and consults a trait collection only once, as a
-/// tie-break, before latching. Neither asks a view what appearance it is in.
-///
-/// So this is one decision for the process: the toggle, and whether iOS is in
-/// Dark. A single answer cannot disagree with itself, which is what makes the
-/// mixed state impossible rather than merely unlikely. The per-view judgement
-/// that remains is a different question and still worth asking — whether *this*
-/// surface is drawn light, so a light-locked card inside a dark app keeps its
-/// own colour — and that lives in FBPApplyView, not here.
+/// Is OLED engaged right now? One answer for the whole process, keyed on the
+/// system appearance rather than a view's trait: views detached from a window
+/// keep their last traits and the hierarchy is not of one mind during a switch,
+/// so asking per view gives a screen part light and part black. Whether a
+/// particular surface is drawn light is a separate question, in FBPApplyView.
 static BOOL FBPOLEDActiveFor(__unused UIView *view) {
     return gOLEDEnabled && FBPSystemIsDark();
 }
@@ -198,13 +106,11 @@ static BOOL FBPOLEDActive(void) {
     return gOLEDEnabled && FBPSystemIsDark();
 }
 
-/// Defined below, beside the relayout it drives: a window's layout pass is
-/// where a Light<->Dark switch is noticed.
+/// Defined below, beside the relayout it drives.
 static void FBPTrackWindowStyle(UIWindow *window);
 
 #pragma mark - Diagnostics
 
-/// Human name for an interface style, for the diagnostic log.
 static NSString *FBPStyleName(UIUserInterfaceStyle style) {
     if (@available(iOS 13.0, *)) {
         switch (style) {
@@ -216,15 +122,9 @@ static NSString *FBPStyleName(UIUserInterfaceStyle style) {
     return @"unspec";
 }
 
-/// One diagnostic line describing exactly what OLED sees at a given moment — the
-/// toggle, the *scene* appearance (our detection source), the screen's and the
-/// current environment's answers, the key window's own effective appearance, any
-/// forced window override, and the two derived gates.
-///
-/// `scene` against `keyWin`/`override` is the pair that matters: when they
-/// disagree, Facebook is forcing a theme, and only `scene` is iOS. A log where
-/// `scene` and `systemDark` ever contradict each other would mean the cache is
-/// being seeded from somewhere it should not be.
+/// One diagnostic line of what OLED sees. `scene` against `keyWin`/`override`
+/// is the pair that matters: when they disagree Facebook is forcing a theme,
+/// and only `scene` is iOS.
 static void FBPOLEDLogState(const char *when) {
     if (@available(iOS 13.0, *)) {
         UIUserInterfaceStyle scene = FBPSystemStyleFromScenes();
@@ -254,10 +154,9 @@ static void FBPOLEDLogState(const char *when) {
 
 #pragma mark - Colour judgement
 
-/// A dark trait collection every dynamic colour is resolved against. Facebook's
-/// backgrounds are dynamic UIColors; resolving them explicitly (instead of relying
-/// on whatever the current trait environment happens to be) is what makes the
-/// header deterministic rather than intermittently dark.
+/// Facebook's backgrounds are dynamic UIColors, and resolving them explicitly
+/// rather than against the ambient trait environment is what makes the header
+/// deterministic rather than intermittently dark.
 static UITraitCollection *FBPDarkTraits(void) {
     static UITraitCollection *traits = nil;
     static dispatch_once_t once;
@@ -285,18 +184,12 @@ static UIColor *FBPResolve(UIColor *color) {
     return color;
 }
 
-/// YES only for one of Facebook's own dark *background* greys — the surfaces that
-/// should go true-black. Facebook's dark palette (FDSColor / FBColorPaletteConfig
-/// -greyColorWithShade:) paints every surface from a small ladder of near-neutral
-/// greys that tops out around #3A3B3C (base #18191A, card #242526, elevated
-/// #3A3B3C). Matches exactly that band — near-neutral and no lighter than
-/// ~#3A3B3C — rather than a loose "is it darkish" luma test.
-///
-/// Deliberately tight: the old test blackened anything up to a mid-grey
-/// (luma < 0.48), which also caught dividers, pressed/hover states, elevated
-/// chips and placeholders and painted them as solid black rectangles — the
-/// "square box" artefacts. Lighter greys, tinted surfaces, accents and photos are
-/// now left untouched, so only real backgrounds deepen to black.
+/// YES only for one of Facebook's own dark *background* greys. Its dark palette
+/// paints every surface from a small ladder of near-neutral greys topping out
+/// around #3A3B3C (base #18191A, card #242526), so the test matches exactly
+/// that band. Deliberately tight: a loose "is it darkish" luma test also caught
+/// dividers, pressed states, chips and placeholders and painted them as solid
+/// black rectangles.
 static const CGFloat kFBPBgMaxLuma    = 0.26;   // just above #3A3B3C (luma ~0.231)
 static const CGFloat kFBPBgMaxChroma  = 0.05;   // near-neutral only (FB greys are ~neutral)
 
@@ -317,8 +210,7 @@ static BOOL FBPColorIsDark(UIColor *color) {
     return NO;
 }
 
-/// Darkness test for a CGColorRef (layer colours are always CGColor and already
-/// concrete, so no dynamic resolution is needed).
+/// Layer colours are always CGColor and already concrete.
 static BOOL FBPCGColorIsDark(CGColorRef cg) {
     if (!cg) return NO;
     return FBPColorIsDark([UIColor colorWithCGColor:cg]);
@@ -329,15 +221,11 @@ static BOOL FBPOLEDSkip(UIView *view) {
     return [NSStringFromClass([view class]) hasPrefix:@"FBP"];
 }
 
-/// YES when this view is actually being shown in LIGHT appearance, whatever the
-/// app window is doing. Facebook renders some cards with their own
-/// overrideUserInterfaceStyle = Light (a link/preview card, a light-locked unit):
-/// a light background with dark text. OLED resolves every background against a
-/// forced-dark trait collection, so such a card's *dark-mode* colour is judged
-/// dark and the real (light) background gets blackened — leaving the dark text
-/// stranded on black, which is the "some posts turn black on re-entry" report.
-/// OLED is meant to be inert in light appearance, so a view shown light is left
-/// entirely alone (keeping its light background and its readable dark text).
+/// YES when this view is shown in LIGHT appearance whatever the window is
+/// doing. Facebook renders some cards with their own overrideUserInterfaceStyle
+/// = Light, and because OLED resolves backgrounds against a forced-dark trait
+/// collection such a card's dark-mode colour reads as dark — blackening a light
+/// background and stranding its dark text. Those views are left alone.
 static BOOL FBPViewIsLight(UIView *view) {
     if (@available(iOS 13.0, *)) {
         return view.traitCollection.userInterfaceStyle == UIUserInterfaceStyleLight;
@@ -347,11 +235,8 @@ static BOOL FBPViewIsLight(UIView *view) {
 
 #pragma mark - Black that keeps alpha
 
-/// Black that keeps the source colour's alpha. A translucent scrim — an alert's
-/// dimming view, a bottom-sheet backdrop — must stay translucent; forcing it to
-/// opaque black would turn it into a solid curtain, hiding everything behind a
-/// popup in OLED mode. Opaque surfaces (alpha 1) still become solid black, so the
-/// rest of the app is unchanged.
+/// Black that keeps the source alpha: a translucent scrim must stay
+/// translucent, or it becomes a solid curtain behind every popup.
 static UIColor *FBPBlackKeepingAlpha(UIColor *color) {
     CGFloat alpha = color ? CGColorGetAlpha(color.CGColor) : 1.0;
     return [UIColor colorWithWhite:0.0 alpha:alpha];
@@ -361,28 +246,12 @@ static CGColorRef FBPBlackCGKeepingAlpha(CGColorRef cg) {
     return [UIColor colorWithWhite:0.0 alpha:alpha].CGColor;
 }
 
-/// Black while the appearance is Dark, and @c original again the moment it is
-/// not.
+/// Black while the appearance is Dark, @c original the moment it is not.
 ///
-/// This is the difference between a surface that comes back and one that does
-/// not. Facebook hands its views a dynamic colour, which resolves itself per
-/// appearance; writing a flat black over it threw that away, and when iOS went
-/// back to Light the view had nothing left to resolve. Facebook does not repaint
-/// a container it believes is unchanged, so the black stayed, and on a device
-/// where UIKit no longer calls -traitCollectionDidChange: nothing else put it
-/// right either. That is issue #10: part of the app light, part still black.
-///
-/// A dynamic colour needs no bookkeeping, no restore pass and no notification.
-/// It is the same object before and after the switch; only its answer changes.
-/// @c original is captured as given, so a colour Facebook had already resolved
-/// to a flat value still comes back as that value rather than as black.
-///
-/// The gate here is the toggle and the traits handed to the provider — nothing
-/// cached. The traits are the view's own, resolved by UIKit at the moment it
-/// draws, so this colour answers black exactly while that view is being drawn
-/// dark and answers the app's own colour the instant it is not. That is what
-/// makes a switch need no detecting: the colour has already changed its mind
-/// before anything of ours has run.
+/// A dynamic colour needs no bookkeeping, no restore pass and no notification:
+/// it is the same object either side of a switch and only its answer changes.
+/// A flat black throws that away, and a container Facebook believes unchanged
+/// is never repainted.
 static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
     if (@available(iOS 13.0, *)) {
         return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
@@ -393,8 +262,7 @@ static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
             @try {
                 resolved = [original resolvedColorWithTraitCollection:traits] ?: original;
             } @catch (__unused NSException *e) {}
-            // Only a genuinely dark surface is blackened, the same test the
-            // caller made: a light-locked card keeps its own colour.
+            // The same test the caller made: a light-locked card keeps its own.
             return FBPColorIsDark(resolved) ? FBPBlackKeepingAlpha(resolved) : resolved;
         }];
     }
@@ -403,10 +271,9 @@ static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
 
 #pragma mark - Save / restore
 
-// OLED paints surfaces Facebook will not repaint on its own, so each is stashed
-// before it is darkened and put back when OLED disengages. A view is flagged as
-// "touched" so a relayout while OLED is off can skip the vast majority of views
-// that were never modified.
+// Each surface Facebook will not repaint itself is stashed before darkening and
+// put back when OLED disengages. A "touched" flag lets a relayout while OLED is
+// off skip the views that were never modified.
 static const void *kFBPTouched     = &kFBPTouched;     // UIView: OLED modified it
 static const void *kFBPSavedViewBG = &kFBPSavedViewBG; // UIView: original backgroundColor
 static const void *kFBPSavedLayerBG = &kFBPSavedLayerBG;// CALayer: original backgroundColor
@@ -414,26 +281,10 @@ static const void *kFBPSavedColors = &kFBPSavedColors; // CAGradientLayer: origi
 static const void *kFBPSavedFill   = &kFBPSavedFill;   // CAShapeLayer: original fillColor
 static const void *kFBPSavedNav    = &kFBPSavedNav;    // UINavigationBar: original appearance
 
-/// Every view OLED has painted, held weakly.
-///
-/// THE REVERT DOES NOT SEARCH FOR THEM ANY MORE.
-///
-/// It used to: a switch to Light walked down from each window and called
-/// FBPApplyView on everything it met, and a view it did not meet kept its black.
-/// Views go missing from that walk for reasons the walk cannot do anything about
-/// — a card that is not mounted at the moment of the flip, a cell recycled
-/// afterwards, anything the app rebuilds while the appearance is changing — and a
-/// view painted through its *layer* cannot recover on its own either, because a
-/// CGColor is flat and has no idea the appearance moved. Those are the surfaces
-/// that stayed #000000 in Light while the header and tab bar came back.
-///
-/// So each painted view is put on this list as it is painted, and the revert
-/// walks the list instead. Nothing has to be found, nothing has to be on screen,
-/// and the depth of the hierarchy stops mattering. The table holds its views
-/// weakly, so a view that goes away takes its entry with it.
-///
-/// It is small by construction: only views OLED actually darkened are on it, and
-/// each one comes off again when it is restored.
+/// Every view OLED has painted, weakly. A revert driven by a tree walk reaches
+/// only what is still mounted, and a view painted through its layer cannot
+/// recover on its own, because a CGColor carries no appearance. Listing them
+/// means the revert has nothing to find.
 static NSHashTable<UIView *> *FBPTouchedViews(void) {
     static NSHashTable<UIView *> *views;
     static dispatch_once_t once;
@@ -444,7 +295,6 @@ static NSHashTable<UIView *> *FBPTouchedViews(void) {
 static void FBPMarkTouched(UIView *view) {
     objc_setAssociatedObject(view, kFBPTouched, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     NSHashTable<UIView *> *touched = FBPTouchedViews();
-    // Painting is rare next to laying out, so the lock is never on a hot path.
     @synchronized (touched) { [touched addObject:view]; }
 }
 static BOOL FBPWasTouched(UIView *view) {
@@ -456,25 +306,14 @@ static void FBPClearTouched(UIView *view) {
     @synchronized (touched) { [touched removeObject:view]; }
 }
 
-/// Set while a restore is putting Facebook's own colour back.
-///
-/// A RESTORE MUST NEVER RE-ENTER THE PAINT PATH.
-///
-/// FBPRestoreViewBG writes through -[UIView setBackgroundColor:], which is
-/// hooked, so the colour it is putting back arrives at FBPBGForSet like any
-/// other. While OLED is still engaged that colour is judged dark all over
-/// again, saved all over again, and written back as black — and the restore
-/// then clears the flag on its way out. The result is a black view with no
-/// record of being painted, which is exactly what `stray` counts.
-///
-/// Reversing Nexus found the same trap and the same answer: every one of its
-/// restores calls the original implementation directly, deliberately bypassing
-/// its own hook. Logos gives no handle on %orig from outside the hook body, so
-/// the hook is told to stand aside instead. Main thread only, which is where
-/// every one of these paths runs.
+/// Set while a restore is putting Facebook's own colour back. Otherwise the
+/// hooked -setBackgroundColor: judges the restored colour dark, saves it and
+/// paints it black again while the restore clears its record on the way out.
+/// Logos gives no handle on %orig from outside a hook, so the hook stands
+/// aside. Main thread only.
 static BOOL gFBPRestoring = NO;
 
-// -- view background (Facebook's dynamic colour, saved unresolved) --
+// Saved unresolved, so it is still Facebook's dynamic colour.
 static void FBPSaveViewBG(UIView *view, UIColor *orig) {
     if (!objc_getAssociatedObject(view, kFBPSavedViewBG)) {
         objc_setAssociatedObject(view, kFBPSavedViewBG, orig ?: (id)NSNull.null,
@@ -495,7 +334,7 @@ static BOOL FBPRestoreViewBG(UIView *view) {
     return YES;
 }
 
-// -- layer background (concrete CGColor, boxed as UIColor) --
+// A concrete CGColor, boxed as UIColor.
 static void FBPSaveLayerBG(CALayer *layer) {
     if (objc_getAssociatedObject(layer, kFBPSavedLayerBG)) return;
     id box = layer.backgroundColor ? (id)[UIColor colorWithCGColor:layer.backgroundColor]
@@ -509,7 +348,6 @@ static void FBPRestoreLayerBG(CALayer *layer) {
     objc_setAssociatedObject(layer, kFBPSavedLayerBG, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-// -- gradient colours --
 static void FBPSaveGradient(CAGradientLayer *g) {
     if (objc_getAssociatedObject(g, kFBPSavedColors)) return;
     NSMutableArray *orig = [NSMutableArray arrayWithCapacity:g.colors.count];
@@ -527,7 +365,6 @@ static void FBPRestoreGradient(CAGradientLayer *g) {
     objc_setAssociatedObject(g, kFBPSavedColors, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-// -- shape fill --
 static void FBPSaveFill(CAShapeLayer *s) {
     if (objc_getAssociatedObject(s, kFBPSavedFill)) return;
     id box = s.fillColor ? (id)[UIColor colorWithCGColor:s.fillColor] : (id)NSNull.null;
@@ -540,7 +377,7 @@ static void FBPRestoreFill(CAShapeLayer *s) {
     objc_setAssociatedObject(s, kFBPSavedFill, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-// -- navigation bar appearance (dynamic colours, restored by reference) --
+// Dynamic colours, restored by reference.
 static void FBPSaveNavBar(UINavigationBar *bar) {
     if (objc_getAssociatedObject(bar, kFBPSavedNav)) return;
     NSMutableDictionary *s = [NSMutableDictionary dictionary];
@@ -560,7 +397,6 @@ static void FBPSaveNavBar(UINavigationBar *bar) {
 static void FBPRestoreNavBar(UINavigationBar *bar) {
     NSDictionary *s = objc_getAssociatedObject(bar, kFBPSavedNav);
     if (!s) return;
-    // -setBackgroundColor: below is hooked like any other; see gFBPRestoring.
     BOOL was = gFBPRestoring;
     gFBPRestoring = YES;
     bar.translucent  = [s[@"translucent"] boolValue];
@@ -581,11 +417,9 @@ static void FBPRestoreNavBar(UINavigationBar *bar) {
 
 #pragma mark - Dividers
 
-// Pure black merges Facebook's cards into their background, so the hairline
-// separators between posts, list rows and sections vanish. Facebook draws them
-// with FBLineComponentInternalView (and plain ~1–2pt hairline views); in OLED
-// mode those are painted a faint white instead of black, keeping the structure
-// of the native dark theme readable — a true-black look that still has lines.
+// Pure black merges cards into their background, so the hairline separators
+// vanish. Facebook draws them with FBLineComponentInternalView and plain ~1-2pt
+// hairline views; those are painted a faint white instead of black.
 static const CGFloat kFBPDividerAlpha = 0.22;   // faint white on black
 
 static UIColor *FBPDividerColor(void) {
@@ -595,18 +429,15 @@ static UIColor *FBPDividerColor(void) {
     return color;
 }
 
-/// What to paint a separator in OLED mode: the faint white when the "Show post
-/// dividers" toggle is on (cards stay separated), or solid black when it is off
-/// (the hairlines disappear into a seamless all-black feed). Either way the
-/// original is saved first, so turning OLED off restores Facebook's own line.
+/// Faint white with the dividers toggle on, solid black with it off. Either way
+/// the original is saved first.
 static UIColor *FBPDividerPaint(void) {
     return gOLEDDividers ? FBPDividerColor() : UIColor.blackColor;
 }
 
-/// YES for a separator line to lighten rather than blacken: Facebook's
-/// FBLineComponentInternalView, or a thin (≤2pt) neutral/near-black hairline. A
-/// *coloured* thin bar — a selected-tab underline, a progress bar — is not a
-/// divider (its colour isn't dark), so it is left alone.
+/// YES for a separator to lighten rather than blacken: FBLineComponentInternal
+/// View, or a thin (<=2pt) neutral hairline. A *coloured* thin bar — a tab
+/// underline, a progress bar — fails the dark test and is left alone.
 static BOOL FBPViewLooksLikeDivider(UIView *view) {
     if ([NSStringFromClass(view.class) containsString:@"LineComponent"]) return YES;
     CGSize size = view.bounds.size;
@@ -619,9 +450,8 @@ static BOOL FBPViewLooksLikeDivider(UIView *view) {
     return view.layer.sublayers.count > 0;   // line drawn on a sublayer
 }
 
-/// Paints a divider faint-white across the ways Facebook draws its line — the
-/// view's background, its own layer, and any line-drawing sublayer — saving the
-/// original of each so it is restored when OLED turns off.
+/// All three ways Facebook draws a line — the view background, its own layer,
+/// any line-drawing sublayer — saving each original.
 static void FBPLightenDivider(UIView *view) {
     UIColor *light = FBPDividerPaint();
     FBPSaveViewBG(view, view.backgroundColor);
@@ -642,27 +472,11 @@ static void FBPLightenDivider(UIView *view) {
 
 #pragma mark - Profile avatars
 
-// A profile avatar stacks an unmasked square image — a low-res placeholder /
-// backing — behind the circular photo. On Facebook's grey cards its grey corners
-// blend in, but on the OLED-black background they poke past the circle as a
-// visible grey "box". Clipping it to the circle is harmless in Light mode (the
-// photo is circular either way), so this is applied while OLED is active and not
-// reverted.
-//
-// Facebook builds avatars several different ways, but the box always comes from
-// a square image that isn't being clipped to the avatar circle. Two shapes cover
-// every case seen (feed headers, comments, video/AI posts):
-//
-//   A. A circular container (cornerRadius ~= half its square size) whose
-//      masksToBounds is OFF, so the square image/placeholder inside bleeds out to
-//      the corners. Turning masksToBounds on clips everything inside to the
-//      circle. The online-status dot lives OUTSIDE this container, so it stays.
-//   B. A container holding a *masked* MRCImageComponentView (the circular photo)
-//      next to a bare, unmasked square UIImageView (a placeholder behind it).
-//      Rounding that bare image to a circle removes its corners.
-//
-// Scoped to small, square-ish containers so rectangular post photos (which also
-// use MRCImageComponentView) and larger media are never touched.
+// A profile avatar stacks an unmasked square placeholder behind the circular
+// photo. Its grey corners blend into Facebook's cards but poke past the circle
+// on black, so they are clipped while OLED is active (harmless in Light, so not
+// reverted). Two shapes cover every case seen, and both are scoped to small
+// square-ish containers so post photos are never touched.
 static void FBPFixAvatarBox(UIView *container) {
     CGSize size = container.bounds.size;
     if (size.width < 16.0 || size.width > 72.0) return;        // avatar-sized only
@@ -690,7 +504,6 @@ static void FBPFixAvatarBox(UIView *container) {
         if (bareCount < 8) bareImages[bareCount++] = (UIImageView *)sub;
     }
 
-    // Case A: a circular container holding image content but not clipping it.
     CGFloat cr = container.layer.cornerRadius;
     CGFloat crDiff = cr > size.width / 2.0 ? cr - size.width / 2.0
                                            : size.width / 2.0 - cr;
@@ -699,7 +512,6 @@ static void FBPFixAvatarBox(UIView *container) {
         container.clipsToBounds = YES;
     }
 
-    // Case B: a masked avatar next to bare square placeholder image(s).
     if (maskedAvatar) {
         for (NSUInteger i = 0; i < bareCount; i++) {
             UIImageView *img = bareImages[i];
@@ -712,12 +524,10 @@ static void FBPFixAvatarBox(UIView *container) {
 
 #pragma mark - Sublayer sweep
 
-/// Blackens (active) or restores (inactive) the colours a view paints *directly
-/// onto its own layer's sublayers* — the gradient/shape/plain CALayers ComponentKit
-/// uses for rounded card backgrounds and Facebook uses for the header fade and
-/// status-bar strip. Layers that merely back a subview are skipped: that subview
-/// repaints itself. On active it flags the owning view touched so a later relayout
-/// while OLED is off knows to visit it.
+/// The colours a view paints directly onto its own layer's sublayers: the
+/// CALayers ComponentKit uses for rounded card backgrounds and Facebook for the
+/// header fade. Layers that merely back a subview are skipped, since that
+/// subview repaints itself.
 static void FBPApplySublayers(CALayer *layer, BOOL active) {
     NSArray<CALayer *> *sublayers = layer.sublayers;
     if (sublayers.count == 0) return;
@@ -784,17 +594,14 @@ static void FBPApplySublayers(CALayer *layer, BOOL active) {
 
 #pragma mark - Header (FBMovableNavigationBarView) helpers
 
-/// Opaque black appearance for the real UINavigationBar the header hosts
-/// (_replacementNavigationBar). Its background is drawn through
+/// The real UINavigationBar the header hosts draws its background through
 /// UINavigationBarAppearance / _UIBarBackground (a blur), not -backgroundColor,
-/// so the appearance objects must be reconfigured and the blur flattened. The
-/// original appearance and the blur colours are saved first so FBPRestoreNavBar
-/// (and the header restore walk) can put the live-appearance header back.
+/// so the appearance objects must be reconfigured and the blur flattened. Both
+/// originals are saved for FBPRestoreNavBar.
 static void FBPBlackNavigationBar(UINavigationBar *bar) {
     if (!bar) return;
-    // On the register like everything else. Its appearance is saved separately,
-    // but without the flag FBPApplyView returns before restoring anything, and
-    // the bar is left flat black with no record that we did it.
+    // On the register like everything else: its appearance is saved separately,
+    // but without the flag FBPApplyView returns before restoring anything.
     FBPSaveNavBar(bar);
     FBPMarkTouched(bar);
     bar.translucent = NO;
@@ -812,7 +619,6 @@ static void FBPBlackNavigationBar(UINavigationBar *bar) {
         bar.scrollEdgeAppearance = appearance;
         if (@available(iOS 15.0, *)) bar.compactScrollEdgeAppearance = appearance;
     }
-    // Flatten the _UIBarBackground blur that sits behind the bar's content.
     for (UIView *sub in bar.subviews) {
         if ([NSStringFromClass(sub.class) containsString:@"BarBackground"]) {
             FBPSaveViewBG(sub, sub.backgroundColor);
@@ -833,13 +639,11 @@ static void FBPBlackNavigationBar(UINavigationBar *bar) {
     }
 }
 
-/// Walks the header's sub-tree and blackens (active) or restores (inactive) every
-/// grey surface — dark view backgrounds, dark layer/gradient/shape colours, the
-/// hosted UINavigationBar and any blur — while leaving photos (nil/clear
-/// backgrounds) and coloured accents untouched, so the profile cover and the blue
-/// "Add to story" button keep their look. The restore pass runs regardless of the
-/// per-view touched flag because the header itself is a single, long-lived view
-/// whose children must be put back the moment OLED turns off.
+/// Walks the header's sub-tree over every grey surface — view backgrounds,
+/// layer/gradient/shape colours, the hosted UINavigationBar and any blur —
+/// leaving nil/clear backgrounds and coloured accents alone. The restore pass
+/// ignores the touched flag: the header is one long-lived view whose children
+/// must come back the moment OLED turns off.
 static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
     if (!view || depth > 12) return;
     for (UIView *sub in [view.subviews copy]) {
@@ -851,13 +655,11 @@ static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
         } else if ([sub isKindOfClass:UIVisualEffectView.class]) {
             UIView *content = ((UIVisualEffectView *)sub).contentView;
             if (active) {
-                // A blur in the header reads as grey; cover it flat black.
                 FBPSaveViewBG(sub, sub.backgroundColor);
                 FBPSaveViewBG(content, content.backgroundColor);
                 FBPMarkTouched(sub);
-                // The content view is a view of its own and is reverted as one,
-                // so it needs its own flag. Saving it and marking only its host
-                // meant the revert returned before it ever read the save.
+                // Reverted as a view of its own, so it needs its own flag;
+                // marking only its host makes the revert return early.
                 FBPMarkTouched(content);
                 sub.backgroundColor = UIColor.blackColor;
                 content.backgroundColor = UIColor.blackColor;
@@ -892,11 +694,9 @@ static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
 
 #pragma mark - Per-view apply
 
-/// The body of UIView -layoutSubviews under OLED. Active: blacken this view's
-/// background / layer / sublayers and (for avatars) clip the placeholder box.
-/// Inactive: put back everything OLED saved, then drop the touched flag. Views
-/// OLED never modified short-circuit immediately, so an off/Light relayout stays
-/// cheap across the whole hierarchy.
+/// The body of UIView -layoutSubviews under OLED: blacken this view's
+/// background, layer and sublayers, or put back everything OLED saved and drop
+/// the touched flag. Untouched views short-circuit immediately.
 static void FBPApplyView(UIView *view, BOOL active) {
     if (FBPOLEDSkip(view)) return;
 
@@ -909,9 +709,8 @@ static void FBPApplyView(UIView *view, BOOL active) {
         return;
     }
 
-    // A surface shown in LIGHT appearance (a light-locked card: light background,
-    // dark text) is left alone — blackening its background would strand the dark
-    // text on black. If it was darkened before it became light, put it back.
+    // A light-locked card is left alone: blackening it strands its dark text.
+    // If it was darkened before it became light, put it back.
     if (FBPViewIsLight(view)) {
         if (FBPWasTouched(view)) {
             FBPRestoreViewBG(view);
@@ -922,16 +721,14 @@ static void FBPApplyView(UIView *view, BOOL active) {
         return;
     }
 
-    // Dividers are lightened, not blackened, so posts/rows stay visually separated.
     if (FBPViewLooksLikeDivider(view)) {
         FBPLightenDivider(view);
         return;
     }
 
-    // Round the square placeholder stacked behind a circular profile avatar, so
-    // its grey corners don't show as a box against the OLED-black background.
-    // Trigger both when the avatar container lays out and, more reliably, when
-    // the masked image component itself mounts (then fix its siblings).
+    // Round the square placeholder behind a circular avatar. Triggered both
+    // when the container lays out and, more reliably, when the masked image
+    // component mounts (which then fixes its siblings).
     FBPFixAvatarBox(view);
     if ([NSStringFromClass(view.class) containsString:@"MRCImageComponent"] &&
         view.layer.masksToBounds) {
@@ -940,64 +737,47 @@ static void FBPApplyView(UIView *view, BOOL active) {
 
     UIColor *bg = view.backgroundColor;
     if (bg) {
-        // Views that paint through -backgroundColor (dynamic colours resolved).
         if (FBPColorIsDark(FBPResolve(bg))) {
             FBPSaveViewBG(view, bg);
             FBPMarkTouched(view);
             view.backgroundColor = FBPBlackFollowingAppearance(bg);
         }
     } else if (FBPCGColorIsDark(view.layer.backgroundColor)) {
-        // ComponentKit cards that paint straight onto their own layer.
-        //
-        // Written as a DYNAMIC colour through the view, not as a flat CGColor on
-        // the layer. -[UIView backgroundColor] *is* the layer's background, so
-        // this reaches exactly the same pixels; the difference is that a CGColor
-        // has no idea an appearance exists and can never answer differently,
-        // while this colour is re-resolved by UIKit the moment the view is drawn
-        // in the other appearance.
-        //
-        // That difference was the whole of the remaining bug. Probed on device
-        // after a switch to Light, the composer row answered
-        // `style=1  bg=UIExtendedGrayColorSpace 0 1` — a view being drawn Light
-        // holding flat opaque black, with no way back. The restore bookkeeping
-        // could not save it either: those views came back as `stray` in the
-        // sweep, painted black with nothing recorded against them. Making the
-        // colour dynamic removes the need for any of that: there is nothing to
-        // notice, nothing to remember and nothing to put back.
+        // ComponentKit cards that paint straight onto their own layer, written
+        // as a dynamic colour through the view rather than a flat CGColor:
+        // -[UIView backgroundColor] IS the layer's background, so it reaches
+        // the same pixels but is re-resolved in the other appearance.
         UIColor *original = [UIColor colorWithCGColor:view.layer.backgroundColor];
         FBPSaveViewBG(view, original);
         FBPMarkTouched(view);
         view.backgroundColor = FBPBlackFollowingAppearance(original);
     }
 
-    // Cards / fades that paint onto a sublayer (gradient, shape or plain CALayer)
-    // rather than the view or its own layer background — the profile panel and the
-    // header fade. Cheap: most views have no sublayers.
+    // Cards and fades that paint onto a sublayer rather than the view or its own
+    // layer background. Cheap: most views have no sublayers.
     FBPApplySublayers(view.layer, YES);
 }
 
-/// The value to hand the original -setBackgroundColor:, saving/forgetting state so
-/// OLED reverts cleanly. Active + dark → black (original stashed). Inactive → the
-/// app's own colour passes through and any stash is dropped, so a later relayout
-/// does not put the black-era colour back over a freshly repainted view.
+/// The value to hand the original -setBackgroundColor:. Inactive drops any
+/// stash, so a later relayout cannot put the black-era colour back over a
+/// freshly repainted view.
 static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
-    // A colour on its way back from a restore passes straight through. Judging
-    // it again here is how a restored view ends up black and unrecorded.
+    // A colour on its way back from a restore passes straight through; judging
+    // it again is how a restored view ends up black and unrecorded.
     if (gFBPRestoring) return color;
     if (FBPOLEDActiveFor(self) && !FBPOLEDSkip(self)) {
         if (FBPColorIsDark(FBPResolve(color))) {
-            // Still saved and flagged, because the layer and sublayer paths
-            // below have no dynamic equivalent and the restore pass walks both.
+            // Still saved and flagged: the layer and sublayer paths have no
+            // dynamic equivalent and the restore pass walks both.
             FBPSaveViewBG(self, color);
             FBPMarkTouched(self);
             return FBPBlackFollowingAppearance(color);
         }
         return color;
     }
-    // Facebook has repainted this view while OLED is disengaged, so every
-    // record of ours is stale. Dropping the saved colour but keeping the flag
-    // used to leave the layer save behind, and the next revert wrote it back
-    // over the colour Facebook had just set.
+    // Facebook repainted while OLED is disengaged, so every record is stale.
+    // Dropping the colour but keeping the flag leaves the layer save behind,
+    // and the next revert writes it over what Facebook just set.
     if (!FBPOLEDSkip(self) && FBPWasTouched(self)) {
         FBPForgetViewBG(self);
         objc_setAssociatedObject(self.layer, kFBPSavedLayerBG, nil,
@@ -1017,8 +797,6 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     FBPTraceFire("oled.UIView.setBackgroundColor");
     if (FBPOLEDActiveFor(self) && !FBPOLEDSkip(self) &&
         [NSStringFromClass(self.class) containsString:@"LineComponent"]) {
-        // A separator line keeps a faint white (toggle on) or is blacked out
-        // (toggle off) instead of taking Facebook's own colour.
         FBPSaveViewBG(self, color);
         FBPMarkTouched(self);
         %orig(FBPDividerPaint());
@@ -1040,18 +818,13 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     if (@available(iOS 13.0, *)) {
         if (previous &&
             previous.userInterfaceStyle != self.traitCollection.userInterfaceStyle) {
-            // A window-level style flip is a hint that the system appearance may
-            // have moved, so re-read it from the window's scene and reapply. Not
-            // from the window itself: that is Facebook's theme (see
-            // FBPSystemStyleFromScenes). This path is a bonus rather than the
-            // mechanism — when Facebook pins its windows the window's own style
-            // never changes and this never fires, which is why the window layout
-            // pass carries the same check.
+            // A hint that the system appearance moved, so re-read it from the
+            // window's *scene*, not the window, which carries Facebook's theme.
+            // A bonus, not the mechanism: when Facebook pins its windows this
+            // never fires, which is why the window layout pass checks too.
             if ([self isKindOfClass:UIWindow.class]) {
                 FBPTrackWindowStyle((UIWindow *)self);
             }
-            // Re-run the layout logic so OLED engages for Dark and fully reverts
-            // for Light on this view.
             [self setNeedsLayout];
         }
     }
@@ -1059,9 +832,8 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 %end
 
-// UIWindow overrides -layoutSubviews, so the UIView hook above never runs for
-// one: this is the only place a window's own layout is seen. Every pass after
-// a change costs one integer comparison.
+// UIWindow overrides -layoutSubviews, so the UIView hook never runs for one and
+// this is the only place a window's own layout is seen.
 %hook UIWindow
 - (void)layoutSubviews {
     %orig;
@@ -1093,29 +865,25 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 }
 %end
 
-// The app header. It paints nothing on its own view; the grey lives on child
-// views, a hosted UINavigationBar, a blur and gradients — so blacken the sub-tree
-// on every layout pass while OLED is on, and restore it when OLED is off. This is
-// what stops the header flickering between grey and black, and what makes the
-// header follow iOS back to Light instead of staying black.
+// The app header paints nothing on its own view: the grey lives on child views,
+// a hosted UINavigationBar, a blur and gradients, so the sub-tree is walked on
+// every layout pass. That is what stops it flickering between grey and black.
 %hook FBMovableNavigationBarView
 - (void)layoutSubviews {
     %orig;
     FBPTraceFire("oled.FBMovableNavigationBarView.layoutSubviews");
     BOOL active = FBPOLEDActiveFor(self);
     if (active) {
-        // Marked, like every other painted surface: without it the revert
-        // returns at the flag and the app's most visible view stays black. And
-        // painted with the dynamic colour, so it follows the appearance by
-        // itself rather than needing to be found again.
+        // Marked like every other painted surface, or the revert returns at the
+        // flag and the most visible view in the app stays black. Painted with
+        // the dynamic colour, so it follows the appearance by itself.
         if (FBPColorIsDark(FBPResolve(self.backgroundColor))) {
             FBPSaveViewBG(self, self.backgroundColor);
             FBPMarkTouched(self);
             self.backgroundColor = FBPBlackFollowingAppearance(self.backgroundColor);
         } else if (FBPCGColorIsDark(self.layer.backgroundColor)) {
-            // Only when the view carries no colour of its own: the two are the
-            // same storage, and writing both makes the second save the first's
-            // black and hand it back as the original.
+            // Only when the view has no colour of its own: the two are the same
+            // storage, so writing both saves the first's black as the original.
             FBPSaveLayerBG(self.layer);
             FBPMarkTouched(self);
             self.layer.backgroundColor = FBPBlackCGKeepingAlpha(self.layer.backgroundColor);
@@ -1129,14 +897,12 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 }
 %end
 
-// The navigation-bar view controller drives the status bar, and it returns
-// darkContent (black time / battery / signal) because Facebook's header is
-// normally light. OLED paints that header black, so black status-bar glyphs
-// vanish. Force light content (white glyphs) while OLED is on.
+// This controller drives the status bar and returns darkContent, because
+// Facebook's header is normally light. OLED paints it black, so the glyphs
+// vanish; force light content while OLED is on.
 %hook FBMovableNavigationBarViewController
 - (UIStatusBarStyle)preferredStatusBarStyle {
     FBPTraceFire("oled.FBMovableNavigationBarViewController.preferredStatusBarStyle");
-    // No view of its own to ask, so the app's own window answers.
     if (FBPOLEDActiveFor(FBPAppKeyWindow())) return UIStatusBarStyleLightContent;
     return %orig;
 }
@@ -1144,28 +910,14 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
 
 %end // FBPOLEDGlobal
 
-/// How deep the reapply and nudge walks go. Headroom, nothing more.
-///
-/// It was 40, and raising it was once written up here as the fix for half the app
-/// staying black. That was wrong and the measurement that disproved it is worth
-/// keeping: instrumented on the SE, the whole of Facebook's window tree came to
-/// **77 views at maximum depth 27**, and the walk reported `deepest=33 capped=0`.
-/// The old cap was never reached, so it cannot have been what stopped the revert.
-///
-/// The number stays well past anything real only so a hierarchy that is somehow
-/// cyclic cannot run away with the stack. What actually makes the revert complete
-/// is FBPTouchedViews below, which does not depend on a walk finding anything.
+/// How deep the reapply and nudge walks go. Headroom only: what makes the
+/// revert complete is FBPTouchedViews, not a walk reaching far enough.
 static const int kFBPWalkMaxDepth = 200;
 
-/// What a walk had to do, for the diagnostic line: how many views it visited, the
-/// deepest it went, whether the cap stopped it short (which would mean the revert
-/// is incomplete again), how many views it actually put back, and how many it left
-/// sitting on pure black without OLED having a record of touching them.
-///
-/// That last count is the one that matters on a revert. OLED only restores a view
-/// it flagged, so a view painted black without being flagged is invisible to the
-/// revert and stays black forever. `stray` being anything but 0 after a switch to
-/// Light says exactly that is happening.
+/// What a walk had to do, for the diagnostic line. `stray` is the count that
+/// matters: OLED only restores a view it flagged, so a view painted black
+/// without a flag is invisible to the revert and stays black forever. Anything
+/// but 0 after a switch to Light says that is happening.
 typedef struct {
     int visited;
     int deepest;
@@ -1174,10 +926,9 @@ typedef struct {
     int stray;
 } FBPWalkStats;
 
-/// YES when this view is painted a flat, opaque-ish pure black right now, as the
-/// screen would draw it. Deliberately narrower than FBPColorIsDark, which also
-/// matches Facebook's own near-black base grey (#18191A): the question here is
-/// "is this one of ours that never came back", not "is this dark".
+/// YES when this view is painted a flat, opaque-ish pure black right now.
+/// Narrower than FBPColorIsDark, which also matches Facebook's own near-black
+/// base grey: the question is "is this one of ours that never came back".
 static BOOL FBPCGIsPureBlack(CGColorRef cg) {
     if (!cg) return NO;
     if (CGColorGetAlpha(cg) < 0.2) return NO;
@@ -1191,14 +942,10 @@ static BOOL FBPCGIsPureBlack(CGColorRef cg) {
     return NO;
 }
 
-/// As above, and it asks BOTH places.
-///
-/// It used to stop at -backgroundColor whenever that was non-nil, which hid the
-/// case it most needed to catch: a view whose colour was restored correctly
-/// while its layer was left holding black. Those read as "restored" and are
-/// visibly black, so the count that was supposed to find them said zero. The two
-/// are usually the same storage, but not while a restore has written one and not
-/// the other.
+/// As above, and it asks BOTH places. Stopping at a non-nil -backgroundColor
+/// hides the case it most needs to catch: a view whose colour was restored
+/// while its layer was left holding black. The two are usually the same
+/// storage, but not while a restore has written one and not the other.
 static BOOL FBPSurfaceIsPureBlack(UIView *view) {
     UIColor *color = view.backgroundColor;
     if (color) {
@@ -1217,21 +964,18 @@ static BOOL FBPSurfaceIsPureBlack(UIView *view) {
     return FBPCGIsPureBlack(view.layer.backgroundColor);
 }
 
-/// Re-applies the current appearance to a whole view tree.
-///
-/// FBPApplyView is normally reached from each view's own -layoutSubviews, which
-/// covers everything that is about to be drawn. It does not cover a view that
-/// is mounted and settled, and after a Light<->Dark switch those are exactly
-/// the ones holding the wrong colour.
+/// Re-applies the current appearance to a whole view tree. FBPApplyView is
+/// normally reached from each view's -layoutSubviews, which covers what is
+/// about to be drawn but not a view already mounted and settled — exactly the
+/// ones holding the wrong colour after a switch.
 static void FBPApplyTree(UIView *view, int depth, FBPWalkStats *stats) {
     if (!view) return;
     if (depth > kFBPWalkMaxDepth) { stats->capped = YES; return; }
     stats->visited++;
     if (depth > stats->deepest) stats->deepest = depth;
 
-    // Per view, for the same reason the paint paths are: a subtree pinned to
-    // the other appearance sits inside the same window as everything else, and
-    // one flag for the whole walk would get it wrong.
+    // Per view: a subtree pinned to the other appearance sits inside the same
+    // window, so one flag for the whole walk would get it wrong.
     BOOL active = FBPOLEDActiveFor(view);
     BOOL wasTouched = FBPWasTouched(view);
     FBPApplyView(view, active);
@@ -1239,9 +983,8 @@ static void FBPApplyTree(UIView *view, int depth, FBPWalkStats *stats) {
         if (wasTouched) stats->restored++;
         else if (FBPSurfaceIsPureBlack(view)) {
             stats->stray++;
-            // Name the first few. A stray is a surface OLED is painting through
-            // a path that does not record it, and the class is the shortest
-            // route to which path that is.
+            // A stray is a surface painted through a path that does not record
+            // it, and the class name is the shortest route to which path.
             if (stats->stray <= 6) {
                 FBPDiag(@"oled", @"  stray %@ frame=%@ bg=%@ layer=%@",
                         NSStringFromClass(view.class),
@@ -1256,9 +999,9 @@ static void FBPApplyTree(UIView *view, int depth, FBPWalkStats *stats) {
     }
 }
 
-/// Marks a whole view tree for relayout so the layout hooks re-run and
-/// blacken/revert for the current state right away — used when the toggle changes
-/// (no trait change fires then) and on returning from the background.
+/// Marks a whole view tree for relayout so the layout hooks re-run at once:
+/// used when the toggle changes, since no trait change fires then, and on
+/// returning from the background.
 static void FBPNudgeLayout(UIView *view, int depth) {
     if (!view || depth > kFBPWalkMaxDepth) return;
     [view setNeedsLayout];
@@ -1275,29 +1018,11 @@ static void FBPNudgeOLEDRelayout(void) {
     }
 }
 
-/// Hands the app back to its own appearance, and lets Facebook repaint.
-///
-/// THIS IS HOW A SWITCH TO LIGHT IS FIXED, RATHER THAN BY RESTORING COLOURS.
-///
-/// Putting back what OLED saved can only reach surfaces OLED recorded, and the
-/// device kept finding ones it had not: a sweep after a switch to Light read
-/// `listed=0 left=0 stray=22` — everything we had painted was back, and
-/// twenty-two views were still black with nothing written against them. Chasing
-/// the path that paints without recording is chasing one bug at a time.
-///
-/// Facebook already owns a light appearance and knows how to draw it. So on the
-/// way out, every one of its windows is pinned to the style the system has moved
-/// to, which is a real UIKit trait change: it propagates through the whole
-/// hierarchy, re-resolves every dynamic colour Facebook holds, and makes
-/// Facebook repaint its own surfaces in its own colours — over the top of
-/// anything of ours that was left behind, recorded or not. The pin is released a
-/// moment later so the window follows iOS again and Facebook's in-app Dark Mode
-/// setting is back in charge.
-///
-/// The subtrees that were stuck are exactly the ones this reaches, because what
-/// made them stuck is that they still carried the old appearance: they reported
-/// Dark while the chrome around them reported Light. Forcing the style is what
-/// moves them.
+/// Hands the app back to its own appearance so Facebook repaints. Restoring
+/// saved colours reaches only surfaces OLED recorded; pinning every Facebook
+/// window to the style the system moved to is a real UIKit trait change, so it
+/// propagates, re-resolves Facebook's dynamic colours and repaints over
+/// anything left behind. Released shortly after, so the window follows iOS.
 static void FBPAdoptAppearance(UIUserInterfaceStyle style) {
     if (@available(iOS 13.0, *)) {
         if (style == UIUserInterfaceStyleUnspecified) return;
@@ -1317,8 +1042,8 @@ static void FBPAdoptAppearance(UIUserInterfaceStyle style) {
         FBPDiag(@"oled", @"handed %lu window(s) to the app's own %@ appearance",
                 (unsigned long)pinned.count, FBPStyleName(style));
 
-        // Long enough for Facebook to have repainted against the forced trait,
-        // short enough that its own Dark Mode setting is never visibly ignored.
+        // Long enough to repaint against the forced trait, short enough that
+        // Facebook's own Dark Mode setting is never visibly ignored.
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{
             for (UIWindow *window in pinned) {
@@ -1329,24 +1054,14 @@ static void FBPAdoptAppearance(UIUserInterfaceStyle style) {
     }
 }
 
-/// Brings every surface OLED cares about into line with the appearance it is
-/// being drawn in right now.
-///
-/// Idempotent by construction: each view is asked what appearance it is drawn
-/// with and is painted or restored to match, so running it twice costs a few
-/// hundred cheap questions and changes nothing the first run already settled.
-///
-/// Two populations, because neither covers the other. The register holds every
-/// view OLED has painted, mounted or not, which is what makes a revert complete
-/// — a card that is no longer in any window will never lay out again and can
-/// only be reached from a list. The tree walk covers the other direction, where
-/// the register is empty and the surfaces about to be blackened have to be
-/// found.
+/// Brings every surface OLED touches into line with the current appearance.
+/// Idempotent. Two populations, because neither covers the other: the register
+/// holds every painted view, mounted or not, while the tree walk finds surfaces
+/// about to be blackened, which are not on the register yet.
 static void FBPSweepAppearance(void) {
     NSHashTable<UIView *> *table = FBPTouchedViews();
     NSArray<UIView *> *painted;
-    // A snapshot: FBPApplyView takes a restored view off the list as it goes,
-    // which would mutate the table underneath the enumeration.
+    // A snapshot: FBPApplyView takes a restored view off the list as it goes.
     @synchronized (table) { painted = table.allObjects; }
     NSUInteger listed = painted.count;
     for (UIView *view in painted) FBPApplyView(view, FBPOLEDActiveFor(view));
@@ -1363,9 +1078,8 @@ static void FBPSweepAppearance(void) {
 
     NSUInteger remaining;
     @synchronized (table) { remaining = table.count; }
-    // `listed` against `left`: after a switch to Light everything OLED painted
-    // should have come back, so `left` should be 0. `stray` counts pure-black
-    // views OLED never painted, which no revert of ours can reach.
+    // After a switch to Light everything painted should have come back, so
+    // `left` should be 0; `stray` counts black views no revert can reach.
     if (listed || remaining || stats.stray) {
         FBPDiag(@"oled",
                 @"sweep listed=%lu left=%lu views=%d deepest=%d capped=%d "
@@ -1376,28 +1090,11 @@ static void FBPSweepAppearance(void) {
     }
 }
 
-/// Runs the sweep on a slow repeat, for the whole life of the process.
-///
-/// THIS IS WHY IT NO LONGER MATTERS WHETHER WE NOTICE THE SWITCH.
-///
-/// Every attempt to catch the moment of an appearance change failed in its own
-/// way, and the device said so each time: -traitCollectionDidChange: is never
-/// called on iOS 18, a window's own style is whatever Facebook pinned it to, and
-/// a sweep run from the window's layout pass asks views a question UIKit has not
-/// finished answering — the log read `listed=34 left=34` after a switch to
-/// Light, every painted view still insisting it was Dark, while a hit test
-/// through the same views twenty seconds later said Light on all of them.
-///
-/// Reversing Nexus, which has this feature and does not have this bug, settled
-/// it: that tweak observes no appearance change at all. It runs its pass on a
-/// repeating 0.75 second timer in NSRunLoopCommonModes and re-decides from
-/// scratch every time. Being right about *when* stops being a requirement if
-/// you are simply right again shortly afterwards. The worst staleness is under a
-/// second, which reads as instant, and the cost is a tree walk over a few
-/// hundred views that does nothing when nothing has changed.
-///
-/// Common modes on purpose: a timer in the default mode stops while the user
-/// drags or scrolls, which is exactly when Facebook is mounting new cards.
+/// Runs the sweep on a slow repeat for the life of the process, because
+/// catching the moment of a switch is not reliable: -traitCollectionDidChange:
+/// is never called on iOS 18, a window's own style may be pinned, and a pass
+/// from the window's layout asks views a question UIKit has not finished
+/// answering. Common run loop modes, so it survives scrolling.
 static void FBPStartAppearanceSweep(void) {
     NSTimer *timer = [NSTimer timerWithTimeInterval:0.75 repeats:YES
                                               block:^(__unused NSTimer *t) {
@@ -1407,37 +1104,15 @@ static void FBPStartAppearanceSweep(void) {
     [NSRunLoop.mainRunLoop addTimer:timer forMode:NSRunLoopCommonModes];
 }
 
-/// Catches a Light<->Dark switch from a window's layout pass.
-///
-/// -traitCollectionDidChange: cannot be relied on to carry this: iOS 17
-/// deprecated it, on some builds UIKit never calls it at all, and even where it
-/// does fire it fires on the window's *effective* style, which does not move when
-/// Facebook has pinned the window. The scene's own -traitCollectionDidChange:
-/// looked like the obvious answer and is dead: an interceptor on it counted zero
-/// calls across two live appearance flips on the SE, while -[UIWindow
-/// layoutSubviews] was entered four times on each.
-///
-/// So the window layout pass is the trigger and the scene is the source. A window
-/// lays out when the appearance changes even if its own style was pinned (that is
-/// what those four calls are), so comparing the scene's style on the way through
-/// costs one integer read and needs no registration, no deprecated callback and
-/// nothing version-specific.
+/// Catches a Light to Dark switch from a window's layout pass, which is the
+/// trigger, with the scene as the source: a window lays out when the appearance
+/// changes even if its own style is pinned, so this needs no deprecated
+/// callback.
 static void FBPTrackWindowStyle(UIWindow *window) {
     if (@available(iOS 13.0, *)) {
         if (!window) return;
 
-        // THE SCENE, BECAUSE THE WINDOW IS NOW OURS.
-        //
-        // A window's own style is the effective one, after any override — and
-        // while OLED is engaged that override is one WE set (see
-        // FBPPinAppearance). Asking the window would therefore mean asking our
-        // own answer back, and the system could go Light without us ever
-        // hearing about it. A UIWindowScene carries no override: it is the iOS
-        // setting, full stop.
-        //
-        // Our own windows still do not get to speak. They follow iOS directly
-        // and would answer for the system while Facebook's windows are pinned,
-        // which is a different question.
+        // Our own windows follow iOS directly, a different question.
         if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) return;
         UIUserInterfaceStyle style = FBPSystemStyleFromScenes();
         if (style == UIUserInterfaceStyleUnspecified || style == gFBPSystemStyle) return;
@@ -1445,8 +1120,6 @@ static void FBPTrackWindowStyle(UIWindow *window) {
         FBPUpdateSystemStyle(style);
         FBPOLEDLogState("window-style-changed");
 
-        // Restore what OLED recorded, then hand the hierarchy to Facebook's own
-        // appearance so it repaints whatever was left behind.
         FBPSweepAppearance();
         FBPAdoptAppearance(style);
     }
@@ -1455,14 +1128,12 @@ static void FBPTrackWindowStyle(UIWindow *window) {
 void FBPInitOLEDHooks(void) {
     FBPRefreshOLED();
 
-    // Everything below registers process-wide state exactly once. FBPInitOLEDHooks
-    // is re-run on every dyld image load (see FBPEntry.xm), so without this latch the
-    // notification observers would be added again for each image — a became-active
-    // would then fire the block dozens of times and storm the log and the relayout.
+    // FBPInitOLEDHooks is re-run on every dyld image load, so without this latch
+    // the observers would be added once per image and a became-active would
+    // fire the block dozens of times.
     FBP_ONCE(gOLED) {
-        // Keep the cached toggle in sync when settings change, then nudge a relayout
-        // so turning OLED on/off takes effect promptly. OLED no longer forces any
-        // appearance; it follows the iOS Light/Dark setting (FBPOLEDActive).
+        // Keep the cached toggle in sync, then nudge a relayout so the switch
+        // takes effect promptly.
         [NSNotificationCenter.defaultCenter
             addObserverForName:FBPSettingsDidChangeNotification
                         object:nil
@@ -1473,20 +1144,17 @@ void FBPInitOLEDHooks(void) {
             FBPNudgeOLEDRelayout();
         }];
 
-        // A live iOS Light↔Dark switch is caught by the window layout pass
-        // (FBPTrackWindowStyle). Returning from the background is the one case
-        // that can miss, so re-apply for the current appearance on foreground.
+        // FBPTrackWindowStyle catches a live switch; returning from the
+        // background is the one case it can miss.
         [NSNotificationCenter.defaultCenter
             addObserverForName:UIApplicationDidBecomeActiveNotification
                         object:nil
                          queue:NSOperationQueue.mainQueue
                     usingBlock:^(NSNotification *note) {
-            // Re-seed the cached style in case the appearance changed while the app
-            // was backgrounded (no trait change fires then).
+            // The appearance may have changed while backgrounded, and no trait
+            // change fires then.
             if (@available(iOS 13.0, *)) {
-                // The app's own appearance, for the same reason as
-                // FBPTrackWindowStyle; the scene only stands in if there is no
-                // window of Facebook's to ask yet.
+                // The scene only stands in when there is no Facebook window yet.
                 UIWindow *key = FBPAppKeyWindow();
                 UIUserInterfaceStyle style =
                     key ? key.traitCollection.userInterfaceStyle

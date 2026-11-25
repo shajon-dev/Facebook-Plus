@@ -1,7 +1,3 @@
-// Shared declarations for the tweak: preference and notification keys, the
-// FBPLog macro, accessibility identifiers, view tags, and the FBP_ONCE
-// deferred-install helper.
-
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import "FBPTrace.h"
@@ -10,9 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Logging
 
-// Every FBPLog line is recorded to the exportable diagnostic log (FBPTrace), in
-// release as well as debug, so a bug report can carry it; debug builds also
-// print to the console.
+// Recorded to the exportable log in release as well as debug; DEBUG also prints.
 #ifdef DEBUG
 #define FBPLog(fmt, ...)                                                       \
     do {                                                                       \
@@ -25,41 +19,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Deferred hook installation
 
-/// Guards a hook group so it installs exactly once.
-///
-/// Facebook's main binary links only FBSharedFramework at launch;
-/// FBFeedAttachmentsFramework, FBSharedDynamicFramework, FBCameraFramework and
-/// FBRarelyUsedFramework are dlopen'd later, the first time the user visits
-/// something that needs them. A %ctor therefore runs long before most of the
-/// app's classes exist, and any group gated on `objc_getClass` for those
-/// frameworks silently never installs.
-///
-/// The installers are re-run on every dyld image load (see FBPEntry.xm), so
-/// each group needs its own latch:
-///
-///     if (objc_getClass("CKComponentActionControlForwarder")) {
-///         FBP_ONCE(gConfirmInstalled) { %init(FBPConfirm); }
-///     }
+/// Installs a hook group once. Most of Facebook's frameworks are dlopen'd long
+/// after %ctor, so the installers are re-run on every dyld image load
+/// (FBPEntry.xm) and each group therefore needs its own latch.
 #define FBP_ONCE(name) static BOOL name = NO; if (!name && (name = YES))
 
-/// One line per call site, however many times hook installation re-runs.
-///
-/// Every report that says whether a group installed has to use this, not
-/// FBPLog. The installers run again for each image dyld loads, and a device
-/// launch on 2026-11-21 loaded 781 of them: five report lines that sat NEXT to
-/// an FBP_ONCE install instead of INSIDE it produced 3,905 of the 4,000 lines
-/// in the exported log and pushed everything else out of it. The install was
-/// correctly guarded in each case; only the line about it was not.
-///
-/// This applies to the failure branch just as much as the success one — "class
-/// not found" repeats 781 times just as happily.
-///
-///     if (checker) {
-///         FBP_ONCE(gMetaPlus) { %init(FBPMetaPlus); }
-///         FBPLogOnce(@"plus: benefit gate installed");
-///     } else {
-///         FBPLogOnce(@"plus: FBSubsBenefitStatusChecker not found");
-///     }
+/// EVERY report inside an FBPInit* must use this, not FBPLog: the installers
+/// run again for each of the hundreds of images dyld loads, and that applies to
+/// the failure branch ("class not found") as much as to the success one.
 #define FBPLogOnce(fmt, ...)                                                   \
     do {                                                                       \
         static BOOL _fbp_logged_once = NO;                                     \
@@ -71,17 +38,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Notifications
 
-/// Posted whenever any preference changes, so live views can re-read state
-/// without an app relaunch.
 extern NSNotificationName const FBPSettingsDidChangeNotification;
 
-/// Posted continuously when floating video button opacity or saved positions
-/// change, allowing live buttons to update immediately without triggering full
-/// theme/feed re-walks on every slider step.
+/// Separate from the settings notification so a slider step does not trigger a
+/// full theme/feed re-walk.
 extern NSNotificationName const FBPVideoButtonsDidChangeNotification;
 
-/// Posted as Facebook slides its tab bar in or out. userInfo carries
-/// @c FBPTabBarFractionKey as an NSNumber<double>, 0 = fully visible.
+/// userInfo carries @c FBPTabBarFractionKey, an NSNumber<double>, 0 = visible.
 extern NSNotificationName const FBPTabBarVisibilityDidChangeNotification;
 extern NSString *const FBPTabBarFractionKey;
 
@@ -113,9 +76,7 @@ extern NSString *const FBPKeyConfirmPost;       // Confirm before publishing a p
 // Downloads
 extern NSString *const FBPKeyReelsDownloaderEnabled;
 extern NSString *const FBPKeyStoryDownloaderEnabled;
-/// Ask which quality to save when Facebook serves more than one rendition.
-/// Off means "take the best one and start", which is what the downloaders did
-/// before the picker existed.
+/// Off means "take the best rendition and start".
 extern NSString *const FBPKeyDownloadQualityPicker;
 
 // Reels & floating video controls
@@ -132,7 +93,6 @@ extern NSString *const FBPKeyStoryEyePosition;         // Normalized "x,y" cente
 extern NSString *const FBPKeyAnonymousStories;
 extern NSString *const FBPKeyNoAutoNext;
 
-// Feed interaction
 extern NSString *const FBPKeyFeedLike;          // Confirm every like (feed + Reels)
 
 // Appearance
@@ -154,26 +114,18 @@ extern NSString *const FBPKeyLinksInSafari;     // Open external links in the de
 // Diagnostics
 extern NSString *const FBPKeyLogsKeep;          // keep the diagnostic log across launches
 // Sideload compatibility
-/// Pin keychain calls that need it to the probed access group (see
-/// src/PluginsInject/SecRebinds.xm). On by default; turning it off disables the
-/// SecItem* rewriting entirely, which is the A/B for a keychain-related crash.
-/// SecRebinds.xm is shared with FBPNotifyBridge.dylib, which cannot see this
-/// header, so it reads the raw @c "keychainRebind" key out of the defaults
-/// suite — keep the two in step.
+/// Pin keychain calls to the probed access group (PluginsInject/SecRebinds.xm);
+/// off disables the SecItem* rewriting. SecRebinds.xm cannot see this header and
+/// reads the raw @c "keychainRebind" key from the suite — keep the two in step.
 extern NSString *const FBPKeyKeychainRebind;
 
-/// Run Facebook's own push client sync when a badge-only silent push arrives,
-/// so a like / comment / tag notification is fetched and shown instead of only
-/// moving the badge. See src/Features/Notifications/FBPNotifClientSync.xm.
 extern NSString *const FBPKeyNotifClientSync;
 
-// Other
 extern NSString *const FBPKeyNotifyUpdates;
 extern NSString *const FBPKeyAutoClearCache;    // Sweep the caches on every launch
 extern NSString *const FBPKeyCacheSchedule;     // Sweep on a UTC schedule instead: "off", "12" or "24" hours
 extern NSString *const FBPKeyLanguage;          // In-tweak UI language ("" = English/Base, "fr", …)
 
-// Internal
 extern NSString *const FBPKeyIntroduced;        // Onboarding has been shown
 extern NSString *const FBPKeyLastNotifiedVersion; // Latest release the user was told about
 extern NSString *const FBPKeyResolvedGitHubOwner; // GitHub owner last found live (primary or mirror)
@@ -181,10 +133,8 @@ extern NSString *const FBPKeyLastCacheSweep;    // When the caches were last swe
 
 #pragma mark - Confirmations
 
-/// One shared "a confirmation is on screen" latch, so the two confirmation
-/// paths (the ComponentKit forwarder and the method-swizzle commit hooks) never
-/// stack a second prompt on the first, which previously made tapping a post
-/// raise the prompt repeatedly.
+/// One shared latch, so the two confirmation paths (the ComponentKit forwarder
+/// and the method-swizzle commit hooks) never stack a second prompt on a first.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -196,10 +146,8 @@ void FBPSetConfirmPromptVisible(BOOL visible);
 
 #pragma mark - Fonts
 
-/// Reentrancy / self-exclusion guard for the font-replacement hooks. The tweak's
-/// own UI (FBPFont) and the font hooks themselves build UIFont objects; this latch
-/// is raised around that work so those requests fall through to the original font
-/// instead of being recursively replaced. Only Facebook's own text is swapped.
+/// Reentrancy guard: the tweak's own UI and the font hooks themselves build
+/// UIFont objects, which must fall through instead of being replaced again.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -211,9 +159,8 @@ void FBPSetFontScopeActive(BOOL active);
 
 #pragma mark - Ads
 
-/// Ad detection for News Feed unit models. Defined in FBPAdsHooks.xm (so every
-/// ad rule lives in one place) and called by the single FBMemModelObject filter
-/// in FBPFeedHooks, which keeps that model hooked exactly once.
+/// Defined in FBPAdsHooks.xm and called from the single FBMemModelObject filter
+/// in FBPFeedHooks, so that model stays hooked exactly once.
 #ifdef __cplusplus
 extern "C" BOOL FBPModelIsBlockedAd(id model);
 #else
@@ -221,20 +168,15 @@ extern BOOL FBPModelIsBlockedAd(id model);
 #endif
 
 #pragma mark - Accessibility identifiers used to locate Facebook views
-//
-// These are stable across app versions because Facebook's own UI tests depend
-// on them, which makes them a far better anchor than ComponentKit's generated
-// view class names. Verified present in FB v570.0.0 and v574.0.0.
+// Stable across app versions because Facebook's own UI tests depend on them.
 
 extern NSString *const FBPAXFeedLikeButton;     // cell-ufi-like-button
 extern NSString *const FBPAXReelsLikeButton;    // shorts-like-top-button
 extern NSString *const FBPAXNavSettingsButton;  // nav-settings-button
 
 #pragma mark - View tags
-//
-// Injected container views are located again on subsequent layout passes with
-// -viewWithTag: rather than being re-created, so repeated -layoutSubviews calls
-// do not stack duplicate buttons.
+// Found again with -viewWithTag: rather than re-created, so repeated layout
+// passes cannot stack duplicate buttons.
 
 typedef NS_ENUM(NSInteger, FBPViewTag) {
     FBPViewTagStoryButton  = 0x7B902,

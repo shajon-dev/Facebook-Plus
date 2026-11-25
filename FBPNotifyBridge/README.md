@@ -351,8 +351,8 @@ in order:
    around `didReceiveNotificationRequest:withContentHandler:` that always calls
    the handler exactly once, falling back to the original content. This does not
    make a notification detailed; it removes the separate failure class where a
-   banner arrives ~30 s late or not at all. iQFace ships exactly this, in
-   `IQFNotifyPassthrough.dylib`, and it is the one thing it has that we do not.
+   banner arrives ~30 s late or not at all. Other tweaks ship exactly this as a
+   separate passthrough dylib, and it is the one thing they have that we do not.
 
 ## Build and injection
 

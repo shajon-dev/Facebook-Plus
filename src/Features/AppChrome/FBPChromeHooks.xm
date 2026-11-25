@@ -173,16 +173,11 @@ static UIView *FBPFirstViewWhere(UIView *root, NSInteger limit,
     return nil;
 }
 
-/// Is this the top "facebook" wordmark?
-///
-/// Two ways of saying so, because the bar is not built the same on every OS:
-///
-///   * an accessibility identifier containing "wordmark" — the app ships both
-///     "facebook-wordmark" and "fb-nav-header-wordmark", neither translated;
-///   * failing that, an image view that calls itself Facebook and is shaped
-///     like the wordmark. The identifier is what the iOS 18 bar carries and the
-///     label is all that was left on the newer one, so neither test alone finds
-///     it on both.
+/// Is this the top "facebook" wordmark? Two tests, because the bar differs by
+/// OS: an accessibility identifier containing "wordmark" (the app ships both
+/// "facebook-wordmark" and "fb-nav-header-wordmark", neither translated), or
+/// else an image view labelled Facebook and shaped like the wordmark. Neither
+/// test alone finds it on both the iOS 18 bar and the newer one.
 static BOOL FBPIsWordmarkView(UIView *candidate) {
     NSString *identifier = candidate.accessibilityIdentifier;
     if (identifier.length &&
@@ -195,10 +190,8 @@ static BOOL FBPIsWordmarkView(UIView *candidate) {
     return size.width > size.height && size.height > 0 && size.height <= 60;
 }
 
-/// One compact description of what the top bar actually holds, for the case
-/// where the wordmark is not in it. Diagnostic builds only, once per launch:
-/// this is the question a phone that cannot be attached to has to answer in a
-/// log, which is how the 16 Pro Max reported this one in the first place.
+/// What the top bar holds when the wordmark is not in it. Diagnostic builds
+/// only, once per launch, for a phone that cannot be attached to.
 static void FBPReportWordmarkMiss(UIView *bar) {
 #if FBP_DIAG
     static BOOL reported = NO;
@@ -240,34 +233,19 @@ static void FBPReportWordmarkMiss(UIView *bar) {
 
 /// Long press on the top "facebook" wordmark opens Facebook Plus settings.
 ///
-/// Ground truth from the live app (observed with Frida on device):
-///   * The wordmark is a @c UIImageView whose @c accessibilityIdentifier is
-///     "facebook-wordmark" — a developer string Facebook does not translate — and
-///     whose @c accessibilityLabel is just "Facebook". It is NOT the "…view
-///     selector" element older versions searched for; that label does not exist
-///     on current builds, which is why matching it failed on every phone.
-///   * It is decorative: it has no tap action and sits userInteractionEnabled =
-///     NO, inside a ComponentKit top bar (CKComponentHostingView) under
-///     FBNavigationBar, wrapped by a plain UIView that does carry interaction.
+/// The wordmark is a decorative @c UIImageView: userInteractionEnabled = NO, no
+/// tap action, inside a ComponentKit top bar under FBNavigationBar and wrapped
+/// by a plain UIView that does carry interaction. So the gesture goes on that
+/// wrapper. The "…view selector" accessibility label older versions matched on
+/// does not exist on current builds at all.
 ///
-/// So match the image view and attach the gesture to its wrapping superview,
-/// which is already interactive and sized to the wordmark.
+/// A miss inside the bar widens the search to the whole window rather than
+/// giving up: on iOS 26+ the bar still lays out but the wordmark is mounted
+/// elsewhere, and this long press is the tweak's main entry point.
 ///
-/// WHY THE SEARCH DOES NOT STOP AT THE BAR
-///
-/// It used to, and on iOS 26+ it found nothing: the exported log off a 16 Pro
-/// Max running iOS 27 shows FBNavigationBar laying out repeatedly with no
-/// "wordmark attached" line after it, while the same build on an older phone
-/// attaches on the first pass. The bar is still there and still lays out; the
-/// wordmark is mounted somewhere else in the window. So a miss inside the bar
-/// widens to the window rather than giving up — this long press is the tweak's
-/// main entry point, and losing it loses the settings panel.
-///
-/// The search is kept off the layout path by its own result instead of by a
-/// latch: while the view it attached to is still in a window the gesture is
-/// live and nothing is walked at all. Only a ComponentKit re-mount, which takes
-/// that view out of the window, costs another walk, and a bar with no wordmark
-/// in it (every screen that is not the feed) is re-examined once a second
+/// Its own result keeps it off the layout path: while the attached view is
+/// still in a window nothing is walked. Only a ComponentKit re-mount costs
+/// another walk, and a bar with no wordmark in it is re-examined once a second
 /// rather than on every layout pass.
 static __weak UIView *gFBPWordmarkTarget = nil;
 static CFAbsoluteTime gFBPWordmarkSearchedAt = 0;

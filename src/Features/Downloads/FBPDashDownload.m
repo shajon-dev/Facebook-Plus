@@ -7,10 +7,9 @@
 #import <stdatomic.h>
 #import <math.h>
 
-// Two symbols declared here rather than imported from FBPResources.h and
-// FBPDownloadVariants.h, both of which pull in UIKit; keeping the imports out is
-// what lets the host harness compile this .m against macOS Foundation. Canonical
-// declarations live in those headers; keep the signatures in step.
+// Declared here rather than imported from FBPResources.h and
+// FBPDownloadVariants.h, which pull in UIKit and would stop the host harness
+// compiling this .m. Canonical declarations are there; keep them in step.
 extern NSString *FBPLocalizedString(NSString *key);
 extern BOOL FBPDownloadQualityLoggingEnabled(void);
 
@@ -21,38 +20,25 @@ NSString *const FBPDashDownloadStatusCodeKey = @"FBPDashDownloadStatusCode";
 
 #pragma mark - Tuning
 
-// The share of the bar that belongs to the two downloads. The remainder is the
-// merge, which reports no intermediate progress of its own — reserving a slice
-// for it is what keeps the bar off 100% while FBPMediaMuxer is still copying
-// samples. 0.88 reflects the shape of the work: seconds of network against a
-// fraction of a second of passthrough I/O, plus enough headroom that the last
-// step reads as a step rather than a flicker.
+// The share of the bar that belongs to the two downloads. The remainder is
+// reserved for the merge, which reports no intermediate progress of its own, so
+// without the slice the bar would sit at 100% while samples are still copying.
 static const float kFBPDashFetchShare = 0.88f;
 
-// The same share, for a flow that converts instead of merging — and it is a very
-// different number, because the work behind it is a different shape. A merge is
-// a fraction of a second of passthrough I/O after seconds of network, so the
-// network is almost the whole wait. A conversion is minutes of sustained
-// encoding after those same seconds of network, so the network is the small
-// part. Measured on the real 127-second 1080p fixture: 8.1s to re-encode on an
-// Apple-silicon Mac, and a phone's encoder block is a good deal slower than
-// that. 0.30 keeps the bar honest about where the time actually goes; leaving it
-// at 0.88 would park the bar at 88% for the entire encode.
+// The same share for a flow that converts, and necessarily a much smaller one:
+// a conversion is minutes of encoding after the same seconds of network, where a
+// merge is a fraction of a second. At 0.88 the bar would park for the encode.
 static const float kFBPDashConvertFetchShare = 0.30f;
 
-// Matches FBPReelDownloadManager's own session: a request that has stalled for a
-// minute is not coming back, and a transfer still going after three minutes is
-// not a Reel. Shared by both streams, which is what makes the two timeouts
-// equivalent to the single-URL path's one.
+// Matches FBPReelDownloadManager's own session, and shared by both streams,
+// which is what makes the two timeouts equivalent to the single-URL path's one.
 static const NSTimeInterval kFBPDashRequestTimeout = 60.0;
 static const NSTimeInterval kFBPDashResourceTimeout = 180.0;
 
 #pragma mark - Diagnostic
 
 // Same subsystem and category as the quality diagnostic in
-// FBPDownloadVariants.m, so a maintainer who already has Console filtered to
-// "com.shajon.fbplus" / DownloadQualities sees the download tap and what the
-// two-stream flow then did in one stream, in order.
+// FBPDownloadVariants.m, so one Console filter covers the tap and the flow.
 static os_log_t FBPDashDownloadLog(void) {
     static os_log_t log;
     static dispatch_once_t onceToken;
@@ -112,12 +98,9 @@ static BOOL FBPDashURLIsFetchable(NSURL *url) {
     NSURL *_audioURL;
     NSURL *_outputURL;
 
-    /// Our own scratch directory, holding exactly the two downloaded streams.
-    /// A directory rather than two loose files so cleanup is one call that
-    /// cannot half-succeed, and so "nothing left in the temp directory" is
-    /// something a test can assert by looking at one path. Set once in -prepare
-    /// and never cleared, so the delayed cleanup in
-    /// -URLSession:didBecomeInvalidWithError: can still find it.
+    /// A directory rather than two loose files, so cleanup is one call that
+    /// cannot half-succeed. Set once in -prepare and never cleared, so the
+    /// delayed cleanup in -URLSession:didBecomeInvalidWithError: still finds it.
     NSString *_scratchPath;
     NSURL *_videoFile;
     NSURL *_audioFile;
@@ -278,10 +261,8 @@ static void FBPDashRelease(FBPDashDownload *download) {
                _videoURL.absoluteString, _audioURL.absoluteString,
                _convertVideo ? "yes" : "no");
 
-    // Concurrently, on purpose: these are two independent complete files, there
-    // is no ordering between them, and the audio one is small enough that
-    // serialising would make the whole download as slow as the video stream plus
-    // a round trip.
+    // Concurrently, on purpose: two independent complete files with no ordering
+    // between them, and serialising would cost a whole extra round trip.
     [_videoTask resume];
     [_audioTask resume];
 
@@ -291,10 +272,8 @@ static void FBPDashRelease(FBPDashDownload *download) {
 /// Validate the arguments and build the scratch directory. NO when the flow has
 /// already been finished off with an error.
 - (BOOL)prepare {
-    // A nil audio URL is allowed and means "silent video": the manifest listed
-    // no audio AdaptationSet at all, which is a real and ordinary case. One that
-    // is present but unusable, or identical to the video URL, is still a
-    // refusal.
+    // A nil audio URL means "silent video", an ordinary case. One that is
+    // present but unusable, or identical to the video URL, is still a refusal.
     BOOL audioIsUsable = (_audioURL == nil) ||
         (FBPDashURLIsFetchable(_audioURL) &&
          ![_videoURL.absoluteString isEqualToString:_audioURL.absoluteString]);
@@ -371,10 +350,8 @@ static void FBPDashRelease(FBPDashDownload *download) {
         [self->_audioTask cancel];
 
         if (self->_muxStarted) {
-            // Work nobody is waiting for: tens of megabytes of sample copying
-            // for a merge, or minutes of the encoder block running flat out for
-            // a conversion. The step's completion still fires, with its own
-            // cancel error, and that is what reaches -finishWithOutput:error:.
+            // The step's completion still fires, with its own cancel error,
+            // and that is what reaches -finishWithOutput:error:.
             if (self->_convertVideo) {
                 // Either converter may be the one in flight (the VP9 path is
                 // chosen per file in -startConversion); cancelling both is safe —
@@ -406,13 +383,10 @@ static void FBPDashRelease(FBPDashDownload *download) {
 
 /// Combined fraction of the two transfers, 0…1.
 ///
-/// Weighted by each stream's Content-Length when both are known, which is the
-/// only per-stream expectation that is both exact and available: the picker's
-/// own size figure is a single bandwidth x duration number covering video *and*
-/// audio together, so it cannot be split across the two bars. When either length
-/// is missing — a chunked response, or a response that has not arrived yet —
-/// this falls back to a simple average of the two fractions, which is also what
-/// the weighting degenerates to when the two weights are equal.
+/// Weighted by each stream's Content-Length when both are known; the picker's
+/// own figure covers video and audio together, so it cannot be split across the
+/// two bars. With either length missing this falls back to a simple average,
+/// which is what the weighting degenerates to when the weights are equal.
 - (float)fetchFraction {
     float videoFraction = FBPDashStreamFraction(_videoProgress);
 
@@ -461,16 +435,10 @@ static void FBPDashRelease(FBPDashDownload *download) {
             break;
     }
 
-    // Never backwards. The weights arrive with the responses, not with the
-    // requests, so there is a window in which one stream's length is known and
-    // the other's is not — and the two formulas disagree across it. Concretely:
-    // a small audio stream can finish before the video stream's Content-Length
-    // has arrived, at which point the fallback average says "one of two streams
-    // done, 50%"; the moment the video's length lands, the weighted figure for
-    // the same state is its true 23%. Honest, but a bar that jumps forward and
-    // then slides back reads as a bug. So the number only ever climbs: on a real
-    // network both responses land in the first round trip and this never
-    // triggers, and when it does the bar pauses instead of retreating.
+    // Never backwards. The weights arrive with the responses, so there is a
+    // window in which one length is known and the other is not, and the two
+    // formulas disagree across it — the average can read 50% where the weighted
+    // figure for the same state is 23%. The bar pauses rather than retreating.
     if (fraction < _reportedFraction) fraction = _reportedFraction;
     _reportedFraction = fraction;
 
@@ -486,11 +454,8 @@ static void FBPDashRelease(FBPDashDownload *download) {
 #pragma mark Merge or convert
 
 /// Both streams are down: start whichever last step this flow was asked for.
-///
-/// The two are alternatives, not a sequence. FBPMediaConverter writes the audio
-/// track in the same pass it encodes the picture, so converting *is* the merge
-/// for an AV1 rung; running the muxer first would write the whole file twice for
-/// nothing.
+/// The two are alternatives, not a sequence — FBPMediaConverter writes the audio
+/// track in the same pass, so converting *is* the merge for an AV1 rung.
 - (void)startMuxIfReady {
     if (atomic_load(&_finishedFlag) || _cancelled || _muxStarted) return;
     if (!_videoProgress.done || !_audioProgress.done) return;
@@ -550,19 +515,13 @@ static void FBPDashRelease(FBPDashDownload *download) {
     }];
 }
 
-/// Re-encode the picture (HEVC, or H.264 as the fallback) and write both
-/// tracks, in one pass.
-///
-/// Structurally the same as the mux branch above, with one addition that is the
-/// reason this stage exists separately: a progress block. The conversion is the
-/// long pole of an AV1 save, so its fraction is forwarded into the flow's own
-/// bar rather than letting the bar sit still through it.
+/// Re-encode the picture (HEVC, or H.264 as the fallback) and write both tracks,
+/// in one pass. Structurally the mux branch plus a progress block: the encode is
+/// the long pole of an AV1 save, so its fraction is forwarded into the bar.
 - (void)startConversion {
-    // AV1 is decoded by AVFoundation (FBPMediaConverter); VP9 is the one codec it
-    // cannot, so that goes to the borrowed-decoder converter (FBPVP9Converter).
-    // -canDecodeVideoAtURL: is a per-file -isPlayable, so the split follows the
-    // device's real capability rather than a codec guess, and both converters
-    // share the same progress/completion contract and the same error domain.
+    // AV1 goes to AVFoundation (FBPMediaConverter), VP9 to the borrowed decoder
+    // (FBPVP9Converter). -canDecodeVideoAtURL: is a per-file -isPlayable, so the
+    // split follows the device's real capability rather than a codec guess.
     BOOL avfoundationDecodes = [FBPMediaConverter canDecodeVideoAtURL:_videoFile];
 
     void (^progress)(float) = ^(float fraction) {
@@ -621,12 +580,9 @@ static void FBPDashRelease(FBPDashDownload *download) {
 
 #pragma mark Exit
 
-/// The one way out. Runs on the control queue, at most once.
-///
-/// Everything this flow created is gone by the time the completion runs: both
-/// downloaded streams and their scratch directory always, and the merge output
-/// too whenever it is not handed over. A caller is never left guessing whether
-/// it owns a file.
+/// The one way out. Runs on the control queue, at most once. Everything this
+/// flow created is gone by the time the completion runs, except the output when
+/// it is handed over, so a caller never guesses whether it owns a file.
 - (void)finishWithOutput:(NSURL *)output error:(NSError *)error {
     if (atomic_load(&_finishedFlag)) return;
     atomic_store(&_finishedFlag, true);
@@ -665,11 +621,9 @@ static void FBPDashRelease(FBPDashDownload *download) {
     });
 }
 
-/// Idempotent, and called twice on purpose: once at the exit, and once more when
-/// the session confirms it will send no further delegate messages. The second
-/// sweep covers the one narrow window where the first cannot win — a stream
-/// whose scratch-file move was in flight on the delegate queue at the moment the
-/// exit ran.
+/// Idempotent, and called twice on purpose: at the exit, and again when the
+/// session confirms no further delegate messages. The second sweep covers a
+/// scratch-file move still in flight on the delegate queue when the exit ran.
 - (void)removeScratchDirectory {
     NSString *path = _scratchPath;
     if (path.length == 0) return;
@@ -732,11 +686,9 @@ didFinishDownloadingToURL:(NSURL *)location {
     NSInteger status = response ? response.statusCode : 0;
     NSString *contentType = response.MIMEType;
 
-    // A refused transfer still "finishes" — with the CDN's error body as its
-    // payload. Without this the error page would be handed to the muxer, which
-    // would refuse it with a far less useful message than "the link expired".
-    // 403 is specifically the signed URL's `oe=` expiry having passed, which
-    // tapping download again fixes.
+    // A refused transfer still "finishes", with the CDN's error body as its
+    // payload, and without this that error page reaches the muxer. 403 is the
+    // signed URL's `oe=` expiry, which tapping download again fixes.
     if (response && (status < 200 || status >= 300)) {
         dispatch_async(_control, ^{
             FBPDashLog("%{public}s stream rejected HTTP %ld",
@@ -894,12 +846,9 @@ NSString *FBPDashDownloadMessageForError(NSError *error) {
                                               FBPDashDownloadReason(error)];
 
         case FBPDashDownloadErrorConvert: {
-            // One case deserves its own sentence rather than the generic
-            // "couldn't be converted (reason)": a device with no AV1 decoder
-            // will never convert this rung, however many times it is tapped, and
-            // the only useful advice is to pick a different quality. Every other
-            // conversion failure is a this-time problem and reads like the merge
-            // one.
+            // A device with no AV1 decoder will never convert this rung, so it
+            // gets its own sentence: the only useful advice is another quality.
+            // Every other conversion failure is a this-time problem.
             NSError *underlying = error.userInfo[NSUnderlyingErrorKey];
             if ([underlying.domain isEqualToString:FBPMediaConverterErrorDomain] &&
                 (underlying.code == FBPMediaConverterErrorNoConversionPath ||

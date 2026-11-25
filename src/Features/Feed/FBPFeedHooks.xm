@@ -1,9 +1,7 @@
-// Feed cleanup.
-//
-// Every News Feed unit is materialised through FBMemModelObject. Returning nil
-// from the initialiser drops the unit before it reaches the data source, so no
-// blank cell is left behind — which is why this is done at the model layer
-// rather than by hiding views.
+// Feed cleanup. Every News Feed unit is materialised through FBMemModelObject,
+// and returning nil from the initialiser drops it before the data source sees
+// it, so no blank cell is left behind — which is why this is done at the model
+// layer rather than by hiding views.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -15,30 +13,23 @@
 #import <os/lock.h>
 #import <stdatomic.h>
 
-/// Feed category token -> the preference that suppresses it.
-///
-/// Built once. -initWithFBPandoTree: is on the hot path for every item in the
-/// feed, so per-call string work would show up as scroll jank.
+/// Feed category token -> the preference that suppresses it. Built once:
+/// -initWithFBPandoTree: is on the hot path for every item in the feed.
 static NSDictionary<NSString *, NSString *> *FBPCategoryMap(void) {
     static NSDictionary *map;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // Ads are handled separately by FBPModelIsBlockedAd (FBPAdsHooks.xm), so
-        // "SPONSORED" is deliberately not mapped here.
+        // "SPONSORED" belongs to FBPModelIsBlockedAd in FBPAdsHooks.xm.
         map = @{
             @"ENGAGEMENT"    : FBPKeyNoRecs,
             @"ENGAGEMENT_QP" : FBPKeyNoRecs,
             @"FB_SHORTS"     : FBPKeyNoReels,
-            // Gone from v585 (see the token diagnostic below), where the tray
-            // is removed at its section component instead — see
-            // FBPStoryHooks.xm. Kept mapped so older builds that still serve
-            // the token obey the same switch.
+            // Gone from v585, where the tray is removed at its section
+            // component instead; mapped for builds that still serve it.
             @"MULTI_FB_STORIES_TRAY" : FBPKeyNoMainStories,
             @"PYMK_STORY"    : FBPKeyNoStoryPYMK,
-            // The feed-level bucket was renamed PYMK_FEED somewhere before
-            // v585 — the bare "PYMK" token is gone from that build's binary,
-            // which is why the filter silently stopped matching. The old token
-            // stays mapped so older Facebook versions keep working.
+            // Renamed from the bare "PYMK", which is gone from v585 and is why
+            // the filter silently stopped matching; both stay mapped.
             @"PYMK_FEED"     : FBPKeyNoPYMK,
             @"PYMK"          : FBPKeyNoPYMK,
         };
@@ -46,13 +37,9 @@ static NSDictionary<NSString *, NSString *> *FBPCategoryMap(void) {
     return map;
 }
 
-/// The Threads cross-app promotion unit ("<name>, discover new threads").
-///
-/// Deliberately only Threads. The binary has a whole `*_IN_FEED_UNIT` family
-/// (Notes, Highlights, "creators you may follow", follow-back, MEMU…) and
-/// blocking all of them emptied the feed — Facebook stopped serving pages and
-/// fell back to "feed not available at this moment". Those units evidently
-/// carry pagination the feed depends on, so they stay.
+/// The Threads cross-app promotion unit, and deliberately only that one: the
+/// binary has a whole `*_IN_FEED_UNIT` family, and blocking all of them emptied
+/// the feed — they evidently carry pagination the feed depends on.
 static NSSet<NSString *> *FBPThreadsUnits(void) {
     static NSSet *units;
     static dispatch_once_t onceToken;
@@ -65,24 +52,14 @@ static NSSet<NSString *> *FBPThreadsUnits(void) {
     return units;
 }
 
-/// Field keys that might carry the unit's type.
-///
-/// FBMemModelObject resolves its fields dynamically off the Pando tree — the
-/// concrete model classes declare no ObjC methods or properties at all, so the
-/// real accessor name cannot be read out of the binary. In v578 the app serves
-/// the Threads card ("<name>, discover new threads") through a generic Pando
-/// feed unit whose type lives in `feed_unit_type` (== "THREADS_IN_FEED_UNIT").
-///
-/// Both camelCase and the raw snake_case Pando key are tried, because KVC (see
-/// FBPIsThreadsUnit) resolves either shape.
+/// Field keys that might carry the unit's type. The concrete model classes
+/// declare no ObjC methods at all (fields resolve off the Pando tree), so the
+/// accessor name cannot be read out of the binary; KVC resolves either shape,
+/// so both spellings are tried.
 static NSArray<NSString *> *FBPUnitTypeKeys(void) {
     static NSArray *keys;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // Grounded in the strings actually present in FBSharedFramework v578:
-        // `unitType`, `feed_unit_type` and `FeedUnitType`. camelCase covers a
-        // materialised accessor; the raw snake key covers KVC lookups that hit
-        // the Pando tree directly.
         keys = @[@"feedUnitType", @"feed_unit_type", @"unitType", @"inlineUnitType"];
     });
     return keys;
@@ -95,11 +72,9 @@ static BOOL FBPValueIsThreadsToken(id value) {
 
 static BOOL FBPIsThreadsUnit(id model) {
     for (NSString *key in FBPUnitTypeKeys()) {
-        // 1) Typed selector send — only when the model genuinely declares an
-        //    object-returning accessor. The return-type guard avoids the scalar
-        //    case (-[FBShortsViewerRichMediaModel storyUnitType] is 'Q', an
-        //    NSUInteger); messaging its result as an id is undefined behaviour
-        //    and previously destabilised the feed.
+        // Typed send, only for a declared object-returning accessor: some of
+        // these are scalar ('Q'), and messaging that result as an id is
+        // undefined behaviour.
         SEL selector = NSSelectorFromString(key);
         if ([model respondsToSelector:selector]) {
             NSMethodSignature *signature = [model methodSignatureForSelector:selector];
@@ -112,13 +87,9 @@ static BOOL FBPIsThreadsUnit(id model) {
             }
         }
 
-        // 2) KVC. Pando fields are reachable through -valueForKey: even when the
-        //    matching accessor has not been lazily materialised yet, so
-        //    -respondsToSelector: for it is NO at -initWithFBPandoTree: time.
-        //    That gap is why the selector-only check missed the Threads card.
-        //    -valueForKey: on an absent key throws NSUndefinedKeyException, which
-        //    the @try absorbs; a scalar-backed field returns an NSNumber that
-        //    FBPValueIsThreadsToken rejects.
+        // KVC reaches a Pando field whose accessor is not materialised yet, so
+        // -respondsToSelector: is NO at -initWithFBPandoTree: time and a
+        // selector-only check misses it. An absent key throws, absorbed below.
         @try {
             id value = [model valueForKey:key];
             if (FBPValueIsThreadsToken(value)) return YES;
@@ -129,29 +100,11 @@ static BOOL FBPIsThreadsUnit(id model) {
 
 #pragma mark - Feed-unit token diagnostic
 
-// Every entry in FBPCategoryMap() is a bucket token Facebook can rename at any
-// release, and when it does the toggle keeps its switch and silently stops
-// biting — exactly how the bare "PYMK" token died. Against Facebook
-// 585.0.0.64.71, "FB_SHORTS", "ENGAGEMENT", "ENGAGEMENT_QP" and
-// "MULTI_FB_STORIES_TRAY" are absent as standalone strings from all nineteen
-// Mach-O images in the app bundle, from the Pando flatbuffer blob
-// (lightblue-app-ios_pando_flatbuffer_data.bin), from react_native_routes.json
-// and prepackaged_bloks_config.json, and from main.hbcbundle. Their
-// replacements could not be identified statically: the only surviving
-// category-shaped family is the feed_top_story_min_gap_type cluster (SPONSORED,
-// MP_NETFLIX_PROMOTION, HIGH_VALUE_PROMOTION, FB_STORIES_ENGAGEMENT,
-// FIXED_POSITION, FB_STORIES, SHOWCASE, END_OF_FEED_CONTENT), which has no
-// Reels entry at all, and parts of the enum have evidently gone numeric — the
-// bundled ranking config expresses "is_organic" as `category=1`, the client
-// logs dist_to_min_gap_type_4/5/10, and several classes declare `category` with
-// an integer encoding (Ti / Tq / TQ) rather than T@"NSString".
-//
-// So rather than guess, this logs what the device actually serves. It is on in
-// a FBP_DIAG build and off in every other. Scroll the feed once and read the
-// token set back either in Console.app, filtered on subsystem
-// com.shajon.fbplus, or straight out of Settings -> Logs, which is the only one
-// of the two reachable on a phone that cannot be attached to. What comes out is
-// the ground truth to map in FBPCategoryMap().
+// Every entry in FBPCategoryMap() is a token Facebook can rename, and when it
+// does the toggle silently stops biting. Several mapped tokens are no longer
+// strings anywhere in the bundle, and part of the enum has gone numeric, so
+// replacements cannot be found statically. This logs what the device serves,
+// which is the ground truth to map in FBPCategoryMap().
 
 static os_log_t FBPFeedUnitLog(void) {
     static os_log_t log;
@@ -162,26 +115,13 @@ static os_log_t FBPFeedUnitLog(void) {
     return log;
 }
 
-/// Whether the per-model feed-unit token probe runs. Off (no user toggle); see
-/// FBPRefreshFeedUnitLogging.
-///
 /// FBPShouldFilterModel runs for every object the Pando tree materialises, so
-/// when the toggle is off the diagnostic has to cost one relaxed load of this
-/// flag and nothing else — an NSUserDefaults lookup per model would be scroll
-/// jank. The mirror is refreshed from the notification the settings panel posts
-/// on commit, so the switch takes effect without a relaunch and without a
-/// rebuild.
+/// the disabled diagnostic must cost one relaxed load and nothing more; an
+/// NSUserDefaults lookup per model would be scroll jank.
 static atomic_bool gFBPLogFeedUnits = false;
 
 static void FBPRefreshFeedUnitLogging(void) {
-    // On in a diagnostic build and off in every other, rather than a constant
-    // somebody has to edit. The probe runs for every object the Pando tree
-    // materialises, so it would jank scrolling in a shipped build; in a
-    // FBP_DIAG build that cost is the point, and it is the only way to learn
-    // the token or class of a unit whose text comes from the server and so
-    // appears nowhere in the binary. "Suggested Pages for you" is one of those:
-    // its copy is not in any image or in the bundled strings, which is why the
-    // PagesYouMayLike class matcher does not reach it.
+    // Diagnostic builds only: the cost would jank scrolling in a shipped one.
 #if FBP_DIAG
     atomic_store_explicit(&gFBPLogFeedUnits, true, memory_order_relaxed);
 #else
@@ -189,13 +129,8 @@ static void FBPRefreshFeedUnitLogging(void) {
 #endif
 }
 
-/// Field keys the diagnostic probes.
-///
-/// `category` is what FBPCategoryMap() is matched against. The rest are the
-/// neighbouring accessors v585 actually declares — `feedUnitCategory` (a new
-/// T@"NSString",R,C,N property), `storyCategory`, `storyUnitType` — plus the raw
-/// snake_case Pando keys, because KVC resolves either shape and the Threads
-/// matcher depends on that (see FBPUnitTypeKeys above).
+/// `category` is what FBPCategoryMap() matches; the rest are neighbouring
+/// accessors plus the raw snake_case Pando keys.
 static NSArray<NSString *> *FBPDiagnosticKeys(void) {
     static NSArray *keys;
     static dispatch_once_t onceToken;
@@ -211,12 +146,8 @@ static NSArray<NSString *> *FBPDiagnosticKeys(void) {
     return keys;
 }
 
-/// One line per distinct finding, not per model.
-///
-/// FBMemModelObject is the base of every Pando object, so a single scroll
-/// materialises tens of thousands of them and logging each one would bury the
-/// answer. Deduping keeps the output to the token set itself, which is the whole
-/// point of the capture.
+/// One line per distinct finding: FBMemModelObject is the base of every Pando
+/// object, so a scroll materialises tens of thousands of them.
 static BOOL FBPClaimDiagnosticLine(NSString *line) {
     static os_unfair_lock lock = OS_UNFAIR_LOCK_INIT;
     static NSMutableSet<NSString *> *seen;
@@ -225,8 +156,6 @@ static BOOL FBPClaimDiagnosticLine(NSString *line) {
     if (!seen) seen = [NSMutableSet set];
     BOOL fresh = ![seen containsObject:line];
     if (fresh) {
-        // Values can be unbounded (ids, tracking strings), so cap the set
-        // rather than let a long session grow it without limit.
         if (seen.count >= 4096) [seen removeAllObjects];
         [seen addObject:line];
     }
@@ -234,21 +163,17 @@ static BOOL FBPClaimDiagnosticLine(NSString *line) {
     return fresh;
 }
 
-/// A printable description of @c key on @c model, or nil when there is no such
-/// field. The leading tag says which path produced it — @c sel for a declared
-/// accessor, @c kvc for a Pando field resolved through -valueForKey:.
+/// A printable description of @c key on @c model, or nil. The leading tag is
+/// @c sel for a declared accessor, @c kvc for a -valueForKey: resolution.
 static NSString *FBPDiagnosticDescription(id model, NSString *key) {
     SEL selector = NSSelectorFromString(key);
     if ([model respondsToSelector:selector]) {
         NSMethodSignature *signature = [model methodSignatureForSelector:selector];
         const char *returnType = signature.methodReturnType;
         if (returnType && returnType[0] != _C_ID) {
-            // The accessor exists but does not return an object. Reported rather
-            // than read: messaging a scalar result as an id is the undefined
-            // behaviour that previously destabilised the feed, and the encoding
-            // alone is the answer worth having — a scalar-backed field is
-            // precisely what makes an NSString comparison in FBPCategoryMap()
-            // stop matching with no other symptom.
+            // Reported, not read: messaging a scalar result as an id is
+            // undefined behaviour. A scalar-backed field is exactly what makes
+            // an NSString comparison in FBPCategoryMap() stop matching.
             return [NSString stringWithFormat:@"sel <scalar '%c'>", returnType[0]];
         }
         if (returnType) {
@@ -271,8 +196,7 @@ static NSString *FBPDiagnosticDescription(id model, NSString *key) {
     return nil;
 }
 
-/// Kept out of line so the disabled path in FBPShouldFilterModel stays a flag
-/// test and a not-taken branch.
+/// Out of line, so the disabled path stays a flag test and an untaken branch.
 __attribute__((noinline))
 static void FBPLogFeedUnit(id model) {
     NSString *className = NSStringFromClass([model class]);
@@ -281,8 +205,6 @@ static void FBPLogFeedUnit(id model) {
     for (NSString *key in FBPDiagnosticKeys()) {
         NSString *description = FBPDiagnosticDescription(model, key);
         if (!description) continue;
-        // A whole nested model can come back as the value; the token is at the
-        // front, so a bounded prefix is enough and keeps the log readable.
         if (description.length > 160) {
             description = [[description substringToIndex:160] stringByAppendingString:@"…"];
         }
@@ -290,18 +212,13 @@ static void FBPLogFeedUnit(id model) {
                           className, key, description];
         if (FBPClaimDiagnosticLine(line)) {
             os_log(FBPFeedUnitLog(), "token %{public}@", line);
-            // Also into the log the Settings page exports, which is the only
-            // one reachable on a phone that cannot be attached to. Deduped
-            // above, so this is a line per distinct finding, not per model.
             FBPDiag(@"feedunit", @"%@", line);
         }
         reported = YES;
     }
 
     if (!reported && [className containsString:@"FeedUnit"]) {
-        // No probed field resolved, but the class name says this is a feed unit
-        // — the inventory of those is worth having too, once per class, since a
-        // class-name match is the fallback the other filters already use.
+        // No field resolved, but the class name says feed unit: inventory it.
         NSString *line = [NSString stringWithFormat:@"%@ · no token", className];
         if (FBPClaimDiagnosticLine(line)) {
             os_log(FBPFeedUnitLog(), "unit  %{public}@", line);
@@ -310,7 +227,6 @@ static void FBPLogFeedUnit(id model) {
     }
 }
 
-/// YES when this model should be dropped.
 static BOOL FBPShouldFilterModel(id model) {
     if (!model) return NO;
 
@@ -318,13 +234,9 @@ static BOOL FBPShouldFilterModel(id model) {
         FBPLogFeedUnit(model);
     }
 
-    // Ads (sponsored units and sponsoredData-backed units) are detected in one
-    // place — FBPModelIsBlockedAd in FBPAdsHooks.xm — so every ad rule lives
-    // beside the other ad hooks. This single model hook stays the only thing that
-    // touches FBMemModelObject.
+    // Ad rules live beside the other ad hooks, so this stays the only hook.
     if (FBPModelIsBlockedAd(model)) return YES;
 
-    // Most models have no category at all; bail out before doing any work.
     if ([model respondsToSelector:@selector(category)]) {
         NSString *category = [model category];
         if ([category isKindOfClass:NSString.class]) {
@@ -337,33 +249,24 @@ static BOOL FBPShouldFilterModel(id model) {
         return YES;
     }
 
-    // "Groups you should join" / "Suggested for you" group units. These arrive as
-    // their own FBMem* model class rather than under a shared category token, so
-    // they are matched by class name. The generated model does not override
-    // -initWithFBPandoTree:, so the instance still reaches this base hook.
+    // Group suggestions arrive as their own FBMem* class, not under a category
+    // token, so they match by name; the generated model does not override
+    // -initWithFBPandoTree:, so it still reaches this base hook.
     if (FBPEnabled(FBPKeyNoGroupSuggestions)) {
         NSString *className = NSStringFromClass([model class]);
         if ([className containsString:@"GroupsYouShouldJoin"]) return YES;
     }
 
-    // "Suggested Pages for you" — the pages-you-may-like unit. Like the group
-    // suggestions above it arrives as its own FBMem* model class (the plain,
-    // Paginated and Creative variants all share the "PagesYouMayLike" infix) and
-    // does not override -initWithFBPandoTree:, so it reaches this base hook.
+    // "Suggested Pages for you", likewise by class name: the plain, Paginated
+    // and Creative variants all share the "PagesYouMayLike" infix.
     if (FBPEnabled(FBPKeyNoSuggestedPages)) {
         NSString *className = NSStringFromClass([model class]);
         if ([className containsString:@"PagesYouMayLike"]) return YES;
     }
 
-    // Standalone survey feed units — the "Are you interested in this post?"
-    // card when it arrives as a unit of its own (FBMemXFBPositionalFeedSurvey,
-    // FBMemStoryGallerySurveyFeedUnit). The two infixes are matched rather than
-    // a bare "Survey" or "InlineSurvey": the latter would also catch
-    // FBMemInlineSurveyStoryActionLink / …SubmitResponsePayload, which belong to
-    // a host post that may dereference them, so dropping those risks a crash.
-    //
-    // The inline card attached to an ordinary post is a component, not a unit —
-    // see FBPFeedSurveyHooks.xm; the Reels surfaces are in FBPReelsSurveyHooks.xm.
+    // Survey cards that arrive as a unit of their own. These two infixes, not a
+    // bare "Survey", which would also catch the action-link and payload objects
+    // a host post may dereference. The inline card is in FBPFeedSurveyHooks.xm.
     if (FBPEnabled(FBPKeyNoSurveys)) {
         NSString *className = NSStringFromClass([model class]);
         if ([className containsString:@"PositionalFeedSurvey"] ||
@@ -372,10 +275,8 @@ static BOOL FBPShouldFilterModel(id model) {
         }
     }
 
-    // A single ephemeral story shown inline in the feed (its own card, distinct
-    // from the horizontal tray). It arrives as FBMemStoriesSingleBucketInline
-    // ViewerFeedUnit under an ORGANIC edge, so it is matched by class name rather
-    // than category.
+    // A single story inline in the feed, distinct from the horizontal tray. It
+    // arrives under an ORGANIC edge, so it is matched by class name.
     if (FBPEnabled(FBPKeyNoStories)) {
         NSString *className = NSStringFromClass([model class]);
         if ([className containsString:@"SingleBucketInlineViewer"] ||
@@ -384,19 +285,11 @@ static BOOL FBPShouldFilterModel(id model) {
         }
     }
 
-    // The story-tray PYMK / suggested bucket, distinct from the feed-level one.
-    // The bucket carries its type as a Pando field, not an ObjC getter, so it is
-    // read by KVC — a respondsToSelector:@selector(storyBucketType) check is
-    // always NO on these models (nothing in the tray implements that getter), so
-    // the older selector-based check never fired. The tray tokens are
-    // PYMK_STORY_TRAY and PYMK_STORY_TRAY_PROFILE_FORWARD (the bare PYMK_STORY is
-    // the non-tray variant); any of them marks a suggestion.
-    //
-    // FBMemPymkStoryData is the leaf data sub-object of such a bucket and is
-    // never dropped here: removing a leaf risks a parent dereference, so only the
-    // bucket unit that owns the token is dropped. If a token is not present (the
-    // model has no such field, or the tray is materialised off this path), the
-    // KVC read simply yields nothing and nothing is dropped.
+    // The story-tray PYMK bucket, distinct from the feed-level one. Its type is
+    // a Pando field, not an ObjC getter, so it must be read by KVC:
+    // respondsToSelector:@selector(storyBucketType) is always NO here.
+    // FBMemPymkStoryData is the leaf of such a bucket and is never dropped,
+    // since removing a leaf risks a parent dereference.
     if (FBPEnabled(FBPKeyNoStoryPYMK) &&
         ![NSStringFromClass([model class]) containsString:@"PymkStoryData"]) {
         @try {
@@ -408,7 +301,7 @@ static BOOL FBPShouldFilterModel(id model) {
                 return YES;
             }
         } @catch (__unused NSException *e) {
-            // Model has no storyBucketType field — not a tray bucket; ignore.
+            // No storyBucketType field, so not a tray bucket.
         }
     }
 
@@ -419,7 +312,6 @@ static BOOL FBPShouldFilterModel(id model) {
 
 %hook FBMemModelObject
 
-// The current path in FB v570/v574.
 - (id)initWithFBPandoTree:(void *)tree {
     FBPTraceFire("feed.FBMemModelObject.initWithFBPandoTree");
     id model = %orig;
@@ -430,14 +322,12 @@ static BOOL FBPShouldFilterModel(id model) {
 
 %end // FBPFeed
 
-// Legacy GraphQL tree path. Absent from v570 and v574, so it is
-// installed only when the selector actually exists — hooking a missing selector
-// would fail silently and mask a real problem later.
+// Legacy GraphQL tree path, absent from current builds, so it is installed
+// only when the selector exists: hooking a missing one creates it.
 %group FBPFeedLegacy
 
 %hook FBMemModelObject
 
-// fbp:legacy initWithFBPandoTree:
 - (id)initWithFBTree:(void *)tree {
     FBPTraceFire("feed.FBMemModelObject.initWithFBTree");
     id model = %orig;
@@ -455,8 +345,7 @@ void FBPInitFeedHooks(void) {
         return;
     }
 
-    // Seed the diagnostic flag and keep it in step with the settings panel. The
-    // installer is re-run on every dyld image load, so this needs its own latch.
+    // The installer re-runs on every dyld image load, so this needs a latch.
     FBP_ONCE(gFeedUnitLogging) {
         FBPRefreshFeedUnitLogging();
         [NSNotificationCenter.defaultCenter

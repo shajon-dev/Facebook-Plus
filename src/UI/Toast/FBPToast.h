@@ -5,11 +5,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// A single HUD pill.
-///
-/// Three shapes: a plain message, a message with the app logo (or a failure
-/// glyph), and an indeterminate-or-determinate progress row with an optional
-/// stop button.
+/// A single HUD pill: a plain message, a message with a glyph, or a progress
+/// row with an optional stop button.
 @interface FBPToastView : UIView
 
 @property (nonatomic, copy, nullable) NSString *title;
@@ -32,11 +29,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-/// Window that hosts the toasts.
-///
-/// Lives above the app so a message keeps showing after the user navigates
-/// elsewhere, through modals and full-screen video. It deliberately never
-/// becomes key and never owns the status bar.
+/// Window that hosts the toasts, above the app so a message survives
+/// navigation, modals and full-screen video. Never becomes key and never owns
+/// the status bar.
 @interface FBPToastWindow : UIWindow
 + (nullable UIWindow *)appKeyWindow;
 @end

@@ -5,50 +5,32 @@
 
 #import "FBPTrace.h"
 
-// WHAT A CACHE IS HERE, AND WHAT IT IS NOT
+// Two things look like caches and are not. A CASK store under Documents or
+// inside an App-Group container is durable per-account state that happens to
+// use a cache-shaped API — and the group container is where the notification
+// extension reads the session from — so only a CASK store under a Caches
+// directory is a cache. And NSTemporaryDirectory() is shared scratch, holding
+// this tweak's own downloads, conversions and log exports, so emptying it
+// wholesale destroys an in-flight download.
 //
-// Every path below was checked against a real container on a device
-// (2026-11-21). That mattered, because two things that look like caches are
-// not:
-//
-//   Documents/cask/100035156896002   CASK stores are scoped by the logged-in
-//   Documents/group.com.facebook.*/cask   account id. A store under Documents or
-//                                    inside an App-Group container is durable
-//                                    per-account state that happens to use a
-//                                    cache-shaped API — the group container is
-//                                    also where the notification extension
-//                                    reads the session from. Only a CASK store
-//                                    under a Caches directory is a cache.
-//
-//   NSTemporaryDirectory()           Shared scratch. This tweak's own downloads,
-//                                    media conversions and log exports all write
-//                                    there, so emptying it wholesale destroys an
-//                                    in-flight download — and with the automatic
-//                                    sweep on, it did so at every launch.
-//
-// So the rule is: clear the Caches directories, the directories Facebook itself
-// names as caches, and the local analytics and log stores. Leave everything
-// else, and never walk Documents or an App-Group container looking for things
-// to delete.
+// The rule: clear the Caches directories, the directories Facebook itself names
+// as caches, and the local analytics and log stores. Never walk Documents or an
+// App-Group container looking for things to delete.
 
 #pragma mark - What must survive
 
 /// Names that must never be removed, whatever directory they turn up in.
-///
-/// Matched per path component during the walk, not once on the directory we
-/// were asked to delete. The difference is the whole point: removing a tree
-/// with -removeItemAtPath: deletes everything inside it, so a check that only
-/// ever saw the top of the tree would protect `Library/Caches/Cookies` and
-/// still take `Library/Caches/something/Cookies` with the rest of `something`.
+/// Matched per path COMPONENT during the walk, not once on the directory we
+/// were asked to delete: -removeItemAtPath: takes everything inside a tree, so
+/// a top-only check protects Library/Caches/Cookies and still loses
+/// Library/Caches/something/Cookies.
 static BOOL FBPIsProtectedComponent(NSString *name) {
     static NSSet<NSString *> *protected;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         protected = [NSSet setWithArray:@[
             // Session and credential stores. HTTPStorages is where iOS 13+
-            // keeps an app's cookies and its URL-session state; losing it signs
-            // the account out, which is the one outcome this feature must never
-            // produce.
+            // keeps cookies and URL-session state, so losing it signs out.
             @"Cookies",
             @"Cookies.binarycookies",
             @"HTTPStorages",
@@ -63,9 +45,8 @@ static BOOL FBPIsProtectedComponent(NSString *name) {
             @"metaUserDefaults",
             @"com.facebook.Facebook.preferences",
 
-            // This tweak's own state, including the log mirror: deleting the
-            // file an open descriptor is writing to leaves the process logging
-            // into an unlinked inode, so the log silently stops existing.
+            // This tweak's own state, the log mirror included: deleting a file
+            // an open descriptor is writing to leaves it logging to nothing.
             @"FacebookPlus",
             @"FacebookPlusFonts",
             @"facebook-plus-trace.log",
@@ -81,13 +62,11 @@ static BOOL FBPIsProtectedComponent(NSString *name) {
     if ([protected containsObject:name]) {
         return YES;
     }
-    // App-Group containers hold the session the app and the notification
-    // extension share. On a re-signed build the redirect puts them under
-    // Documents, so they are reachable from a sweep that walks it.
+    // App-Group containers hold the session the app and the extension share,
+    // and a re-signed build's redirect puts them under Documents.
     if ([name hasPrefix:@"group.com.facebook."] || [name hasPrefix:@"group.com.metaplatforms."]) {
         return YES;
     }
-    // A preferences plist anywhere is somebody's settings.
     return [name hasSuffix:@".plist"];
 }
 
@@ -104,26 +83,22 @@ static BOOL FBPIsProtectedPath(NSString *path) {
     return NO;
 }
 
-/// Scratch this tweak owns. Named so the temporary-directory sweep cannot take
-/// a download, a conversion or a log export out from under its own feature.
+/// Scratch this tweak owns, so the temporary-directory sweep cannot take a
+/// download or a log export out from under its own feature.
 static BOOL FBPIsOurScratch(NSString *name) {
     return [name hasPrefix:@"FBP"] || [name hasPrefix:@"Facebook-Plus-"];
 }
 
 #pragma mark - Measuring, staging and deleting
 
-/// A fresh directory to rename doomed items into, or nil when one cannot be
-/// made.
+/// A fresh directory to rename doomed items into, or nil.
 ///
-/// Renaming is what makes a launch-time sweep safe. Unlinking a cache while
-/// Facebook is starting up pulls files out from under stores it has already
-/// opened, and the feed comes back "not available"; a rename is a single
-/// instant operation that leaves the app looking at an empty cache instead of a
-/// disappearing one, and anything it already holds open stays readable. The
-/// staged tree is unlinked afterwards, off the main thread.
-///
-/// The name begins with "FBP" so FBPIsOurScratch keeps the temporary-directory
-/// pass from walking into the staging area it is filling.
+/// Renaming is what makes a launch-time sweep safe: unlinking a cache while
+/// Facebook starts up pulls files out from under stores it has already opened,
+/// while a rename leaves the app looking at an empty cache and anything it
+/// holds open still readable. The staged tree is unlinked afterwards, off the
+/// main thread. The name begins with "FBP" so FBPIsOurScratch keeps the
+/// temporary-directory pass out of the staging area it is filling.
 static NSString *_Nullable FBPStagingDirectory(NSFileManager *fm) {
     NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:
         [NSString stringWithFormat:@"FBPCacheSweep-%@", NSUUID.UUID.UUIDString]];
@@ -136,7 +111,6 @@ static NSString *_Nullable FBPStagingDirectory(NSFileManager *fm) {
     return path;
 }
 
-/// Size of a file, or of everything under a directory.
 static unsigned long long FBPSizeOfPath(NSString *path, NSFileManager *fm) {
     if (!path.length) {
         return 0;
@@ -152,9 +126,7 @@ static unsigned long long FBPSizeOfPath(NSString *path, NSFileManager *fm) {
     unsigned long long total = 0;
     NSDirectoryEnumerator *enumerator = [fm enumeratorAtPath:path];
     // The loop variable is unused on purpose: -fileAttributes describes the
-    // item the enumerator just produced, and reading it costs no second stat
-    // the way building each full path and asking again would. Named with a
-    // marked __unused so -Werror does not take the build down over it.
+    // item just produced, so there is no second stat.
     for (NSString *__unused relative in enumerator) {
         NSDictionary *attributes = enumerator.fileAttributes;
         if (![attributes[NSFileType] isEqual:NSFileTypeDirectory]) {
@@ -164,11 +136,9 @@ static unsigned long long FBPSizeOfPath(NSString *path, NSFileManager *fm) {
     return total;
 }
 
-/// Disposes of one item that is already known to be safe to lose: renamed into
-/// @c staging when one was given, unlinked otherwise.
-///
-/// Only the unlinking path measures. Staging runs on the main thread during
-/// launch, and a size is a second walk of the tree for a number nothing reads.
+/// Disposes of one item known to be safe to lose: renamed into @c staging when
+/// one was given, unlinked otherwise. Only the unlinking path measures, because
+/// staging runs on the main thread during launch and a size is a second walk.
 static unsigned long long FBPReclaimItem(NSString *path,
                                          NSFileManager *fm,
                                          NSString *_Nullable staging) {
@@ -182,12 +152,9 @@ static unsigned long long FBPReclaimItem(NSString *path,
     return [fm removeItemAtPath:path error:NULL] ? size : 0;
 }
 
-/// Reclaims a file, or the unprotected parts of a directory, and reports the
-/// bytes freed.
-///
-/// A directory is only taken outright once it is known to contain nothing
-/// protected; otherwise it is walked and its children handled one by one, and
-/// the directory itself is left behind.
+/// Reclaims a file, or the unprotected parts of a directory, reporting bytes
+/// freed. A directory is taken outright only once it is known to hold nothing
+/// protected; otherwise its children are handled one by one and it stays.
 static unsigned long long FBPReclaimPath(NSString *path,
                                          NSFileManager *fm,
                                          NSString *_Nullable staging) {
@@ -204,8 +171,7 @@ static unsigned long long FBPReclaimPath(NSString *path,
         return FBPReclaimItem(path, fm, staging);
     }
 
-    // Does this tree hold anything that has to survive? If not, one operation
-    // is both cheaper and atomic.
+    // Nothing in the tree has to survive, so one operation does it atomically.
     BOOL holdsProtected = NO;
     NSDirectoryEnumerator *scan = [fm enumeratorAtPath:path];
     for (NSString *relative in scan) {
@@ -226,7 +192,6 @@ static unsigned long long FBPReclaimPath(NSString *path,
     return freed;
 }
 
-/// Empties a directory, keeping the directory itself.
 static unsigned long long FBPReclaimContentsOfDirectory(NSString *directory,
                                                         NSFileManager *fm,
                                                         NSString *_Nullable staging) {
@@ -245,12 +210,9 @@ static unsigned long long FBPReclaimContentsOfDirectory(NSString *directory,
     return freed;
 }
 
-/// Clears Facebook's CASK stores **under a caches directory only**.
-///
-/// A CASK store outside one is not a cache: on device, `Documents/cask` and the
-/// stores inside the App-Group containers are scoped by the logged-in account
-/// id, and the group container is what the notification extension reads the
-/// session from. Sweeping those was the most destructive thing this file did.
+/// Facebook's CASK stores **under a caches directory only**: one outside is not
+/// a cache but account-scoped state, and the App-Group container is what the
+/// notification extension reads the session from.
 static unsigned long long FBPClearCaskStoresInCaches(NSString *cachesRoot,
                                                      NSFileManager *fm,
                                                      NSString *_Nullable staging) {
@@ -281,11 +243,9 @@ static unsigned long long FBPClearCaskStoresInCaches(NSString *cachesRoot,
     return freed;
 }
 
-/// Clears abandoned scratch from the temporary directory.
-///
-/// Not emptied wholesale. This tweak's downloads, media conversions and log
-/// exports all live here, and so does Facebook's own in-flight upload and
-/// transcode scratch, so anything recent is assumed to be in use.
+/// Abandoned scratch only. This tweak's downloads and log exports live here, as
+/// does Facebook's own upload and transcode scratch, so anything recent is
+/// assumed to be in use.
 static unsigned long long FBPClearStaleTemporaryFiles(NSFileManager *fm,
                                                       NSString *_Nullable staging) {
     NSString *directory = NSTemporaryDirectory();
@@ -325,17 +285,14 @@ static unsigned long long FBPRunSweep(NSString *_Nullable staging) {
     NSString *documents = NSSearchPathForDirectoriesInDomains(
         NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
 
-    // Library/Caches, which is what a caches directory is for: the CDN image
-    // stores, the media segment caches, the DNS and TLS stores, the WebKit
-    // network cache.
+    // Library/Caches: CDN images, media segments, DNS/TLS, WebKit's network
+    // cache.
     freed += FBPReclaimContentsOfDirectory(caches, fm, staging);
 
-    // Scratch nothing is still using.
     freed += FBPClearStaleTemporaryFiles(fm, staging);
 
-    // The directories Facebook itself names as caches. These sit under
-    // Application Support rather than Caches, so they are listed by name
-    // instead of being found by a walk.
+    // Named by Facebook as caches but sitting under Application Support, so
+    // they are listed rather than found by a walk.
     if (appSupport.length) {
         NSString *base = [appSupport stringByAppendingPathComponent:@"com.facebook.Facebook"];
         for (NSString *name in @[ @"News Feed Cache", @"analytics" ]) {
@@ -348,8 +305,7 @@ static unsigned long long FBPRunSweep(NSString *_Nullable staging) {
         }
     }
 
-    // Local analytics and logging stores. Named individually: Documents
-    // holds durable account state alongside them and must not be walked.
+    // Named individually: Documents holds durable account state alongside them.
     if (documents.length) {
         for (NSString *child in [fm contentsOfDirectoryAtPath:documents error:NULL]) {
             if ([child hasPrefix:@"FFLogger.sql"] ||
@@ -365,7 +321,6 @@ static unsigned long long FBPRunSweep(NSString *_Nullable staging) {
         }
     }
 
-    // CASK stores, in caches directories only.
     freed += FBPClearCaskStoresInCaches(caches, fm, staging);
     if (appSupport.length) {
         freed += FBPClearCaskStoresInCaches(
@@ -373,8 +328,7 @@ static unsigned long long FBPRunSweep(NSString *_Nullable staging) {
                             @"com.facebook.Facebook/News Feed Cache"], fm, staging);
     }
 
-    // The shared container's own caches directory, and nothing else inside
-    // it: the rest of that container is the session.
+    // Its caches directory only: the rest of that container is the session.
     NSURL *group = [fm containerURLForSecurityApplicationGroupIdentifier:
                            @"group.com.facebook.Facebook"];
     if (group.path.length) {
@@ -387,11 +341,9 @@ static unsigned long long FBPRunSweep(NSString *_Nullable staging) {
     return freed;
 }
 
-/// WebKit's own stores, which it answers for asynchronously.
-///
-/// Cookies stay: they are the in-app browser's logins. Local and session
-/// storage stay with them, because a web login keeps its token there as readily
-/// as in a cookie.
+/// WebKit's own stores, answered for asynchronously. Cookies stay — they are
+/// the in-app browser's logins — and local and session storage with them,
+/// because a web login keeps its token there as readily as in a cookie.
 static void FBPClearWebsiteData(void (^_Nullable completion)(void)) {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (![WKWebsiteDataStore class]) {
@@ -413,7 +365,6 @@ static void FBPClearWebsiteData(void (^_Nullable completion)(void)) {
 
 #pragma mark - The schedule
 
-/// Seconds between the scheduled sweep times, or 0 when the schedule is off.
 static NSTimeInterval FBPSchedulePeriod(void) {
     NSString *choice = [FBPPrefs.shared stringForKey:FBPKeyCacheSchedule];
     if ([choice isEqualToString:@"12"]) return 12 * 3600;
@@ -426,18 +377,15 @@ static void FBPRecordSweep(void) {
                         forKey:FBPKeyLastCacheSweep];
 }
 
-/// Whether a scheduled sweep is owed. Separate from the every-launch switch,
-/// which answers for itself.
+/// Whether a scheduled sweep is owed; the every-launch switch answers for
+/// itself.
 ///
-/// The schedule is clock times in UTC, not an elapsed-time countdown: 00:00 and
-/// 12:00 on the twelve-hour setting, 00:00 on the twenty-four. A sweep is owed
-/// when the last one happened before the most recent of those times, so it runs
-/// on the first launch after the hour comes round and once only, wherever the
-/// device is and whatever its time zone says.
-///
-/// The boundary is arithmetic rather than an NSCalendar question because Unix
-/// time is counted from midnight UTC and has no leap seconds in it, so flooring
-/// to a multiple of the period lands exactly on 00:00 or 12:00 UTC.
+/// The schedule is clock times in UTC, not an elapsed-time countdown, so a
+/// sweep is owed when the last one happened before the most recent of those
+/// times — once, on the first launch after the hour comes round, in any time
+/// zone. The boundary is arithmetic rather than an NSCalendar question because
+/// Unix time counts from midnight UTC with no leap seconds, so flooring to a
+/// multiple of the period lands exactly on it.
 static BOOL FBPScheduledSweepIsDue(void) {
     NSTimeInterval period = FBPSchedulePeriod();
     if (period <= 0) {
@@ -445,14 +393,13 @@ static BOOL FBPScheduledSweepIsDue(void) {
     }
     NSTimeInterval last = [FBPPrefs.shared doubleForKey:FBPKeyLastCacheSweep];
     if (last <= 0) {
-        // Never swept — including the first launch after the schedule was
-        // turned on, which is where the user expects it to start.
+        // Never swept, the first launch after switching the schedule on
+        // included.
         return YES;
     }
     NSTimeInterval now = NSDate.date.timeIntervalSince1970;
     if (now < last) {
-        // The clock moved backwards: a restored backup, a time-zone edit, a
-        // user setting the date. Sweeping now is better than parking the next
+        // The clock moved backwards: better to sweep now than park the next
         // one somewhere in the future.
         return YES;
     }
@@ -473,9 +420,8 @@ static BOOL FBPScheduledSweepIsDue(void) {
         FBPDiag(@"cache", @"cleared %@ from disk",
                 [self formattedByteSize:freed]);
 
-        // WebKit last, because it answers asynchronously and the completion has
-        // to wait for it — the previous version reported a total before this
-        // ran and before the caller's toast could be truthful.
+        // WebKit last: it answers asynchronously, and the completion has to
+        // wait for it or the total it reports is not the whole figure.
         FBPClearWebsiteData(^{
             if (completion) {
                 completion(freed);
@@ -492,9 +438,8 @@ static BOOL FBPScheduledSweepIsDue(void) {
     NSFileManager *fm = NSFileManager.defaultManager;
     NSString *staging = FBPStagingDirectory(fm);
     if (!staging) {
-        // Without somewhere to rename into there is no safe sweep to run at
-        // launch, and deleting in place is the thing this avoids. The Settings
-        // button still works.
+        // With nowhere to rename into there is no safe launch sweep, and
+        // deleting in place is what this avoids. Settings still works.
         FBPDiag(@"cache", @"no staging directory — skipping the launch sweep");
         return;
     }

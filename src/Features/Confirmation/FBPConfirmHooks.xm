@@ -26,11 +26,8 @@ typedef NS_ENUM(NSInteger, FBPConfirmKind) {
     FBPConfirmKindFriend,   // confirming / responding to a friend request
 };
 
-/// Classifies a single view by its accessibility identifier and label, matching
-/// the anchors Facebook puts on these controls. Identifiers are preferred; the
-/// label is a fallback for buttons that carry no identifier ("Share now", the
-/// group "Join" button). All comparisons are lower-cased so a label is matched
-/// regardless of its exact casing.
+/// Classifies one view by accessibility identifier, falling back to its label
+/// for the buttons that ship none ("Share now", the group "Join"). Lower-cased.
 static FBPConfirmKind FBPKindForView(UIView *view) {
     NSString *identifier = view.accessibilityIdentifier;
     NSString *label = view.accessibilityLabel;
@@ -43,15 +40,13 @@ static FBPConfirmKind FBPKindForView(UIView *view) {
         return FBPConfirmKindLike;
     }
 
-    // Share — the feed share button carries an identifier; the share-sheet's
-    // final "Share now" button carries only a label.
+    // Share — the share-sheet's final "Share now" has only a label.
     if ([idl containsString:@"ufi-share-button"] ||
         [lbl isEqualToString:@"share now"]) {
         return FBPConfirmKindShare;
     }
 
-    // Friend request — the confirm button on an incoming request. Checked before
-    // Follow because some of these also carry follow-ish labels.
+    // Checked before Follow: some of these carry follow-ish labels too.
     if (([idl containsString:@"friend"] &&
          ([idl containsString:@"request"] ||
           [idl containsString:@"confirm"] ||
@@ -60,8 +55,8 @@ static FBPConfirmKind FBPKindForView(UIView *view) {
         return FBPConfirmKindFriend;
     }
 
-    // Follow / Join — the profile follow control carries a "following_status"
-    // identifier; the group join button carries only a "Join …" label.
+    // The profile follow control has a "following_status" identifier; the group
+    // join button has only a "Join …" label.
     if ([idl containsString:@"following_status"] ||
         [idl containsString:@"follow-button"] ||
         [lbl isEqualToString:@"follow"] ||
@@ -84,13 +79,11 @@ static NSString *FBPKeyForKind(FBPConfirmKind kind) {
     }
 }
 
-/// Which confirmable action this sender is, or None when it is not one of them.
+/// Which confirmable action this sender is, or None.
 ///
-/// ComponentKit does not consistently put the accessibility identifier on the
-/// view that ends up as the sender — depending on how the component tree was
-/// built it can sit on a wrapper above it or on the tappable child below.
-/// Checking only the sender itself is why confirmation fired on some controls
-/// and not others, so a couple of levels are searched in each direction.
+/// ComponentKit does not reliably put the identifier on the view that becomes
+/// the sender: it can sit on a wrapper above or the tappable child below, so a
+/// couple of levels are searched in each direction.
 static FBPConfirmKind FBPConfirmKindForSender(id sender, UIView **outMatch) {
     if (outMatch) *outMatch = nil;
     if (![sender isKindOfClass:UIView.class]) return FBPConfirmKindNone;
@@ -99,14 +92,12 @@ static FBPConfirmKind FBPConfirmKindForSender(id sender, UIView **outMatch) {
     FBPConfirmKind kind = FBPKindForView(view);
     if (kind != FBPConfirmKindNone) { if (outMatch) *outMatch = view; return kind; }
 
-    // Upwards: a wrapper carrying the identifier for its subtree.
     UIView *node = view.superview;
     for (NSInteger level = 0; node && level < 3; level++, node = node.superview) {
         kind = FBPKindForView(node);
         if (kind != FBPConfirmKindNone) { if (outMatch) *outMatch = node; return kind; }
     }
 
-    // Downwards: the identifier on the actual glyph inside a tappable wrapper.
     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithArray:view.subviews];
     NSInteger visited = 0;
     while (queue.count && visited < 24) {
@@ -121,10 +112,9 @@ static FBPConfirmKind FBPConfirmKindForSender(id sender, UIView **outMatch) {
     return FBPConfirmKindNone;
 }
 
-/// YES when an accessibility label names an "already liked" state — i.e. tapping
-/// would *remove* the reaction. Facebook labels the control "Like" when it will
-/// add a like and "Unlike" when it will take one away (both are literal strings
-/// in FBSharedFramework), so the label is the reliable signal.
+/// YES when the label names an already-liked state, so a tap would remove the
+/// reaction. Facebook labels the control "Like" or "Unlike" by what the tap
+/// will do, which makes the label the reliable signal.
 static BOOL FBPLabelMeansLiked(NSString *label) {
     if (label.length == 0) return NO;
     NSString *lower = label.lowercaseString;
@@ -133,13 +123,10 @@ static BOOL FBPLabelMeansLiked(NSString *label) {
            [lower containsString:@"remove reaction"];
 }
 
-/// YES when the like control is currently in the liked state, so the pending tap
-/// is an *unlike* and must not be confirmed — undoing a like needs no guard.
-///
-/// The state lives on the same component as the like identifier (its label flips
-/// to "Unlike", and it carries the selected trait), but ComponentKit sometimes
-/// splits the identifier and the label across a wrapper and its glyph child, so
-/// a shallow subtree is checked for the label too.
+/// YES when the pending tap is an unlike, which needs no guard. The state lives
+/// on the same component as the like identifier, but ComponentKit sometimes
+/// splits identifier and label across a wrapper and its glyph child, so a
+/// shallow subtree is checked for the label too.
 static BOOL FBPSenderIsCurrentlyLiked(UIView *view) {
     if (!view) return NO;
     if (view.accessibilityTraits & UIAccessibilityTraitSelected) return YES;
@@ -157,9 +144,8 @@ static BOOL FBPSenderIsCurrentlyLiked(UIView *view) {
     return NO;
 }
 
-/// Title, message and confirm-verb for a kind, read from the strings table. Like
-/// builds its message from the sender's reaction label (see the hook), so this
-/// returns its generic fallback for that kind.
+/// Title, message and confirm-verb for a kind. Like builds its message from the
+/// sender's reaction label, so this returns only its generic fallback.
 static void FBPStringsForKind(FBPConfirmKind kind,
                               NSString **title, NSString **message, NSString **verb) {
     switch (kind) {
@@ -211,17 +197,15 @@ static BOOL gConfirmedPassthrough = NO;
         return;
     }
 
-    // Confirm a like, never an unlike: if the control is already liked this tap
-    // just undoes it, which needs no guard — let it through untouched.
+    // Never guard an unlike: it only undoes a like.
     if (kind == FBPConfirmKindLike &&
         FBPSenderIsCurrentlyLiked(match ?: (UIView *)sender)) {
         %orig;
         return;
     }
 
-    // A prompt is already up (the other confirmation path, or a stray second
-    // event from the same tap). Drop this one rather than stacking a prompt —
-    // the action still fires through the first prompt's confirm.
+    // The other confirmation path, or a stray second event from the same tap.
+    // Dropping it does not lose the action: the first prompt still fires it.
     if (FBPConfirmPromptVisible()) {
         return;
     }
@@ -238,9 +222,8 @@ static BOOL gConfirmedPassthrough = NO;
     NSString *alertTitle = nil, *message = nil, *verb = nil;
     FBPStringsForKind(kind, &alertTitle, &message, &verb);
 
-    // For a like the sender's accessibility label ("Like", "Love", …) names the
-    // exact reaction, so the message is tailored to it and stays correct across
-    // reaction types and languages without shipping a copy of each.
+    // The sender's label ("Like", "Love", …) names the exact reaction, so the
+    // message stays correct across reaction types and languages for free.
     if (kind == FBPConfirmKindLike && view.accessibilityLabel.length) {
         message = [NSString stringWithFormat:@"Send a “%@” reaction?",
                    view.accessibilityLabel];
@@ -265,7 +248,6 @@ static BOOL gConfirmedPassthrough = NO;
                                  style:UIAlertActionStyleDefault
                                handler:^(UIAlertAction *action) {
         FBPSetConfirmPromptVisible(NO);
-        // Only now does the action actually fire.
         gConfirmedPassthrough = YES;
         [forwarder handleControlEventFromSender:sender withEvent:event];
         gConfirmedPassthrough = NO;
@@ -273,10 +255,8 @@ static BOOL gConfirmedPassthrough = NO;
     [alert addAction:confirm];
     alert.preferredAction = confirm;
 
-    // The settings tint (#B5DAFC) is tuned for the black settings panel and is
-    // almost invisible on the system alert's light-gray background, so the
-    // buttons read as faint pale-blue. The standard system blue stays legible in
-    // both the light and dark alert styles.
+    // The settings tint is tuned for the black settings panel and vanishes on
+    // the alert's light background, so use system blue.
     alert.view.tintColor = UIColor.systemBlueColor;
     FBPSetConfirmPromptVisible(YES);
     [host presentViewController:alert animated:YES completion:nil];

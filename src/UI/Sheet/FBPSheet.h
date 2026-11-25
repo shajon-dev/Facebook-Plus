@@ -1,20 +1,14 @@
-// Bottom action sheet: the action model, its content-sized controller, the
-// presenter, and a custom detent presentation for older iOS.
+// Bottom action sheet: action model, controller, presenter, detent fallback.
 
 #import "FBPlus.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// One card in an action sheet.
-///
-/// By default the card renders @c detail above @c title — the detail small and
-/// grey on top, the title large underneath. @c titleFirst turns that around for
-/// callers whose title is the thing to read first; see below.
+/// One card. Renders @c detail above @c title unless @c titleFirst is set.
 @interface FBPSheetAction : NSObject
 
 @property (nonatomic, copy) NSString *title;
 @property (nonatomic, copy, nullable) NSString *detail;
-/// SF Symbol name for the leading glyph.
 @property (nonatomic, copy, nullable) NSString *iconName;
 @property (nonatomic, assign) BOOL destructive;
 @property (nonatomic, copy, nullable) dispatch_block_t handler;
@@ -22,13 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// Short tinted capsule beside the title, e.g. "Best". Nil for no capsule.
 @property (nonatomic, copy, nullable) NSString *badge;
 
-/// Put @c title on the first line and @c detail underneath, instead of the
-/// default detail-above-title order.
-///
-/// Defaults to NO: the grey detail stacks on its own line above the title. Set
-/// it when the title carries the decision and the detail only qualifies it — the
-/// card then reads on one line, title (and badge) leading, detail trailing. The
-/// download quality picker needs this: "1080p" first, "~24.8 MB" second.
+/// One-line layout: title (and badge) leading, detail trailing. Defaults to NO.
 @property (nonatomic, assign) BOOL titleFirst;
 
 + (instancetype)actionWithTitle:(NSString *)title
@@ -38,27 +26,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-/// Content-sized bottom sheet: one rounded card per action, with Cancel as a
-/// button of its own underneath.
 @interface FBPSheetController : UIViewController
 
 - (instancetype)initWithActions:(NSArray<FBPSheetAction *> *)actions
                           title:(nullable NSString *)title;
 
-/// Height the whole sheet wants: the measured content and its two insets, and
-/// nothing else. This is the figure a presentation that sets the frame itself
-/// needs — @c FBPDetentPresentationController below.
+/// Measured content plus insets: what a self-framing presentation needs.
 @property (nonatomic, readonly) CGFloat preferredSheetHeight;
 
-/// The same height as a @c UISheetPresentationController custom detent wants
-/// it. UIKit makes the sheet taller than the detent it resolved — every current
-/// release by exactly the bottom safe area — so that difference is already
-/// taken off here. Detents want this one; a hand-set frame wants
-/// @c preferredSheetHeight, and mixing them up leaves a strip of empty sheet
-/// under the last element.
-///
-/// Re-read on every detent resolution, so it is safe to call repeatedly and at
-/// any point after init.
+/// For a custom detent: UIKit makes the sheet taller than the detent it
+/// resolved by the bottom safe area, so that is already subtracted here.
 @property (nonatomic, readonly) CGFloat preferredDetentHeight;
 
 @end
@@ -70,13 +47,11 @@ NS_ASSUME_NONNULL_BEGIN
     fromViewController:(nullable UIViewController *)viewController
             sourceView:(nullable UIView *)sourceView;
 
-/// Best-effort topmost presented controller, for hooks that only have a view.
 + (nullable UIViewController *)topViewController;
 
 @end
 
-/// Fallback half-sheet presentation for iOS < 15, and for the cases where a
-/// precise pixel height is wanted that native detents cannot express.
+/// Fallback half-sheet for iOS < 15 and for exact pixel heights.
 @interface FBPDetentPresentationController : UIPresentationController
 @property (nonatomic, assign) CGFloat customHeight;
 @end

@@ -1,31 +1,16 @@
-// Link bridge: open inbound Facebook links at their exact destination instead of
-// landing on Home.
+// Open inbound Facebook links at their exact destination instead of Home: on a
+// re-signed build, a Facebook web link arriving from outside does not reliably
+// resolve a Reel/post/photo/story.
 //
-// On a sideloaded / re-signed build, a Facebook web link reaching the app from
-// the outside does not reliably resolve a Reel/post/photo/story and falls back
-// to the News Feed. Three outside sources matter, and all three end up as one of
-// two shapes the app mishandles on these builds:
+// Three sources arrive in two shapes: the Safari extension's own route
+// (fb://fbplusbridge?url=<https url>), a FaceWeb deep link carrying an embedded
+// web URL (fb://faceweb…?href=…), and a plain Facebook universal link, possibly
+// wrapped in LinkShim (l.facebook.com/l.php?u=…). All are normalized to a
+// canonical https://www.facebook.com URL and fed to the app's browsing-web
+// NSUserActivity handler, the same path a real Universal Link takes.
 //
-//   1. The "Open in Facebook" Safari extension, which hands over the clean HTTPS
-//      URL through a registered route:  fb://fbplusbridge?url=<https url>
-//
-//   2. Messenger (and other Meta apps), which resolve a shared link through an
-//      app-link / FaceWeb step and open the app with either
-//        * a FaceWeb deep link:  fb://faceweb…?href=<https url>  (or ?url=…), or
-//        * a plain Facebook universal link:  https://m.facebook.com/…  etc.
-//      Messenger also wraps shared links in LinkShim (l.facebook.com/l.php?u=…).
-//
-// This hook normalizes all of those to a canonical https://www.facebook.com URL
-// and feeds it to the app's browsing-web NSUserActivity handler — the same path
-// a real Universal Link takes — so Facebook resolves it to the intended screen.
-//
-// It deliberately does NOT touch structured native deep links (fb://story?…,
-// fb://group?id=…, fb://profile, fb://notifications, tapped-notification
-// routing): those already resolve correctly and are passed straight through.
-//
-// Installed from FBPEntry's repeated image-load pass: FBBaseAppDelegate may not
-// exist yet when the tweak first loads, so the installer no-ops until the class
-// is present and then latches with FBP_ONCE.
+// Structured native deep links (fb://story?…, fb://group?id=…, notification
+// routing) already resolve correctly and are passed straight through.
 
 #import "FBPlus.h"
 #import "FBPTrace.h"
@@ -34,9 +19,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 
-/// The bridge route, reached as fb://fbplusbridge?url=… . The fb scheme is
-/// already registered by the app, so no extra Info.plist entry is needed; only
-/// the "fbplusbridge" host is claimed.
+/// The fb scheme is already registered by the app, so only the host is claimed.
 static NSString *const kFBPBridgeScheme = @"fb";
 static NSString *const kFBPBridgeHost   = @"fbplusbridge";
 
@@ -46,7 +29,6 @@ static BOOL FBPIsFacebookHost(NSString *host) {
     return [host isEqualToString:@"facebook.com"] || [host hasSuffix:@".facebook.com"];
 }
 
-/// Pull the first query item named any of `names` out of a URL.
 static NSString *FBPQueryValue(NSURL *url, NSArray<NSString *> *names) {
     NSURLComponents *components = [NSURLComponents componentsWithURL:url
                                             resolvingAgainstBaseURL:NO];
@@ -60,8 +42,8 @@ static NSString *FBPQueryValue(NSURL *url, NSArray<NSString *> *names) {
     return nil;
 }
 
-/// Unwrap Facebook's LinkShim redirector (…facebook.com/l.php?u=<real url>, also
-/// seen as /l/?u= and ?url=). Returns the inner URL, or the input unchanged.
+/// Unwrap LinkShim (/l.php?u=, /l/?u=, ?url=). Returns the input unchanged if
+/// it is not one.
 static NSURL *FBPUnwrapLinkShim(NSURL *url) {
     if (!FBPIsFacebookHost(url.host)) return url;
     NSString *path = url.path.lowercaseString ?: @"";
@@ -73,10 +55,8 @@ static NSURL *FBPUnwrapLinkShim(NSURL *url) {
     return innerURL ?: url;
 }
 
-/// Canonicalize any Facebook web URL to https://www.facebook.com/… keeping
-/// path/query/fragment so Reels, posts, story.php, permalink.php, groups,
-/// watch/share URLs keep their identity. Returns nil for non-Facebook or
-/// non-http(s) URLs (so the caller passes them through untouched).
+/// Canonicalize to https://www.facebook.com/…, keeping path, query and fragment
+/// so the URL keeps its identity. nil for non-Facebook or non-http(s) input.
 static NSURL *FBPCanonicalFacebookURL(NSURL *url) {
     if (![url isKindOfClass:NSURL.class]) return nil;
 
@@ -93,8 +73,7 @@ static NSURL *FBPCanonicalFacebookURL(NSURL *url) {
     return components.URL ?: url;
 }
 
-/// If this is a FaceWeb-style fb:// deep link carrying an embedded web URL
-/// (fb://faceweb…?href=… or ?url=…), return that embedded URL; otherwise nil.
+/// The web URL embedded in a FaceWeb-style fb:// link, or nil.
 static NSURL *FBPHrefFromFaceWeb(NSURL *url) {
     if ([url.scheme.lowercaseString isEqualToString:@"fb"]) {
         NSString *host = url.host.lowercaseString ?: @"";
@@ -108,34 +87,29 @@ static NSURL *FBPHrefFromFaceWeb(NSURL *url) {
     return nil;
 }
 
-/// Resolve an incoming URL to the canonical Facebook destination to route, or nil
-/// to leave the URL for the app's original handler.
+/// The destination to route, or nil to leave the URL to the app's handler.
 static NSURL *FBPBridgeTargetURL(NSURL *incomingURL) {
     if (![incomingURL isKindOfClass:NSURL.class]) return nil;
 
     NSString *scheme = incomingURL.scheme.lowercaseString ?: @"";
     NSString *host = incomingURL.host.lowercaseString ?: @"";
 
-    // 1. The Safari-extension route.
     if ([scheme isEqualToString:kFBPBridgeScheme] && [host isEqualToString:kFBPBridgeHost]) {
         NSString *target = FBPQueryValue(incomingURL, @[ @"url" ]);
         return target.length ? FBPCanonicalFacebookURL([NSURL URLWithString:target]) : nil;
     }
 
-    // 2. A FaceWeb deep link wrapping a web URL (Messenger / other Meta apps).
     NSURL *href = FBPHrefFromFaceWeb(incomingURL);
     if (href) return FBPCanonicalFacebookURL(href);
 
-    // 3. A plain Facebook web/universal link arriving through openURL.
     if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
         return FBPCanonicalFacebookURL(incomingURL);
     }
 
-    // Anything else (structured fb:// deep links, other schemes) is left alone.
+    // Structured fb:// deep links and other schemes are left alone.
     return nil;
 }
 
-/// Hand a canonical Facebook URL to the app's browsing-web Universal Link handler.
 static BOOL FBPRouteThroughUniversalLink(id delegate, UIApplication *application, NSURL *targetURL) {
     SEL universalLinkSelector =
         NSSelectorFromString(@"application:continueUserActivity:restorationHandler:");
@@ -167,8 +141,7 @@ static BOOL FBPRouteThroughUniversalLink(id delegate, UIApplication *application
     NSURL *targetURL = FBPBridgeTargetURL(url);
     if (!targetURL) return %orig;
 
-    // `self` is typed as the forward-declared FBBaseAppDelegate here, so route
-    // the dynamic call through an untyped id.
+    // `self` is the forward-declared type here, so the dynamic call needs id.
     id delegate = self;
     if (FBPRouteThroughUniversalLink(delegate, application, targetURL)) return YES;
     return %orig;
@@ -178,9 +151,8 @@ static BOOL FBPRouteThroughUniversalLink(id delegate, UIApplication *application
     continueUserActivity:(NSUserActivity *)userActivity
       restorationHandler:(id)restorationHandler {
     FBPTraceFire("linkbridge.FBBaseAppDelegate.continueUserActivity");
-    // A real Universal Link (e.g. Messenger opening m.facebook.com). Rewrite the
-    // host to the canonical www form before the app routes it, so mobile/web
-    // host variants do not degrade to Home. Non-Facebook activities untouched.
+    // A real Universal Link: rewrite the host to the canonical www form before
+    // the app routes it, or mobile/web host variants degrade to Home.
     if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
         NSURL *canonical = FBPCanonicalFacebookURL(userActivity.webpageURL);
         if (canonical && ![canonical isEqual:userActivity.webpageURL]) {

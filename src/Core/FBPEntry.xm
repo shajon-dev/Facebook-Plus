@@ -1,6 +1,5 @@
-// Single constructor. Each hook group installs only after confirming its target
-// class and selector exist in this build of Facebook, so a missing target
-// degrades that one feature instead of taking the tweak down.
+// Single constructor. Each hook group confirms its target class and selector
+// exist in this build first, so a missing target costs one feature, not the tweak.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -28,26 +27,16 @@ extern void FBPInitLinkBridge(void);
 extern void FBPInitCallBlocker(void);
 extern void FBPInitSidebarHooks(void);
 
-/// Not a hook installer: settles off the main thread whether this device can
-/// decode AV1, which decides whether the download picker may offer AV1 quality
-/// rungs. Declared here rather than importing FBPMediaConverter.h, which would
-/// pull AVFoundation and VideoToolbox into this constructor for one call.
-/// Prewarmed so the first caller is not the DASH reader on the main thread
-/// during a download tap; the answer costs ~46 ms to compute once.
-///
-/// `extern "C"`, unlike the installers above: logos compiles this file as
-/// Objective-C++, so a bare `extern` would look for a C++-mangled symbol. The
-/// installers are each defined in another .xm and mangled the same way; this one
-/// lives in a plain .m and is not.
+/// Settles off the main thread whether this device can decode AV1, so the first
+/// caller is not the DASH reader on the main thread. `extern "C"`, unlike the
+/// installers above: logos compiles this file as Objective-C++ and this symbol
+/// lives in a plain .m, so a bare `extern` would look for a mangled name.
 extern "C" void FBPMediaConversionPrewarm(void);
 
-/// Settles, off the main thread, whether Facebook's own libavcodec can be
-/// borrowed to decode VP9 (src/Features/Downloads/FBPVP9Bridge.m) — so the first
-/// VP9 download does not pay for the symbol resolution on its control queue.
+/// Same, for borrowing Facebook's own libavcodec to decode VP9.
 extern "C" void FBPVP9BridgePrewarm(void);
 
-/// Runs every installer. Each group latches itself with FBP_ONCE, so calling
-/// this repeatedly installs each hook exactly once.
+/// Each group latches with FBP_ONCE, so repeat calls install each hook once.
 static void FBPInstallHooks(void) {
     FBPInitFeedHooks();
     FBPInitLanguagePackHooks();
@@ -71,28 +60,15 @@ static void FBPInstallHooks(void) {
     FBPInitSidebarHooks();
 }
 
-/// dyld calls this for every image already loaded, then again for each new one.
-/// Facebook links only FBSharedFramework at launch and dlopens the rest on
-/// demand, so a one-shot %ctor would observe only a fraction of the app's
-/// classes — hence the deferred install.
+/// Facebook links only FBSharedFramework at launch and dlopens the rest, so a
+/// one-shot %ctor would see only a fraction of its classes.
 static void FBPImageDidLoad(const struct mach_header *header, intptr_t slide) {
     FBPInstallHooks();
 }
 
-/// How many copies of this tweak are in the process, and says so when it is
-/// more than one.
-///
-/// A device export from 2026-11-21 carried two different builds' install
-/// reports in a single session: one set once per launch, in this build's
-/// wording, and another 305 times per launch in wording this build stopped
-/// using. Two dylibs, two sets of statics, and an injected IPA is the easy way
-/// to end up with them — re-injecting a newer build into an IPA that was
-/// already injected leaves the older one in Frameworks/ and in the load
-/// commands, and dyld loads both.
-///
-/// The second copy is the older one, so it cannot report itself; this build
-/// has to. One line, at launch, naming every copy, because working this out
-/// from the outside took a long time and an export that could not answer it.
+/// Re-injecting a newer build into an already-injected IPA leaves the older
+/// dylib in Frameworks/ and in the load commands, and dyld loads both. The older
+/// copy cannot report itself, so this one names every copy at launch.
 static void FBPReportDuplicateLoads(void) {
     NSMutableArray<NSString *> *copies = [NSMutableArray array];
     uint32_t count = _dyld_image_count();
@@ -100,10 +76,8 @@ static void FBPReportDuplicateLoads(void) {
         const char *name = _dyld_get_image_name(i);
         if (!name) continue;
         NSString *path = @(name);
-        // By file name, not by prefix: the same dylib is called
-        // FacebookPlus.dylib wherever it is installed from, and a copy left in
-        // an IPA's Frameworks/ sits under a different directory, not a
-        // different name.
+        // By file name, not path prefix: a stale copy in an IPA's Frameworks/
+        // keeps the same name under a different directory.
         if ([path.lastPathComponent rangeOfString:@"FacebookPlus"
                                           options:NSCaseInsensitiveSearch].location != NSNotFound) {
             [copies addObject:path];
@@ -119,17 +93,9 @@ static void FBPReportDuplicateLoads(void) {
 
 %ctor {
     @autoreleasepool {
-        // Bound to the app it ships in, not to a fixed bundle id: the Filter
-        // plist scopes the substrate build to Facebook, and an IPA-embedded
-        // build only loads inside the app it was injected into. No bundle id is
-        // hardcoded, so a re-signed IPA can use a custom identifier (to run
-        // alongside the stock app) and still activate.
-
         // Registers defaults before any hook can read a preference.
         (void)FBPPrefs.shared;
 
-        // Clear the kept log once every twelve hours, then prime the
-        // device-name lookup and open the diagnostic log.
         FBPLogClearIfDue();
         FBPResolveDeviceName();
         FBPTraceLine(@"launch · on %@ into %@", FBPDeviceDisplayName(),
@@ -137,18 +103,15 @@ static void FBPReportDuplicateLoads(void) {
 
         FBPReportDuplicateLoads();
 
-        // Installs what is available now, and again as each framework arrives.
         FBPInstallHooks();
         _dyld_register_func_for_add_image(&FBPImageDidLoad);
 
-        // Returns immediately; the work happens on a utility queue. Outside
-        // FBPInstallHooks because it is not a hook and must not be repeated for
-        // every image dyld reports.
+        // Outside FBPInstallHooks, which dyld repeats for every image.
         FBPMediaConversionPrewarm();
         FBPVP9BridgePrewarm();
 
-        // Inlined (not a local) so the release build, where FBPLog is a no-op,
-        // does not trip -Werror=unused-variable.
+        // Inlined, not a local: in release FBPLog is a no-op and a local would
+        // be unused.
         FBPLog(@"loaded into %@", NSBundle.mainBundle.bundleIdentifier);
     }
 }

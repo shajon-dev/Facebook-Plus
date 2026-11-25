@@ -99,17 +99,10 @@ static UIColor *FBPSheetAccentFillColor(void) {
     return color;
 }
 
-/// Cancel's fill. Deliberately *not* the card fill, and deliberately on the
-/// other side of the backdrop from it.
-///
-/// The backdrop these sit on is systemThinMaterial, which settles at
-/// rgb(43,43,43) in dark and rgb(203,203,203) in light (both measured on the
-/// simulator).
-///
-/// The cards sit below the backdrop in dark (#1C1C1E reads as a cut-out) and
-/// above it in light (white). Cancel goes the other way in each — lighter than
-/// the backdrop in dark, darker in light — so it is never mistaken for one more
-/// card and never disappears into the panel.
+/// Cancel's fill: deliberately not the card fill, and deliberately on the other
+/// side of the systemThinMaterial backdrop from it. The cards sit below the
+/// backdrop in dark and above it in light; Cancel goes the other way in each,
+/// so it is never read as one more card and never vanishes into the panel.
 static UIColor *FBPSheetCancelColor(void) {
     static UIColor *color;
     static dispatch_once_t onceToken;
@@ -147,8 +140,7 @@ static UIFont *FBPSheetFont(CGFloat size, UIFontWeight weight, UIFontTextStyle s
 
 #pragma mark - Badge capsule
 
-/// The tinted capsule beside a title, e.g. "Best". Hugs its text so it sits
-/// tight against the title instead of stretching.
+/// The tinted capsule beside a title, hugging its text rather than stretching.
 static UIView *FBPSheetBadgeCapsule(NSString *text) {
     UILabel *label = [[UILabel alloc] init];
     label.text = text;
@@ -247,15 +239,12 @@ static UIView *FBPSheetSpacer(void) {
         [content addArrangedSubview:glyph];
 
         if (action.titleFirst) {
-            // Glyph, title (+ badge), then the detail trailing on the same
-            // line. One line, one decision per card.
             [content addArrangedSubview:titleRow];
             [content addArrangedSubview:FBPSheetSpacer()];
             if (detail.text.length) [content addArrangedSubview:detail];
         } else {
-            // The original order, kept because titleFirst is public and
-            // defaults to NO: the grey detail on its own line above the title,
-            // both stacked beside the glyph.
+            // The default order: grey detail above the title, both beside the
+            // glyph.
             NSArray<UIView *> *lines =
                 detail.text.length ? @[detail, titleRow] : @[titleRow];
             UIStackView *lineStack = [[UIStackView alloc] initWithArrangedSubviews:lines];
@@ -379,9 +368,8 @@ static UIView *FBPSheetSpacer(void) {
 @property (nonatomic, copy, nullable) NSString *sheetTitle;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIStackView *stackView;
-/// Held so the bottom inset can follow the safe area. The same value feeds
-/// -preferredSheetHeight, which is what keeps the detent and the content the
-/// same height.
+/// Held so the bottom inset can follow the safe area, and feeding
+/// -preferredSheetHeight so the detent and the content stay the same height.
 @property (nonatomic, strong) NSLayoutConstraint *stackBottom;
 /// The height -preferredDetentHeight last handed the detent, and how much
 /// taller than it UIKit then made the view. See -viewDidLayoutSubviews.
@@ -415,10 +403,9 @@ static UIView *FBPSheetSpacer(void) {
 - (CGFloat)preferredSheetHeight {
     [self loadViewIfNeeded];
 
-    // Measured rather than arithmetic on row constants, so Dynamic Type, a
-    // wrapped title and a ladder of any length all come out right. The sheet is
-    // full-width on iPhone, so the screen is the right fallback before the view
-    // has a window.
+    // Measured, not arithmetic on row constants, so Dynamic Type and a wrapped
+    // title come out right. Full-width on iPhone, so the screen is the fallback
+    // before the view has a window.
     CGFloat width = CGRectGetWidth(self.view.window.bounds);
     if (width <= 0) width = CGRectGetWidth(self.view.bounds);
     if (width <= 0) width = CGRectGetWidth(UIScreen.mainScreen.bounds);
@@ -435,14 +422,9 @@ static UIView *FBPSheetSpacer(void) {
 }
 
 /// How much taller than the resolved detent UIKit is expected to make the
-/// sheet.
-///
-/// Every current release adds exactly the bottom safe area — measured, not
-/// assumed: a 473pt detent came back as a 507pt view, 475 as 509, 457 as 491.
-/// Seeding with that makes the first resolution already right, so the sheet
-/// does not visibly settle after it appears. -viewDidLayoutSubviews corrects it
-/// from what actually lands on screen, so this is a starting point rather than
-/// a hard-coded answer.
+/// sheet. Every current release adds exactly the bottom safe area, and seeding
+/// with that makes the first resolution right, so the sheet does not visibly
+/// settle. -viewDidLayoutSubviews corrects it from what lands on screen.
 - (CGFloat)appliedChrome {
     return self.sheetChromeKnown ? self.sheetChrome : self.view.safeAreaInsets.bottom;
 }
@@ -463,18 +445,14 @@ static UIView *FBPSheetSpacer(void) {
     return height;
 }
 
-/// Correct @c sheetChrome from the empty strip actually left under Cancel.
+/// Correct @c sheetChrome from the empty strip left under Cancel, measured
+/// against the content the view holds NOW, not the height last requested:
+/// requesting and being resized are separate passes, so a request-based
+/// measurement reads the previous pass's view and the sheet comes out too tall.
 ///
-/// What is measured is the view against the content it is holding *now*, not
-/// against the height last requested. Requesting and being resized are separate
-/// passes, so a request-based measurement reads the previous pass's view: it
-/// reported 16pt of chrome where there were 34, and the sheet came out 18pt too
-/// tall. The content is never stale.
-///
-/// Whatever is left over is fed straight back into the chrome, so one pass is
-/// enough from any starting point. A drag toward the large detent opens a gap
-/// wider than the chrome can legitimately be and is rejected by the bound
-/// below, rather than mistaken for a correction.
+/// The leftover feeds straight back into the chrome, so one pass is enough. A
+/// drag toward the large detent opens a gap wider than the chrome can
+/// legitimately be and is rejected by the bound below.
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
 

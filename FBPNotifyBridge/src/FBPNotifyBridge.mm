@@ -1,45 +1,18 @@
 // FBPNotifyBridge — the slim half of the sideload compatibility layer, loaded
-// into Facebook's NotificationServiceExtension.appex (the NSE) instead of the
-// full tweak.
-//
-// Why a separate dylib: FacebookPlus.dylib's constructor registers preferences
-// and installs every feature hook unconditionally, and it links UIKit. An NSE
-// runs under a hard ~24 MB memory limit and a ~30 s execution window — being
-// killed there makes notifications *worse* (iOS falls back to the generic
-// payload), so the extension gets only the two container redirects it needs.
-//
-// What it does: the NSE resolves a push into real text only when it can find the
-// logged-in session. On a re-signed build that session is not where Facebook
-// looks — the Meta app groups (group.com.facebook.*) and the T84QZS65DQ keychain
-// group cannot be claimed by a third-party signer. The main app already works
-// around this (src/PluginsInject/), and this dylib applies the *same* mapping
-// inside the extension so both processes read and write the same container:
-//
-//   <real app group container>/<requested group id>
+// into Facebook's NotificationServiceExtension.appex instead of the full
+// tweak, which registers every hook and links UIKit. An extension runs under
+// a hard ~24 MB limit and a ~30 s window, and being killed there makes
+// notifications worse, so it gets only the redirects and rebinds it needs.
 //
 // The path construction below is a line-for-line match of
-// src/PluginsInject/SideloadFix.xm — including the "group" prefix check and the
-// Documents/<group id> fallback — because an identical mapping in both processes
-// is the entire point. Change one, change the other.
-//
-// The keychain half (probe + SecItem rebinds) comes from the shared
-// src/PluginsInject/PluginsInject.mm + SecRebinds.xm, compiled in here too: the
-// NSE asks for kSecAttrAccessGroup "T84QZS65DQ.platformFamily" (see its
-// Info.plist's FBKeychainAccessGroup), which a re-signed extension can never be
-// granted, so without the rebinds the container redirect alone cannot surface a
-// session. The probe asks the keychain which group a throwaway item actually
-// landed in, so the app and the extension converge on the same group whenever
-// the signer gives them the same keychain entitlement — which is what a signer's
-// "merge entitlements" step does by re-prefixing Facebook's own keychain groups
-// with the signer's team id. Note that the rebind is blanket — it forces
-// kSecAttrAccessGroup on *every* SecItem call in the process — and project notes
-// record a suspicion that this aggravates crashes elsewhere. See
-// FBPNotifyBridge/README.md.
-//
-// Hooks are installed with plain objc runtime swizzling rather than Logos so the
-// dylib carries no Cydia Substrate / ElleKit dependency: cyan drops
-// CydiaSubstrate.framework into Facebook.app/Frameworks, which an appex binary
-// has no guaranteed rpath to.
+// src/PluginsInject/SideloadFix.xm, including the "group" prefix check and the
+// Documents fallback: an identical mapping in both processes is the entire
+// point, so CHANGE ONE, CHANGE THE OTHER. The keychain half comes from the
+// shared PluginsInject.mm and SecRebinds.xm, whose rebind is blanket — every
+// SecItem call in the process — and is suspected of aggravating crashes.
+// Hooks use plain objc swizzling rather than Logos so the dylib needs no
+// injection framework, which lands in Facebook.app/Frameworks where an appex
+// binary has no guaranteed rpath.
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -54,14 +27,10 @@
 
 @implementation NSFileManager (FBPNotifyBridge)
 
-// Mirrors -[NSFileManager containerURLForSecurityApplicationGroupIdentifier:] in
-// SideloadFix.xm: never defers to the original, because the original returns nil
-// for a group this build does not hold.
+// Mirrors SideloadFix.xm. Never defers to the original, which returns nil.
 - (NSURL *)fbp_containerURLForSecurityApplicationGroupIdentifier:(NSString *)groupIdentifier {
-	// Mirrors the gate in SideloadFix.xm. This dylib is injected into the appex
-	// of the shipped IPA, which TrollStore installs with Facebook's original
-	// entitlements — there the real container exists and is shared with the
-	// app, so the redirect would break the one thing it exists to fix.
+	// Mirrors the gate in SideloadFix.xm: where the original entitlements are
+	// intact, redirecting would break the one thing this exists to fix.
 	if (fbpShouldLeaveAppGroupAlone(groupIdentifier)) {
 		FBPDiagLog(@"containerURL for %@ -> original (group is held)", groupIdentifier);
 		return [self fbp_containerURLForSecurityApplicationGroupIdentifier:groupIdentifier];
@@ -74,12 +43,9 @@
 		return fakeAppGroupURL;
 	}
 
-	// fallback to a fake App Group path in Documents/App Group
-	//
-	// Unlike in the main app this fallback cannot actually share anything: an
-	// app extension gets its own data container, so the extension's Documents/
-	// is not the app's. It is kept only so the mapping stays identical and the
-	// call never returns nil.
+	// Fallback to a stand-in path in Documents. Unlike in the main app this
+	// shares nothing (an extension has its own data container); it is kept only
+	// so the mapping stays identical and the call never returns nil.
 	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
 	NSString *fakePath = [[paths lastObject] stringByAppendingPathComponent:groupIdentifier];
 	createDirectoryIfNotExists(fakePath);
@@ -90,19 +56,17 @@
 
 #pragma mark - group-suite NSUserDefaults
 
-// The selector starts with "init" followed by an uppercase letter, so ARC places
-// it in the init method family — same ownership contract as the
-// -_initWithSuiteName:container: it is exchanged with. A raw IMP function
-// pointer would not carry that contract and would mis-balance retains.
+// The selector starts with "init" plus an uppercase letter, so ARC puts it in
+// the init method family — the same ownership contract as the selector it is
+// exchanged with. A raw IMP would not carry it and would mis-balance retains.
 @interface NSUserDefaults (FBPNotifyBridge)
 - (instancetype)initFBPWithSuiteName:(NSString *)suiteName container:(NSURL *)container;
 @end
 
 @implementation NSUserDefaults (FBPNotifyBridge)
 
-// Mirrors -[NSUserDefaults _initWithSuiteName:container:] in SideloadFix.xm.
-// After the exchange, -initFBPWithSuiteName:container: *is* the original
-// implementation, so calling it on self is the %orig equivalent.
+// Mirrors -[NSUserDefaults _initWithSuiteName:container:] in SideloadFix.xm;
+// after the exchange this selector *is* the original, so it is the %orig.
 - (instancetype)initFBPWithSuiteName:(NSString *)suiteName container:(NSURL *)container {
 	PILog(@"hooking NSUserDefaults init...");
 
@@ -155,16 +119,12 @@
 
 @implementation FBPDiagNotificationService
 
-// After the exchange this selector holds Facebook's own implementation, so
-// calling it on self is the %orig equivalent.
 - (void)fbp_didReceiveNotificationRequest:(id)request withContentHandler:(void (^)(id))contentHandler {
 	id content = [request valueForKey:@"content"];
 	NSDictionary *userInfo = [content valueForKey:@"userInfo"];
 	NSString *identifier = [request valueForKey:@"identifier"] ?: @"(none)";
 
-	// The identifier is what ties this line to SpringBoard's own
-	// "Delivered user visible push notification <id>" (or its refusal to), so a
-	// capture can follow one push across both processes.
+	// The identifier ties this line to SpringBoard's own delivery line.
 	NSString *incomingTitle = [content valueForKey:@"title"] ?: @"";
 	NSString *incomingBody  = [content valueForKey:@"body"] ?: @"";
 	FBPDiagLog(@"NSE RAN for request %@ — incoming title '%@' body '%@'",
@@ -179,11 +139,7 @@
 		NSString *finalTitle = [finalContent valueForKey:@"title"] ?: @"";
 		NSString *finalBody  = [finalContent valueForKey:@"body"] ?: @"";
 
-		// The one judgement that matters: Facebook's job here is to replace the
-		// stub with real text. If the body came back unchanged the extension ran
-		// and failed to resolve the notification, which is a session problem. If
-		// it changed, this path is working and whatever is still wrong is not
-		// here.
+		// An unchanged body means the extension ran and lost: a session problem.
 		BOOL changed = ![finalBody isEqualToString:incomingBody] ||
 		               ![finalTitle isEqualToString:incomingTitle];
 		FBPDiagLog(@"NSE RESULT for %@ after %.2fs: %@ — title '%@' body '%@'",
@@ -194,10 +150,8 @@
 	}];
 }
 
-// Reached when Facebook has not called the content handler in time and iOS is
-// about to deliver the unmodified payload. Silent otherwise, so a line here is
-// itself the finding: the extension started, did not finish, and the user got
-// the stub.
+// Silent unless Facebook missed the content handler, so a line here is itself
+// the finding.
 - (void)fbp_serviceExtensionTimeWillExpire {
 	FBPDiagLog(@"NSE TIME EXPIRED — Facebook never called the content handler; "
 	           @"iOS will deliver the original payload");
@@ -210,9 +164,8 @@
 
 #pragma mark - Install
 
-// Swaps two instance methods, but only when both really exist — a future
-// Foundation that drops the private initialiser then costs the group-suite
-// redirect instead of taking the extension down with it.
+// Swaps two instance methods only when both really exist, so a Foundation
+// that drops the private initialiser costs the redirect, not the extension.
 static BOOL fbpExchange(Class cls, SEL original, SEL replacement) {
 	if (!cls) {
 		return NO;
@@ -231,21 +184,18 @@ static BOOL fbpExchange(Class cls, SEL original, SEL replacement) {
 
 __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 	@autoreleasepool {
-		// Loaded twice in the extension — see the note in PluginsInject.mm.
-		// Exchanging the same two methods a second time would undo the first.
+		// Loaded twice in the extension (see PluginsInject.mm): exchanging the
+		// same two methods a second time would undo the first.
 		if (!fbpClaimProcessOnce("FBPNotifyBridgeInstalled")) {
 			FBPDiagLog(@"notify bridge constructor ran again — ignoring the duplicate");
 			return;
 		}
 
-		// Extensions only — see the note in PluginsInject.mm. In the main app
-		// FacebookPlus.dylib already installs every one of these redirects.
+		// Extensions only: in the main app FacebookPlus.dylib installs all of this.
 		if (!fbpIsAppExtensionProcess()) {
 			return;
 		}
 
-		// The exchanges must always run — only the log is debug-gated, so the
-		// results are unused in the release build (PILog compiles to a no-op).
 		__attribute__((unused)) BOOL container =
 			fbpExchange([NSFileManager class],
 						@selector(containerURLForSecurityApplicationGroupIdentifier:),
@@ -256,10 +206,6 @@ __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 						@selector(initFBPWithSuiteName:container:));
 
 #if FBP_DIAG
-		// The extension's principal class comes out of its own Info.plist rather
-		// than being hardcoded, because that is where iOS itself reads it and a
-		// Facebook release is free to rename the class. "FBNotificationService"
-		// stays only as the fallback.
 		NSDictionary *extension = NSBundle.mainBundle.infoDictionary[@"NSExtension"];
 		NSString *principal = [extension isKindOfClass:NSDictionary.class]
 		                          ? extension[@"NSExtensionPrincipalClass"]
@@ -271,10 +217,7 @@ __attribute__((constructor)) static void FBPNotifyBridgeInit() {
 		           service ? NSStringFromClass(service) : @"(not found)",
 		           principal.length ? @"Info.plist" : @"fallback name");
 
-		// The traces live on their own class, so graft each implementation onto
-		// the principal class before exchanging — fbpExchange needs both methods
-		// on the same class, and it verifies they exist, so a Facebook that
-		// drops one of these selectors costs that trace and nothing else.
+		// Grafted on first: fbpExchange needs both methods on the same class.
 		if (service) {
 			SEL replacements[2] = {
 				@selector(fbp_didReceiveNotificationRequest:withContentHandler:),

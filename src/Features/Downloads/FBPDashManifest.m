@@ -1,55 +1,27 @@
 // DASH MPD reader. See FBPDashManifest.h for intent and the short refusal list.
 //
-// Two readers, in order:
+// Two readers. NSXMLParser first (NSXMLDocument does not exist on iOS), which
+// decodes the `&amp;` in a signed <BaseURL> and inherits attributes from
+// AdaptationSet to Representation, as Facebook uses either level. Then a regex
+// scraper, run only when the first produced no video rung: NSXMLParser abandons
+// the document at its first well-formedness error, so one unescaped `&` loses
+// the whole ladder. Scraper patterns: see THIRD_PARTY_NOTICES.md.
 //
-//   1. NSXMLParser (NSXMLDocument does not exist on iOS). <BaseURL> text is XML
-//      content, so a signed URL's `&` arrives escaped as `&amp;` and the event
-//      parser decodes it; attributes inherit from AdaptationSet to
-//      Representation, which is how Facebook puts contentType/mimeType on either
-//      level.
+// Structural oddities are noted in -droppedNotes rather than refused. Still
+// refused: a <BaseURL> that is not an absolute http(s) URL. AV1 and VP9 survive
+// only where a conversion path exists at runtime, marked -needsConversion.
 //
-//   2. A regex scraper, run only when (1) produced no video rung from a document
-//      that plainly had one. NSXMLParser abandons the document at the first
-//      well-formedness error, so one unescaped `&` in a signed <BaseURL> — and
-//      Facebook's manifests are entity-laden — loses the whole ladder; a scraper
-//      is immune by construction. Patterns derived from a third-party source;
-//      see THIRD_PARTY_NOTICES.md.
-//
-// No longer refused, each recorded in -droppedNotes instead. Every one was a
-// structural gate that cost rungs without buying safety, on manifests that carry
-// the full 360p…1080p ladder:
-//
-//   * a missing <SegmentBase> child — Reels manifests carry byte ranges as
-//     FBInitializationRange / FBIndexRange attributes on <Representation>, which
-//     failed that gate for every rung at once;
-//   * <SegmentTemplate> / <SegmentList>;
-//   * <ContentProtection>;
-//   * MPD@type="dynamic", and the absence of an <MPD> element;
-//   * audio that is not AAC, or an unrecognised channel layout — audio can no
-//     longer veto the video ladder;
-//   * a representation with no codecs attribute, or no readable rung name.
-//
-// Still refused: a <BaseURL> that cannot resolve to an absolute http(s) URL is
-// not fetchable, and VP9 cannot be saved to Photos with anything on the other
-// end. AV1 is accepted only when a conversion path exists at runtime, and such a
-// rung comes back marked -needsConversion; see the codec policy section.
-//
-// The bounds further down are bounds on work, not policy.
-//
-// Event parser over a string already held: no I/O, no network, external entity
-// resolution off, no base URI to resolve against.
-//
-// Free of every FBP header, so it compiles against desktop Foundation.
+// External entity resolution is off and there is no base URI to resolve against,
+// since the document arrived as a string. Free of every FBP header, so it
+// compiles against desktop Foundation.
 
 #import "FBPDashManifest.h"
 
 #import <math.h>
 
 // Declared here rather than imported from FBPMediaConverter.h, which pulls in
-// AVFoundation and VideoToolbox and would break desktop-Foundation compilation.
-// Same arrangement FBPDashDownload.m and FBPDownloadStore.m use for
-// FBPLocalizedString; canonical declaration lives in FBPMediaConverter.h, keep
-// the signature in step. A host harness supplies its own definition.
+// AVFoundation and would break desktop-Foundation compilation. The canonical
+// declaration is there; keep the signature in step.
 extern BOOL FBPMediaConversionIsAvailable(void);
 
 // Same arrangement for the VP9 tier: canonical declaration in FBPVP9Bridge.h,
@@ -59,10 +31,9 @@ extern BOOL FBPVP9ConversionIsAvailable(void);
 
 #pragma mark - Bounds
 //
-// Bounds on work, not judgements about content. The MPD arrives as a string of
-// unknown length on the main thread during a download tap, so the parse has to
-// be cheap and has to terminate. Exceeding a bound aborts the parse and keeps
-// what was already collected — "fewer qualities offered", not a hang or a crash.
+// Bounds on work, not judgements about content: the MPD arrives as a string of
+// unknown length on the main thread during a tap, so the parse has to
+// terminate. Exceeding one keeps what was already collected.
 
 /// Largest MPD we will look at. Facebook's are a few kilobytes; a megabyte of
 /// XML is not a manifest.
@@ -82,20 +53,17 @@ static const NSTimeInterval kFBPDashMaxDuration = 7.0 * 24.0 * 60.0 * 60.0;
 /// Dropped-representation notes kept for the diagnostic.
 static const NSUInteger kFBPDashMaxDroppedNotes = 24;
 
-/// The AudioChannelConfiguration scheme we recognise. Facebook also emits a
-/// spatial scheme (fb360:audio:channel_layout) for ambisonic tracks. This is no
-/// longer a gate — an unrecognised scheme only loses a tie-break against a
-/// track that does carry this one, and is noted.
+/// The AudioChannelConfiguration scheme we recognise; Facebook also emits a
+/// spatial one for ambisonic tracks. Not a gate — an unrecognised scheme only
+/// loses a tie-break.
 static NSString *const kFBPDashStandardChannelScheme =
     @"urn:mpeg:dash:23003:3:audio_channel_configuration:2011";
 
 #pragma mark - Small helpers
 
-/// "mpd:Representation" -> "Representation". Facebook's MPD uses the default
-/// namespace (urn:mpeg:dash:schema:mpd:2011) so names arrive unprefixed, but
-/// namespace processing is left off (it would also rewrite attribute names, and
-/// FBQualityLabel is unprefixed and non-standard) and a prefixed document is
-/// cheap to tolerate.
+/// "mpd:Representation" -> "Representation". Namespace processing is left off
+/// because it would also rewrite attribute names, and FBQualityLabel is
+/// unprefixed and non-standard.
 static NSString *FBPDashLocalName(NSString *name) {
     if (name.length == 0) return name;
     NSRange colon = [name rangeOfString:@":" options:NSBackwardsSearch];
@@ -148,12 +116,9 @@ static NSString *FBPDashTrim(NSString *text) {
 }
 
 /// @frameRate, in all three spellings DASH allows: "30", "29.97" and "15360/512".
-///
-/// Facebook uses the ratio form — every captured manifest writes 30 fps as
-/// "15360/512" and 25 fps as "12800/512" — which parses to 0 as a plain number,
-/// so the ratio case is the one that matters rather than a nicety. 0 when the
-/// attribute is absent or nonsense; the one caller then falls back to assuming
-/// 30, which is what the converter does anyway.
+/// Facebook uses the ratio form, which parses to 0 as a plain number, so that
+/// case is the one that matters. 0 when absent or nonsense, and the one caller
+/// then assumes 30, which is what the converter does anyway.
 static double FBPDashFrameRateAttr(NSDictionary<NSString *, NSString *> *attributes,
                                    NSString *name) {
     NSString *raw = FBPDashTrim(FBPDashAttr(attributes, name));
@@ -180,9 +145,8 @@ NSInteger FBPDashRankFromQualityLabel(NSString *label) {
     NSString *value = FBPDashTrim(label);
     if (value.length == 0 || value.length > 12) return 0;
 
-    // Leading digit run is the rung: "720p", "1080p60", "540". Anything that
-    // does not start with digits ("4K", "hd", "auto") cannot be compared
-    // numerically against the rest of the ladder, so it reads as unknown and
+    // Leading digit run is the rung. Anything that does not start with digits
+    // ("4K", "hd") cannot be compared numerically, so it reads as unknown and
     // the caller falls back to the frame's short edge.
     NSInteger rank = 0;
     NSUInteger index = 0;
@@ -254,46 +218,20 @@ NSTimeInterval FBPDashParseISODuration(NSString *text) {
 #pragma mark - Codec policy
 
 /// Video codecs kept: H.264 and HEVC in every spelling either gets written with,
-/// plus a representation that declares no codec at all.
+/// plus a representation that declares no codec at all, which is treated as the
+/// H.264 Facebook has always served rather than as a disqualification.
 ///
-/// The "no codec" case is the change that matters. A missing or empty codecs
-/// attribute used to be a refusal, so a manifest that declared its codec once on
-/// the AdaptationSet in an unrecognised form — or not at all — lost every rung at
-/// once. Silence is now treated as "probably the H.264 Facebook has always
-/// served", not as a disqualification.
+/// Still a whitelist rather than "accept everything": a codec with nothing on
+/// the other end gives the worst outcome available, where the rung is offered
+/// and the save fails after a full download. The wall is Photos, not the muxer —
+/// PHAssetCreationRequest answers a remuxed AV1 file with PHPhotosErrorDomain
+/// 3302 while AVAssetWriter passes AV1 through fine.
 ///
-/// Still a whitelist rather than "accept everything": letting a codec through
-/// with nothing on the other end gives the worst outcome available — the rung is
-/// offered, the user waits for a full download, and the save fails at the end.
+/// AV1 and VP9 therefore survive only where this process can re-encode them,
+/// which is a runtime question about the device and not about the document.
 ///
-/// The failure is in Photos, not the muxer. Measured on device (iPhone SE, A13),
-/// same muxer and code path for both: a remuxed `av01.0.08M.08` file is refused
-/// by `PHAssetCreationRequest` with `PHPhotosErrorDomain` 3302
-/// (`PHPhotosErrorInvalidResource`), while a remuxed `avc1.4d001e` file saves and
-/// returns an identifier. `AVAssetWriter` passes AV1 through fine (ffprobe reads
-/// `av1 + aac` off the output), so the wall was never the muxer.
-///
-/// AV1 is accepted conditionally. Refusing it was expensive: five of six captured
-/// Meta manifests are AV1-only and carry the long ladders, which is why the
-/// picker used to collapse to the progressive pair on most real content.
-/// FBPMediaConverter re-encodes to H.264 before saving, with no library shipped.
-///
-/// The condition: AV1 survives only when a conversion path exists in this
-/// process, which @c FBPMediaConversionIsAvailable answers by asking VideoToolbox
-/// whether the device has an AV1 decoder. On the A13 above it says no and AV1
-/// rungs are refused as before; on a device with hardware or software AV1 the
-/// ladder appears and each AV1 rung is marked @c needsConversion. Offering a rung
-/// the device cannot decode would be the "fails late" outcome again.
-///
-/// VP9 is still refused unconditionally. Same Photos wall, nothing on the other
-/// end: no VP9 equivalent of the converter, because the borrowed-decoder tier
-/// that might have supplied one is declined (FBPDav1dBridge.h) and Facebook's
-/// bundled `libavcodec` VP9 decoder ships no muxer. One captured manifest is
-/// `avc1 + vp09`, where the H.264 lane carries the ladder, so refusing VP9 there
-/// costs nothing.
-///
-/// Runs before dedupe, or a VP9 entry could win a label and take the H.264 rung's
-/// place.
+/// Runs before dedupe, or a convertible entry could win a label and take the
+/// place of an H.264 rung that needs no conversion at all.
 static BOOL FBPDashVideoCodecIsAV1(NSString *codecs) {
     if (codecs.length == 0) return NO;
     NSString *lower = codecs.lowercaseString;
@@ -313,22 +251,16 @@ static BOOL FBPDashVideoCodecIsSupported(NSString *codecs) {
         if ([lower hasPrefix:needle]) return YES;
     }
     if (FBPDashVideoCodecIsAV1(codecs)) return FBPMediaConversionIsAvailable();
-    // VP9: Photos still refuses it, but it is re-encoded like AV1 — decoded by
-    // Facebook's own borrowed libavcodec (FBPVP9Bridge), since VideoToolbox has
-    // no VP9 decoder. Offered only where that borrow has resolved; a device or a
-    // future build where it has not keeps VP9 refused, with a -droppedNotes line.
+    // VP9 is re-encoded like AV1, but decoded by the borrowed libavcodec since
+    // VideoToolbox has none. Offered only where that borrow has resolved.
     if (FBPDashVideoCodecIsVP9(codecs)) return FBPVP9ConversionIsAvailable();
     return NO;
 }
 
 /// The families we refuse on purpose and can name in a note, so a dropped rung
-/// reads as "we have no decoder for this" rather than "unrecognised".
-///
-/// AV1 is in this list *and* can be supported above: on a device with no AV1
-/// decoder it is refused and this is what makes the note say why, while on a
-/// device with one it never reaches here. The two are not in conflict — the
-/// question this answers is "if it was refused, was it for want of a decoder",
-/// and for AV1 on such a device the answer is yes.
+/// reads as "we have no decoder for this" rather than "unrecognised". AV1 is
+/// both here and conditionally supported above: this answers "if it was refused,
+/// was it for want of a decoder", and on such a device the answer is yes.
 static BOOL FBPDashVideoCodecHasNoPassthrough(NSString *codecs) {
     if (codecs.length == 0) return NO;
     NSString *lower = codecs.lowercaseString;
@@ -338,12 +270,9 @@ static BOOL FBPDashVideoCodecHasNoPassthrough(NSString *codecs) {
     return NO;
 }
 
-/// AAC, which is what Facebook serves (HE-AAC v1, mp4a.40.5).
-///
-/// No longer a gate: Opus/Vorbis/FLAC would have to be transcoded to ride in an
-/// MP4, but finding one is a reason to flag the audio, never a reason to throw
-/// away a video ladder that is perfectly downloadable. It only orders the audio
-/// pick and sets -audioIsNotAAC.
+/// AAC, which is what Facebook serves (HE-AAC v1, mp4a.40.5). Not a gate: it
+/// only orders the audio pick and sets -audioIsNotAAC, because finding Opus or
+/// FLAC is never a reason to throw away a downloadable video ladder.
 static BOOL FBPDashAudioCodecIsAAC(NSString *codecs) {
     if (codecs.length == 0) return NO;
     NSString *lower = codecs.lowercaseString;
@@ -353,13 +282,9 @@ static BOOL FBPDashAudioCodecIsAAC(NSString *codecs) {
 /// 0 = H.264 (or unstated), 1 = HEVC, 2 = AV1. Only ever breaks a tie between
 /// two representations carrying the same FBQualityLabel; the lowest rank wins.
 ///
-/// H.264 first, because it is the family every iOS build remuxes without
-/// surprises. AV1 last, and that placement is load-bearing now that AV1 rungs
-/// are offered: a mixed manifest that has both an `avc1` and an `av01` lane at
-/// the same label gives the user a rung that is copied in a second over one that
-/// is re-encoded over minutes and comes out lossier. Converting is the fallback
-/// for a ladder that is AV1-only, which is the common case, not something to
-/// choose when Facebook has already served H.264.
+/// The placement is load-bearing: where a mixed manifest offers both an `avc1`
+/// and an `av01` lane at one label, the user gets the rung that is copied in a
+/// second rather than re-encoded over minutes and lossier.
 static NSInteger FBPDashVideoCodecRank(NSString *codecs) {
     NSString *lower = codecs.lowercaseString;
     // VP9 last: it re-encodes like AV1 but through a borrowed decoder, so when a
@@ -425,11 +350,9 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
         _height = height;
         _bandwidth = bandwidth;
         _codecRank = FBPDashVideoCodecRank(codecs ?: @"");
-        // Set from the codecs string alone, which is safe because an AV1 or VP9
-        // rung only gets this far on a device the gate has already established can
-        // decode it (VideoToolbox for AV1, the borrowed libavcodec for VP9). Audio
-        // representations run through this initializer too and never match, so
-        // there is nothing to exclude.
+        // Safe from the codecs string alone, because an AV1 or VP9 rung only
+        // gets this far on a device the gate has established can decode it.
+        // Audio representations run through here too and never match.
         _needsConversion = FBPDashVideoCodecIsAV1(codecs ?: @"") ||
                            FBPDashVideoCodecIsVP9(codecs ?: @"");
         _hasKnownChannelLayout = YES;
@@ -439,10 +362,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
 /// The frame's own number, preferred over the label: the shorter edge when both
 /// are known (a portrait 720x1280 Reels rung is 720p, never 1280p), else the raw
-/// height, else whatever FBQualityLabel says.
-///
-/// Dimensions lead because they are measured rather than asserted, and because
-/// this rescues a rung FBQualityLabel never named — which used to be dropped.
+/// height, else whatever FBQualityLabel says. Dimensions lead because they are
+/// measured rather than asserted, and they rescue an unnamed rung.
 - (NSInteger)qualityRank {
     if (_width > 0 && _height > 0) return MIN(_width, _height);
     if (_height > 0) return _height;
@@ -450,11 +371,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 }
 
 /// What goes in front of the user; FBQualityLabel leads, the opposite order to
-/// -qualityRank. Meta's CRF ladder is why: 480p, 540p, 640p and 720p are all
-/// 1280x720 in a real feed manifest, so naming those rows from their dimensions
-/// would print "720p" four times. The label is the perceptual rung that
-/// separates them; dimensions are the fallback for a rung the document never
-/// named.
+/// -qualityRank, because Meta's CRF ladder puts 480p, 540p, 640p and 720p rungs
+/// all at 1280x720: naming those from dimensions would print "720p" four times.
 - (NSString *)displayLabel {
     if (_qualityLabel.length > 0) return _qualityLabel;
     NSInteger rank = self.qualityRank;
@@ -486,10 +404,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 @property (nonatomic, strong) NSMutableArray<FBPDashRepresentation *> *audioCandidates;
 @property (nonatomic, strong) NSMutableArray<NSString *> *droppedNotes;
 
-// Counted, not refused. Each one used to throw the representation away; they
-// are now tallied here and summarised into -droppedNotes once per document, so
-// a short ladder on a device still names its cause without flooding the note
-// cap with one line per rung.
+// Counted, not refused, and summarised into -droppedNotes once per document
+// rather than one line per rung, which would flood the note cap.
 @property (nonatomic, assign) NSUInteger keptWithoutSegmentBase;
 @property (nonatomic, assign) NSUInteger keptWithFBRangeAttributes;
 @property (nonatomic, assign) NSUInteger keptWithSegmentTemplate;
@@ -506,13 +422,11 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
     NSMutableArray<NSString *> *_stack;          // local element names, outermost first
     NSUInteger _elementCount;
 
-    // <BaseURL> inherits down the document (MPD -> Period -> AdaptationSet ->
-    // Representation). Facebook emits exactly one, absolute, on each
-    // Representation, so the ancestor levels are normally unused — but keeping
-    // them costs four strings and means a spec-shaped relative BaseURL under an
-    // absolute ancestor resolves instead of being thrown away. A relative
-    // BaseURL with no absolute ancestor is refused: there is no document URI to
-    // resolve it against, since the MPD arrived as a string.
+    // <BaseURL> inherits down the document. Facebook emits exactly one,
+    // absolute, per Representation, but keeping the ancestor levels lets a
+    // spec-shaped relative BaseURL resolve. A relative one with no absolute
+    // ancestor is refused: the MPD arrived as a string, so there is no
+    // document URI to resolve it against.
     NSString *_mpdBase;
     NSString *_periodBase;
     NSString *_adaptationBase;
@@ -521,10 +435,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
     NSDictionary<NSString *, NSString *> *_adaptationAttributes;
     NSDictionary<NSString *, NSString *> *_representationAttributes;
 
-    // Structural observations, tracked per scope. The AdaptationSet's value is
-    // inherited by every Representation inside it. None of these refuses a
-    // representation any more — see the file comment — they are kept only so
-    // the diagnostic can say what shape the document was.
+    // Tracked per scope, and inherited by every Representation in the set.
+    // None of these refuses anything; they are only for the diagnostic.
     BOOL _adaptationHasSegmentTemplate;
     BOOL _adaptationHasContentProtection;
     NSString *_adaptationChannelScheme;
@@ -581,11 +493,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
     if ([name isEqualToString:@"MPD"]) {
         _sawMPD = YES;
-        // @type is read for the note and nothing else. "dynamic" used to abort
-        // the parse outright, on the theory that a live manifest's <BaseURL> is a
-        // path prefix rather than a file. A representation whose BaseURL is not a
-        // fetchable file now falls out on its own when the GET or the mux fails,
-        // rather than taking the static rungs with it.
+        // Read for the note and nothing else: a BaseURL that is not a fetchable
+        // file falls out on its own rather than taking the static rungs with it.
         NSString *type = FBPDashTrim(FBPDashAttr(attributes, @"type")).lowercaseString;
         if (type.length > 0 && type.length <= 32) _mpdType = type;
         if (_duration <= 0) {
@@ -607,11 +516,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
     if ([name isEqualToString:@"Representation"]) {
         // Attributes inherit from the AdaptationSet; the Representation's own
-        // win where both declare one. Facebook puts contentType/mimeType on
-        // either level depending on the track — in one real manifest the video
-        // AdaptationSet has neither and the Representation has both, while the
-        // audio AdaptationSet carries contentType and its Representation
-        // carries mimeType — so both placements have to work.
+        // win where both declare one. Facebook uses either placement depending
+        // on the track, so both have to work.
         NSMutableDictionary *merged =
             [NSMutableDictionary dictionaryWithCapacity:
                  _adaptationAttributes.count + attributes.count];
@@ -640,12 +546,9 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
     BOOL inAdaptationSet = [parent isEqualToString:@"AdaptationSet"];
 
     if ([name isEqualToString:@"SegmentBase"]) {
-        // Used to be the gate that said "this <BaseURL> is one complete file".
-        // Its @indexRange and child Initialization/@range were never read: they
-        // describe where the sidx and moov sit inside that file, which one
-        // unranged GET fetches whole — so its presence was never load-bearing and
-        // its absence should not have been fatal. Reels manifests appear to carry
-        // the same information as FBInitializationRange / FBIndexRange attributes.
+        // Read for the note only. @indexRange and Initialization/@range
+        // describe where the sidx and moov sit inside the file that one
+        // unranged GET fetches whole, so their absence is not fatal.
         if (inRepresentation) _representationHasSegmentBase = YES;
         return;
     }
@@ -826,11 +729,9 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
         if (!FBPDashVideoCodecIsSupported(codecs)) {
             NSString *why;
             if (FBPDashVideoCodecIsAV1(codecs)) {
-                // The one refusal that is about the device rather than the
-                // codec, and the most important note in this file now: it is
-                // what tells a maintainer looking at a two-row picker on a real
-                // phone that the ladder was there and this handset could not
-                // decode it.
+                // The one refusal about the device rather than the codec, and
+                // so the note that explains a two-row picker on a real phone:
+                // the ladder was there and this handset could not decode it.
                 why = @"is AV1 and this device has no AV1 decoder, so it cannot "
                       @"be converted for Photos";
             } else if (FBPDashVideoCodecHasNoPassthrough(codecs)) {
@@ -844,11 +745,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
             return;
         }
 
-        // Nothing below this line can refuse the rung. An unnameable rung —
-        // no FBQualityLabel, no width, no height — used to be dropped here on
-        // the grounds that the user could not read the row; the picker now
-        // names it from its bitrate instead, because a row with an awkward name
-        // is strictly better than a rung that is not offered at all.
+        // Nothing below this line can refuse the rung. An unnameable one is
+        // named from its bitrate by the picker instead of being dropped.
         FBPDashRepresentation *representation =
             [[FBPDashRepresentation alloc] initWithURL:url
                                           qualityLabel:qualityLabel.length ? qualityLabel : nil
@@ -856,11 +754,9 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
                                                  width:width
                                                 height:height
                                              bandwidth:bandwidth];
-        // Only the picker uses this, and only for a rung that will be converted:
-        // the output bitrate — and so the size the row promises — is bounded per
-        // pixel per frame, which needs the frame rate to mean anything. Facebook
-        // puts @frameRate on the AdaptationSet, and `attributes` has already
-        // inherited it.
+        // Only the picker uses this, and only for a rung that will be
+        // converted: the promised size is bounded per pixel per frame, which
+        // needs the frame rate. @frameRate is inherited into `attributes`.
         representation.frameRate = FBPDashFrameRateAttr(attributes, @"frameRate");
         if (representation.qualityRank <= 0) {
             [self note:@"rep %@: no FBQualityLabel and no dimensions — kept, "
@@ -872,11 +768,8 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
     // --- audio ---
     //
-    // Nothing here refuses anything either, and that is the whole point of this
-    // branch now. Audio used to be able to veto the entire video ladder: a
-    // non-AAC or ambisonic track set hasUnusableAudio, the caller saw it and
-    // handed back the progressive pair, and a complete 360p…1080p ladder
-    // vanished because of the soundtrack. Both observations survive as
+    // Nothing here refuses anything, and that is the point: audio used to be
+    // able to veto the entire video ladder. Both observations survive as
     // preferences on the pick and as a flag for mux time.
     BOOL sawConfig = _representationSawChannelConfig || _adaptationSawChannelConfig;
     NSString *scheme = _representationSawChannelConfig ? _representationChannelScheme
@@ -915,19 +808,14 @@ static BOOL FBPDashCodecsLookLikeAudio(NSString *codecs) {
 
 // The second reader, run only when the first produced no video rung.
 //
-// NSXMLParser's contract is the problem it solves: the first well-formedness
-// error ends the document. A single unescaped `&` in a signed <BaseURL> — and
-// those URLs are entity-laden enough for one to slip through unescaped — means
-// every representation after it is never delivered, and one at the top of the
-// file means none of them are. From the picker's side that is indistinguishable
-// from a manifest with no ladder in it: the two-row picker that was reported.
+// NSXMLParser ends the document at its first well-formedness error, so one
+// unescaped `&` in a signed <BaseURL> drops every representation after it —
+// indistinguishable, from the picker's side, from a manifest with no ladder.
+// A scraper cannot fail that way; see THIRD_PARTY_NOTICES.md.
 //
-// A scraper cannot fail that way. Patterns derived from a third-party source;
-// see THIRD_PARTY_NOTICES.md. The acceptance rule matches: a representation
-// exists if and only if a non-empty <BaseURL> matched inside it, and it is kept
-// if that resolves to a URL. The codec policy still applies on top, because
-// AVAssetWriter's inability to pass VP9 through is a fact about this device, not
-// about the document.
+// A representation exists if and only if a non-empty <BaseURL> matched inside
+// it, and is kept if that resolves to a URL. The codec policy still applies on
+// top, since it is a fact about this device rather than about the document.
 
 /// First capture group of the first match, or nil.
 static NSString *FBPDashFirstCapture(NSRegularExpression *expression, NSString *text) {
@@ -1164,10 +1052,8 @@ static NSRegularExpression *FBPDashExpression(NSString *pattern,
         }
     }
 
-    // No AdaptationSet survived either — a truncation above the first one, or a
-    // document that never had them. Scan the whole document anyway: a
-    // <Representation> with its own contentType is still readable, and this is
-    // the last reader there is.
+    // No AdaptationSet survived either, so scan the whole document: a
+    // <Representation> with its own contentType is still readable here.
     if (self.videoCandidates.count == 0) {
         [self scrapeRegion:source kind:nil patterns:patterns];
     }
@@ -1200,12 +1086,8 @@ static NSRegularExpression *FBPDashExpression(NSString *pattern,
 
 /// One row per FBQualityLabel, highest bandwidth wins, H.264 wins a tie.
 ///
-/// Keyed on the label text and not on @height or -qualityRank, because Meta
-/// encodes several CRFs per resolution: one real feed manifest carries 480p,
-/// 540p, 640p and 720p rungs that are *all* 1280x720, and -qualityRank now
-/// reads 720 for every one of them. Deduping on that number would leave a
-/// three-row picker, which is the bug this tier exists to fix — so the label is
-/// the key and the rank is only the sort.
+/// Keyed on the label text, not on @height or -qualityRank: Meta encodes several
+/// CRFs per resolution, so that number collapses four rungs into one row.
 static NSArray<FBPDashRepresentation *> *
 FBPDashDedupeVideo(NSArray<FBPDashRepresentation *> *candidates) {
     NSMutableDictionary<NSString *, FBPDashRepresentation *> *best =
@@ -1232,16 +1114,10 @@ FBPDashDedupeVideo(NSArray<FBPDashRepresentation *> *candidates) {
         }
     }
 
-    // Best first: frame size, then the label's own number, then bitrate.
-    //
-    // The middle key is what keeps Meta's CRF ladder in the order a human reads
-    // it. Those four rungs all measure 1280x720, so they tie on -qualityRank;
-    // without the label to separate them the ladder would fall back to bitrate,
-    // which happens to agree today and is not promised to tomorrow.
-    //
-    // Codec is deliberately *not* a sort key: after dedupe each rung appears
-    // once, and grouping by codec would scramble the ladder whenever one rung
-    // happens to be HEVC-only.
+    // Best first: frame size, then the label's own number, then bitrate. The
+    // middle key keeps Meta's CRF ladder in a readable order, since those rungs
+    // tie on -qualityRank. Codec is deliberately not a sort key: grouping by it
+    // would scramble the ladder.
     return [best.allValues sortedArrayUsingComparator:
         ^NSComparisonResult(FBPDashRepresentation *a, FBPDashRepresentation *b) {
             if (a.qualityRank != b.qualityRank) {
@@ -1259,19 +1135,11 @@ FBPDashDedupeVideo(NSArray<FBPDashRepresentation *> *candidates) {
         }];
 }
 
-/// The audio track to pair with every video rung.
-///
-/// Nothing is refused on the way in any more, so this has to rank rather than
-/// assume. In order: AAC beats anything we would have to transcode; a channel
-/// layout from the standard scheme beats one we do not recognise (Facebook's
-/// fb360 ambisonic track is the case that matters — flattening it onto flat
-/// video sounds wrong, so it loses to a stereo track even at a third of the
-/// bitrate); then the document's own FBDefaultQuality; then bitrate.
-///
-/// The last of those is the "any codec" fallback: when no AAC track survives,
-/// the highest-bandwidth candidate of whatever codec is there is still returned,
-/// because an audio track that might not mux is never a reason to withhold the
-/// video ladder.
+/// Ranked rather than filtered: AAC, then a standard channel layout (an fb360
+/// ambisonic track loses to stereo even at a third of the bitrate, since
+/// flattening it onto flat video sounds wrong), then FBDefaultQuality, then
+/// bitrate. When no AAC track survives the best of whatever is there still comes
+/// back, because audio is never a reason to withhold the video ladder.
 static FBPDashRepresentation *
 FBPDashPickAudio(NSArray<FBPDashRepresentation *> *candidates) {
     FBPDashRepresentation *best = nil;
@@ -1303,9 +1171,8 @@ FBPDashPickAudio(NSArray<FBPDashRepresentation *> *candidates) {
     NSString *source = xml;
 
     // -DashPlaylist hands over raw XML, which must NOT be percent-decoded: that
-    // would turn every `+` in a signed URL into a space and decode every %xx
-    // inside it. The web GraphQL payload is percent-encoded, so decode only when
-    // the document plainly is not XML yet and plainly is an encoded one.
+    // would turn every `+` in a signed URL into a space. The web GraphQL payload
+    // is encoded, so decode only when the document is plainly not XML yet.
     if (![FBPDashTrim(source) hasPrefix:@"<"] &&
         [source rangeOfString:@"%3C" options:NSCaseInsensitiveSearch].location != NSNotFound) {
         NSString *decoded = source.stringByRemovingPercentEncoding;
@@ -1327,19 +1194,16 @@ FBPDashPickAudio(NSArray<FBPDashRepresentation *> *candidates) {
     parser.shouldReportNamespacePrefixes = NO;
 
     @try {
-        // The return value is deliberately ignored. Truncated XML — the common
-        // real failure — reports an error *after* the elements that did parse
-        // have already been handed to the delegate, and those are usable. A
-        // document that produced nothing usable falls out below anyway.
+        // The return value is deliberately ignored: truncated XML reports its
+        // error after the elements that did parse have reached the delegate,
+        // and those are usable.
         [parser parse];
     } @catch (__unused NSException *exception) {
         return nil;
     }
 
-    // Neither of the two document-level gates that used to live here survives.
-    // `!delegate.sawMPD` refused anything not rooted in <MPD>, and
-    // MPD@type="dynamic" refused live manifests; both cost real ladders. Both
-    // are notes now, so a device log still says what shape the document was.
+    // Neither document-level gate survives: not being rooted in <MPD>, and
+    // MPD@type="dynamic", both cost real ladders. They are notes now.
     if (!delegate.sawMPD) {
         [delegate note:@"no <MPD> element — read anyway"];
     }

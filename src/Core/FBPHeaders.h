@@ -1,8 +1,5 @@
-// Private interfaces of the Facebook iOS app and of UIKit that the hooks bind
-// to, verified against Facebook v570 and v574.
-//
-// Declaring them does not create a link-time dependency; they are resolved
-// through the Objective-C runtime at hook-install time.
+// Private Facebook and UIKit interfaces the hooks bind to. Declaring them adds
+// no link-time dependency; they resolve through the runtime at install time.
 
 #import <UIKit/UIKit.h>
 
@@ -17,8 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Feed
 
-/// FBSharedFramework. Subclass of GQLModel. Every feed unit passes through
-/// -initWithFBPandoTree:.
+/// FBSharedFramework. Every feed unit passes through -initWithFBPandoTree:.
 @interface FBMemModelObject : NSObject
 - (nullable NSString *)category;
 - (nullable id)sponsoredData;
@@ -27,21 +23,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Ads (specialised ad sources, outside the feed-model path)
 
-/// FBSharedFramework. Builds the array of ad items inserted into the Watch /
-/// video feed; returning an empty -insertedItems suppresses them.
+/// FBSharedFramework. An empty -insertedItems suppresses Watch/video feed ads.
 @interface FBVideoFeedAdsPool : NSObject
 - (NSArray *)insertedItems;
 @end
 
-/// FBSharedFramework. Fetches the ads interleaved between stories; the fetch
-/// entry points are no-oped to keep story ads from ever loading.
+/// FBSharedFramework. Fetch entry points are no-oped so story ads never load.
 @interface FBSnacksAdsPaginatingFetcher : NSObject
 @end
 
 #pragma mark - Action-confirmation targets
-//
-// Each exposes the single method that commits the action, verified present in
-// FBSharedFramework. The hooks guard that method behind an opt-in prompt.
+// Each exposes the one method that commits the action; the hooks guard it.
 
 @interface FBCommentCreateMutator : NSObject
 - (void)publishWithSession:(id)session;
@@ -79,9 +71,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBShortsSideBarView : UIView
 @end
 
-/// FBSharedFramework (FBShortsKit). Builds and injects the inline survey card
-/// ("Are you interested in this Reel?") into both the Reels tab and the
-/// full-screen viewer — the two surfaces share this one manager.
+/// FBShortsKit. The Reels tab and the full-screen viewer share this one manager
+/// for the inline survey card.
 @interface FBShortsInlineSurveyInjectionManager : NSObject
 - (void)maybeAddInlineSurveyComponents:(id)arg1;
 @end
@@ -98,8 +89,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - ComponentKit action routing
 
-/// Every ComponentKit-built control event funnels through this one forwarder —
-/// the interception point for like confirmation.
+/// Every ComponentKit control event funnels through this one forwarder.
 @interface CKComponentActionControlForwarder : NSObject
 - (void)handleControlEventFromSender:(id)sender withEvent:(nullable UIEvent *)event;
 @end
@@ -112,9 +102,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBTabBarItemDefaultView : UIView
 @end
 
-// iOS 26+ "liquid glass" tab bars. FBFloatingTabBar is the floating pill bar and
-// FBNativeTabBar wraps the system bar; both are METANoCodingView (a UIView
-// subclass) and replace the classic FBTabBarContainerView on newer builds.
+// iOS 26+ tab bars; both replace FBTabBarContainerView on newer builds.
 @interface FBFloatingTabBar : UIView
 @end
 
@@ -124,16 +112,13 @@ NS_ASSUME_NONNULL_BEGIN
 @interface FBBaseAppDelegate : UIResponder <UIApplicationDelegate>
 @end
 
-// Facebook's in-app browser (IAB). Its initial-URL load is intercepted to hand
-// external links to the default browser.
+// In-app browser; its initial-URL load is intercepted for external links.
 @interface FBWebViewController : UIViewController
 @end
 
 #pragma mark - OLED targets
-//
-// The chrome and feed container views whose background fills the screen. Forcing
-// these to pure black in dark mode makes the app AMOLED-black. Each is hooked
-// only when present, so a build that renames one loses only that surface.
+// Containers whose background fills the screen. Each is hooked only when
+// present, so a build that renames one loses only that surface.
 
 @interface FBTabBar : UIView
 @end
@@ -155,21 +140,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Left menu (ComponentKit rendering)
 
-/// The chain a side-menu row's model is read through. The ComponentKit list
-/// keeps one immutable model per index path, which is what tells its rows apart:
-/// a cell is reused and can still carry the previous row's content.
-///
-///   UICollectionView.dataSource  FBComponentCollectionViewDataSource
-///     -dataSourceState           CKDataSourceState
-///     -objectAtIndexPath:        CKDataSourceItem
-///     -model                     FBSectionComponentDataSourceModel
-///     -model                     FBBookmarkDropdownButtonModel (a menu section)
-///     -identifier                e.g. "dropdown_section_name-upsell"
-///
-/// The identifiers are developer strings Facebook does not translate, so they
-/// hold in every language. The log-out row is an FBBookmarkModel and the rules
-/// between rows are _FBBookmarksSeparatorModel, so neither can be mistaken for
-/// a section.
+/// The chain a side-menu row's model is read through: dataSourceState,
+/// objectAtIndexPath:, model, model, identifier. Rows must be told apart by that
+/// identifier (an untranslated developer string), never by cell label: a reused
+/// cell can still carry the previous row's content.
 @interface FBPBookmarksModelChain : NSObject
 - (nullable id)dataSourceState;
 - (nullable id)objectAtIndexPath:(NSIndexPath *)indexPath;
@@ -177,11 +151,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSString *)identifier;
 @end
 
-/// The "<language> wasn't downloaded" screen's own retry, so the tweak can
-/// press it once at first launch rather than leave the user to (see
-/// FBPLanguagePackHooks.xm). Declared rather than guessed: it is
-/// -_didTapRetryButton on FBDownloadLanguagePackInterstitialViewController in
-/// Facebook 588, beside _didTapUseInEnglishButton and _dismissLanguagePackView.
+/// The "<language> wasn't downloaded" screen's own retry, pressed once at first
+/// launch (FBPLanguagePackHooks.xm): -_didTapRetryButton on
+/// FBDownloadLanguagePackInterstitialViewController.
 @interface FBPLanguagePackInterstitial : UIViewController
 - (void)_didTapRetryButton;
 @end

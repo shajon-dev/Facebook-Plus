@@ -1,55 +1,28 @@
-// "Disable HDR" - force SDR rendering app-wide, so HDR photos and video stop
-// over-brightening the app (issues #4, #7 and #14).
+// "Disable HDR": force SDR rendering app-wide, so HDR photos and video stop
+// over-brightening the app.
 //
-// The brightness is not UIScreen.brightness. It is the display's EDR headroom:
-// an HDR layer asks the compositor for luminance above SDR white, and Facebook's
+// The brightness is not UIScreen.brightness but the display's EDR headroom: an
+// HDR layer asks the compositor for luminance above SDR white, and Facebook's
 // own shaders and CoreImage filters scale their output by the headroom the
-// screen reports. So there are two things to take away, and both matter: the
-// layers' request for EDR, and the headroom the app is told it has.
+// screen reports. Both have to go — the layers' request for EDR, and the
+// headroom the app is told it has.
 //
-// The levers, all public or stable system API, none tied to a Facebook class:
-//
-//   Layer, asking for EDR
-//     * CALayer.preferredDynamicRange - the iOS 26 control. ABSENT on iOS 18,
-//       which is why it now installs on its own and not beside the others:
-//       hooking a selector the platform does not have ADDS it, and an app that
-//       asks -respondsToSelector: would then take a path that does not exist.
-//     * CALayer.wantsExtendedDynamicRangeContent - the older control, still set
-//       on several paths; forced to NO through both setter and getter.
-//     * CALayer.contentsMaximumDesiredEDR / displayMaximumDesiredEDR - the
-//       per-layer EDR ceiling, in multiples of SDR white. Clamped to 1.0, which
-//       is "no headroom", and the value every SDR layer already carries. Live
-//       on this build: a single feed scroll sets it 397 times.
-//     * CALayer.contentsEDRStrength - how much of that ceiling to use. Zero.
-//     * CALayer.toneMapToStandardDynamicRange - the opposite direction, and the
-//       one that catches content nobody configured: instead of refusing EDR it
-//       asks the compositor to map HDR down into SDR. Forced on, and set on
-//       AVPlayerLayer and AVSampleBufferDisplayLayer as they are created, since
-//       a player layer that is never configured never reaches a setter.
-//     * CAMetalLayer.EDRMetadata - the HLG / HDR10 description attached to a
-//       Metal layer. Dropped.
-//
-//   Screen, reporting headroom
-//     * UIScreen.currentEDRHeadroom / potentialEDRHeadroom, and the newer
-//       maximumDynamicRangeHeadroom / currentDynamicRangeHeadroom on UIScreen
-//       and UIView - all answer 1.0, so shader and filter code that scales by
-//       headroom scales by nothing.
-//
-//   Images
-//     * UIImageView.preferredImageDynamicRange / imageDynamicRange and the
-//       private -_maximumEDRForDynamicRange:, plus Facebook's own image views,
-//       which are UIView subclasses with their own copy of the property.
+// The levers are all public or stable system API, none tied to a Facebook
+// class, grouped below as layers asking for EDR (preferredDynamicRange,
+// wantsExtendedDynamicRangeContent, the EDR ceiling and strength,
+// toneMapToStandardDynamicRange, CAMetalLayer.EDRMetadata), the screen and view
+// headroom properties, and the image dynamic-range properties — including
+// Facebook's own image views, which are UIView subclasses carrying their own
+// copy and so are missed entirely by the UIImageView hooks.
 //
 // contentsFormat is deliberately left alone. Downgrading RGBA16Float to 8-bit
-// removes precision from ordinary wide-gamut content (FBRichTextLayer is one of
-// the callers here) and buys nothing: a float layer whose EDR ceiling is 1.0 and
-// whose EDR request is NO does not drive the panel brighter.
+// strips precision from ordinary wide-gamut content and buys nothing: a float
+// layer whose EDR ceiling is 1.0 and whose EDR request is NO does not drive the
+// panel brighter.
 //
-// Every forced value is one the system already accepts - Standard, NO, 1.0, 0.0
-// - so none of this can crash the host. Each group installs only when every
-// selector it hooks is present, because a hook on a missing selector would
-// create it. A one-time trace per lever records that the hook is live without
-// logging on every frame.
+// Every forced value is one the system already accepts, so none of this can
+// crash the host. Each group installs only when every selector it hooks is
+// present, because hooking a missing selector creates it.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -62,27 +35,18 @@
 #import <objc/message.h>
 #import <stdatomic.h>
 
-// CADynamicRangeStandard / UIImageDynamicRangeStandard are both 0. Declared as a
-// plain constant so this builds against an SDK that predates either enum.
+// Both are 0; a plain constant so this builds against an older SDK.
 static const NSInteger kFBPDynamicRangeStandard = 0;
 
-/// EDR headroom, as a multiple of SDR white. 1.0 is what a display with no
-/// headroom reports, and what every SDR layer already carries.
+/// EDR headroom as a multiple of SDR white; 1.0 is "none".
 static const CGFloat kFBPNoHeadroom = 1.0;
 
-/// Mirror of the "Disable HDR" preference.
-///
-/// Not read through FBPEnabled() here, and that is not an optimisation. These
-/// hooks sit on Core Animation's own paths: a single feed scroll calls
-/// -setContentsMaximumDesiredEDR: 397 times, and UIKit resolves the headroom
-/// properties while it builds every view. Asking NSUserDefaults each time put a
-/// cfprefsd round trip inside those paths and the app stopped launching at all,
-/// killed by the 20 second launch watchdog with the CPU almost idle. A relaxed
-/// load of this flag costs two instructions and cannot block.
-///
-/// The mirror is seeded at install and refreshed from the notification the
-/// settings panel posts on commit, so the switch still takes effect without a
-/// relaunch.
+/// Mirror of the "Disable HDR" preference, and not FBPEnabled(), which is not
+/// an optimisation: these hooks sit on Core Animation's own paths (a feed
+/// scroll sets the EDR ceiling hundreds of times, and UIKit resolves the
+/// headroom properties for every view). An NSUserDefaults read there puts a
+/// cfprefsd round trip inside them and the app never launches at all, killed by
+/// the watchdog. Seeded at install, refreshed from the settings notification.
 static atomic_bool gFBPHDRDisabled = false;
 
 static inline BOOL FBPHDRDisabled(void) {
@@ -94,10 +58,8 @@ static void FBPRefreshHDRFlag(void) {
                           memory_order_relaxed);
 }
 
-// Core Animation's EDR controls are not in the public SDK. Declaring them here
-// only tells the compiler their shapes; it does not make -respondsToSelector:
-// answer YES for a platform that lacks them, which is what the per-selector
-// install guards in FBPInitHDRHooks are for.
+// Not in the public SDK. These declarations only tell the compiler the shapes;
+// the per-selector guards in FBPInitHDRHooks are what check the platform.
 @interface CALayer (FBPHDRPrivate)
 - (void)setToneMapToStandardDynamicRange:(BOOL)toneMap;
 - (void)setContentsMaximumDesiredEDR:(CGFloat)value;
@@ -105,11 +67,8 @@ static void FBPRefreshHDRFlag(void) {
 - (void)setContentsEDRStrength:(CGFloat)value;
 @end
 
-/// Puts a freshly created player layer on the SDR path.
-///
-/// Both of the levers it uses are properties the layer already has, set to the
-/// value an SDR layer carries, so a layer that was never going to show HDR is
-/// unaffected.
+/// Puts a freshly created player layer on the SDR path, using properties the
+/// layer already has, so a layer that would never show HDR is unaffected.
 static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
     if (!layer || !FBPHDRDisabled()) {
         return;
@@ -117,10 +76,8 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
     if ([layer respondsToSelector:@selector(setToneMapToStandardDynamicRange:)]) {
         [layer setToneMapToStandardDynamicRange:YES];
     }
-    // Sent rather than called: the SDK this builds against marks
-    // -setWantsExtendedDynamicRangeContent: as iOS 17 and up, and the
-    // deployment target is older. -respondsToSelector: above is the stricter
-    // check anyway, since it asks the device rather than the SDK.
+    // Sent, not called: the SDK marks this iOS 17+ and the deployment target
+    // is older. -respondsToSelector: above asks the device, which is stricter.
     SEL wantsEDR = NSSelectorFromString(@"setWantsExtendedDynamicRangeContent:");
     if ([layer respondsToSelector:wantsEDR]) {
         ((void (*)(id, SEL, BOOL))objc_msgSend)(layer, wantsEDR, NO);
@@ -158,9 +115,7 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 %end // FBPHDRImage
 
-// What the view decided the image itself is, and the headroom it will allow for
-// a given range. Separate from the group above because these two are private
-// and may not survive an OS release.
+// Private, so kept apart from the group above: they may not survive a release.
 %group FBPHDRImageInternals
 
 %hook UIImageView
@@ -187,9 +142,8 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 %hook CALayer
 
-// Both the setter and the getter are forced to Standard: the setter so the
-// stored value is SDR whether Core Animation later reads it via the ivar or the
-// accessor, the getter as a backstop for layers the app never set it on.
+// Setter and getter both: the setter so the stored value is SDR however Core
+// Animation reads it, the getter for layers the app never set it on.
 - (void)setPreferredDynamicRange:(NSInteger)range {
     NSInteger effective = range;
     if (FBPHDRDisabled() && range != kFBPDynamicRangeStandard) {
@@ -237,8 +191,7 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 %end // FBPHDRLayerWantsEDR
 
-// The EDR ceiling and how much of it to use, in multiples of SDR white. 1.0 and
-// 0.0 are what an ordinary SDR layer already carries.
+// The EDR ceiling and how much of it to use; 1.0 and 0.0 are plain SDR.
 %group FBPHDRLayerEDRCeiling
 
 %hook CALayer
@@ -288,9 +241,9 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 %end // FBPHDRLayerToneMap
 
-// A player layer that is never configured never reaches a setter, so the two
-// video layer classes are tone-mapped as they are created. Both override the
-// property, so the CALayer hook above does not reach them either.
+// A player layer that is never configured never reaches a setter, so both video
+// layer classes are tone-mapped at creation. Both also override the property,
+// so the CALayer hook above does not reach them.
 %group FBPHDRPlayerLayerToneMap
 
 %hook AVPlayerLayer
@@ -354,10 +307,8 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 #pragma mark - Reported headroom
 
 // Facebook's shaders and CoreImage filters scale their output by the headroom
-// the screen reports (##HDR_HEADROOM## is a shader placeholder in its own
-// binary), so a layer clamp alone still leaves content that was expanded before
-// it ever reached a layer. 1.0 means "no headroom", which is what every SDR
-// display reports.
+// the screen reports, so a layer clamp alone still leaves content that was
+// expanded before it ever reached a layer.
 %group FBPHDRScreenHeadroom
 
 %hook UIScreen
@@ -421,12 +372,11 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 #pragma mark - Facebook image views (photos)
 
-// Facebook's own image views are UIView subclasses — NOT UIImageView — each with
-// its own preferredImageDynamicRange property backed by a private ivar, so the
-// UIImageView hook above never reaches them. That is why HDR photos still
-// over-brightened. Force the setter (the value Facebook actually writes) and the
-// getter to Standard on each; FB also asks -_isImageHDR: before boosting, so
-// answering NO keeps the image on the SDR path.
+// Facebook's own image views are UIView subclasses, NOT UIImageView, each with
+// its own preferredImageDynamicRange backed by a private ivar, so the hooks
+// above never reach them — the reason HDR photos still over-brightened. Force
+// setter and getter on each, and answer -_isImageHDR: NO, which FB asks before
+// boosting.
 %group FBPHDRFBImageViews
 
 %hook FBWebImageView
@@ -498,12 +448,11 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 #pragma mark - Video inverse-tonemap (the EDR boost on playback)
 
-// HDR video and Reels glare rides Facebook's own inverse-tonemap path — an
-// SDR->HDR expansion on its Metal / sample-buffer player layers — which is
-// INDEPENDENT of CALayer.preferredDynamicRange, so clamping the layer alone left
-// video glaring. Force every inverse-tonemap enable to NO. Each takes a BOOL and
-// the forced value is the app's own SDR default, so it is crash-safe. (A literal
-// is routed through a local to avoid logos' "%orig(NO)" argument gotcha.)
+// HDR video and Reels glare rides Facebook's own inverse-tonemap path, an
+// SDR->HDR expansion on its player layers that is independent of
+// CALayer.preferredDynamicRange, so clamping the layer alone leaves video
+// glaring. Every inverse-tonemap enable is forced NO. (A literal goes through a
+// local to avoid logos' "%orig(NO)" argument gotcha.)
 %group FBPHDRVideoTonemap
 
 %hook FNFCAMetalLayer
@@ -580,23 +529,18 @@ static void FBPToneMapLayerToSDR(CALayer *layer, const char *trace) {
 
 #pragma mark - Init
 
-/// YES when @c cls has every one of these selectors.
+/// YES when @c cls has every one of these selectors. Through the runtime's C
+/// API, not -instancesRespondToSelector:, for two reasons.
 ///
-/// Two reasons this goes through the runtime's C API rather than
-/// -instancesRespondToSelector:.
+/// Correctness: hooking a selector a class lacks ADDS it, so a blind install
+/// makes -respondsToSelector: answer YES for an API the platform does not have.
+/// CALayer.preferredDynamicRange is that case, absent on iOS 18.
 ///
-/// The first is correctness: hooking a selector a class does not have ADDS it,
-/// so a group installed blind would make -respondsToSelector: answer YES for an
-/// API the platform lacks and send the app down a path that is not there.
-/// CALayer.preferredDynamicRange is exactly that case, absent on iOS 18 and
-/// present on 26, which is why it installs on its own.
-///
-/// The second is that this runs from a dyld initializer, before main. Asking a
-/// class anything with a message send triggers its +initialize, and
-/// +[UIScreen initialize] waits on UIKit's application configuration, which
-/// does not exist yet: the app hung there until the 20 second launch watchdog
-/// killed it. class_getInstanceMethod realizes the class without running
-/// +initialize, and objc_getClass looks a class up without messaging it.
+/// And this runs from a dyld initializer, before main, where a message send
+/// triggers +initialize — and +[UIScreen initialize] waits on UIKit's
+/// application configuration, which does not exist yet, so the app hangs until
+/// the launch watchdog kills it. class_getInstanceMethod realizes a class
+/// without running +initialize; objc_getClass looks one up without messaging.
 static BOOL FBPHDRHasAll(const char *className, NSArray<NSString *> *selectorNames) {
     Class cls = objc_getClass(className);
     if (!cls) {
@@ -611,8 +555,7 @@ static BOOL FBPHDRHasAll(const char *className, NSArray<NSString *> *selectorNam
 }
 
 void FBPInitHDRHooks(void) {
-    // Seed the mirror and keep it in step with the settings panel. The
-    // installer is re-run on every dyld image load, so this needs its own latch.
+    // The installer re-runs on every dyld image load, so this needs a latch.
     FBP_ONCE(gHDRFlag) {
         FBPRefreshHDRFlag();
         [NSNotificationCenter.defaultCenter
@@ -711,10 +654,7 @@ void FBPInitHDRHooks(void) {
         }
     }
 
-    // Facebook's own image views are UIView subclasses with their own
-    // dynamic-range property, so the UIImageView hook never reaches them (the
-    // real cause of HDR photos still glaring). Install when any is present; a
-    // class the build lacks is simply not swizzled.
+    // Install when any is present; a class the build lacks is not swizzled.
     if (objc_getClass("FBWebImageView") || objc_getClass("FBNetworkImageView") ||
         objc_getClass("FBWebImageCoreAnimatedImageView")) {
         FBP_ONCE(gHDRFBImages) {
@@ -726,8 +666,7 @@ void FBPInitHDRHooks(void) {
         FBP_ONCE(gHDRMRC) { %init(FBPHDRMRCImageView); }
     }
 
-    // Facebook's video inverse-tonemap (SDR->HDR EDR boost) is independent of
-    // the layer dynamic-range clamp. Install when any player class is present.
+    // Install when any player class is present.
     if (objc_getClass("FNFCAMetalLayer") || objc_getClass("FBVideoPlaybackController")) {
         FBP_ONCE(gHDRTonemap) {
             %init(FBPHDRVideoTonemap);

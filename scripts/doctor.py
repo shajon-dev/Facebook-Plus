@@ -33,6 +33,7 @@ import concurrent.futures
 import glob
 import os
 import json
+import base64
 import re
 import shutil
 import subprocess
@@ -915,11 +916,109 @@ class DeadCodeCheck(Check):
         return findings
 
 
+class CommentRatioCheck(Check):
+    """At most 20 percent of a file's non-blank lines may be comments.
+
+    The project is 80 percent code. A file that drifts past this is explaining
+    its own history rather than its behaviour, and the history belongs in a
+    commit message.
+    """
+
+    name = "comments"
+    summary = "no file is more than 20 percent comments"
+
+    CEILING = 20
+    # Below this a single long comment swamps the ratio for no real benefit.
+    FLOOR_LINES = 40
+
+    def run(self, ctx: "Doctor") -> list[Finding]:
+        findings: list[Finding] = []
+        wanted = (".m", ".mm", ".h", ".xm", ".c")
+        for path in ctx.repo.tracked():
+            if path.suffix.lower() not in wanted or not path.is_file():
+                continue
+            try:
+                lines = ctx.repo.text(path).splitlines()
+            except OSError:
+                continue
+            code = [l for l in lines if l.strip()]
+            if len(code) < self.FLOOR_LINES:
+                continue
+            comments = sum(1 for l in code if l.strip().startswith("//"))
+            pct = 100 * comments // len(code)
+            if pct <= self.CEILING:
+                continue
+            findings.append(Finding(
+                self.name,
+                f"{pct}% comments ({comments} of {len(code)} lines), ceiling is "
+                f"{self.CEILING}%",
+                path=ctx.repo.rel(path)))
+        return findings
+
+
+class ForeignNameCheck(Check):
+    """No other tweak, product or developer is named anywhere in the repository.
+
+    Studying another implementation is fine; naming it is not. The technique
+    goes in the comment, the source does not.
+    """
+
+    name = "names"
+    summary = "no other tweak is named in the tree or in recent commits"
+
+    # Base64 so the list does not itself break the rule it enforces. Decode one
+    # with `base64 -d` if you need to know what is being matched.
+    NAMES = ("aXFmYWNl", "bmV4dXM=", "aXFm", "ZmJwcmVtaXVt", "Ymh0aWt0b2s=", "dXlvdQ==")
+    # Whole words only, so an ordinary word is not mistaken for a product name.
+    PATTERN = re.compile(
+        r"\b(" + "|".join(base64.b64decode(n).decode() for n in NAMES) + r")\b",
+        re.I)
+
+    SKIP_DIRS = (".temp/", "test/", "preview/", ".agent/")
+
+    def run(self, ctx: "Doctor") -> list[Finding]:
+        findings: list[Finding] = []
+        for path in ctx.repo.tracked():
+            rel = str(ctx.repo.rel(path))
+            if any(rel.startswith(d) for d in self.SKIP_DIRS):
+                continue
+            if path.suffix.lower() in (".png", ".jpg", ".car", ".ttf", ".otf"):
+                continue
+            try:
+                text = ctx.repo.text(path)
+            except (OSError, UnicodeDecodeError):
+                continue
+            for i, line in enumerate(text.splitlines(), 1):
+                m = self.PATTERN.search(line)
+                if m:
+                    findings.append(Finding(
+                        self.name,
+                        f"names another tweak ({m.group(0)})",
+                        path=rel, line=i, detail=line.strip()[:120]))
+        # Commit messages are published too, so they are checked as well.
+        # Record-separated, because a commit body contains blank lines and
+        # splitting on those tears one message into pieces that match nothing.
+        out = subprocess.run(
+            ["git", "log", "-40", "--format=%H%x1f%B%x1e"],
+            cwd=ctx.repo.root, capture_output=True, text=True)
+        for entry in out.stdout.split("\x1e"):
+            parts = entry.strip().split("\x1f", 1)
+            if len(parts) != 2:
+                continue
+            m = self.PATTERN.search(parts[1])
+            if m:
+                findings.append(Finding(
+                    self.name,
+                    f"commit message names another tweak ({m.group(0)})",
+                    detail=f"{parts[0][:8]} {parts[1].splitlines()[0][:70]}"))
+        return findings
+
+
 class Doctor:
     """Runs the checks and reports what they found."""
 
     CHECKS = (CompileCheck, LinkCheck, PrefCheck, StringCheck, LintCheck, HookCheck,
-              DeadCodeCheck)
+              DeadCodeCheck, CommentRatioCheck, ForeignNameCheck)
 
     # Enough to act on without burying the summary; -v prints the rest.
     LIMIT = 25

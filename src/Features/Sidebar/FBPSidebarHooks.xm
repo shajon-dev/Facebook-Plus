@@ -2,32 +2,24 @@
 // adds the tweak's own "Facebook Plus" row above log out.
 //
 // Facebook ships the menu in two renderings and a launch gets one or the other:
-//
-//   Bloks   FBBookmarksPanelNavigationController -> FBBloksScreenQueryViewController
-//           -> BKBloksHostingView -> BKCollectionView / BKCollectionViewLayout,
-//           rows are BKBloksCollectionCell_SyncUpdates.
-//   CK      FBBookmarksViewController -> a ComponentKit surface whose list is a
-//           plain UICollectionView on FBBookmarksMasonryGridCollectionViewLayout,
-//           rows are FBComponentHostingCollectionViewCell.
+// a Bloks panel (BKCollectionView, BKBloksCollectionCell_SyncUpdates) or a
+// ComponentKit surface (a UICollectionView on
+// FBBookmarksMasonryGridCollectionViewLayout, with
+// FBComponentHostingCollectionViewCell rows).
 //
 // The tweak's own row is added to both. Hiding a row is done in the CK menu
-// only: a hidden row is taken out of the layout, along with the hairline drawn
-// at its top, and everything below it moves up. A row there is identified by
-// its model rather than by its cell, because FBBookmarkDropdownButtonModel.identifier
-// names each section in a string Facebook does not translate while a reused
-// cell can still carry the previous row's content. See FBPBookmarksModelChain
-// in FBPHeaders.h.
-//
-// The Bloks menu carries no such identifier, and the only per-row signal there
-// was the accessibility label of the cell's Bloks content, which meant matching
-// the English words "Upgrades" and "Also from Meta" and missing both in every
-// other language. That is gone: the hide switches act on the CK menu and leave
-// the Bloks one as Facebook draws it.
+// only: a hidden row and the hairline at its top come out of the layout and
+// everything below moves up. A row is identified by its MODEL, never its cell —
+// FBBookmarkDropdownButtonModel.identifier names each section in a string
+// Facebook does not translate, while a reused cell can still carry the previous
+// row's content (see FBPBookmarksModelChain in FBPHeaders.h). The Bloks menu
+// carries no such identifier, and its only per-row signal is an accessibility
+// label, which means matching English words and missing every other language,
+// so the hide switches leave Bloks as Facebook draws it.
 //
 // Neither list's model is touched. The tweak's row is a plain UIControl added as
-// a subview of the list, and the space for it is opened in the layout: it
-// reports a content size one row taller and pushes everything from the log-out
-// row down, so the collection view places Facebook's own cells around it.
+// a subview of the list, and the layout opens the space for it: it reports a
+// content size one row taller and pushes everything from the log-out row down.
 
 #import "FBPlus.h"
 #import "FBPPrefs.h"
@@ -40,28 +32,22 @@
 
 #pragma mark - Facebook Plus row
 
-// A menu row is a 1pt rule and a 24x24 glyph with the label beside it. Its
-// height and leading inset differ between the two menus (60pt / 12pt in the
-// ComponentKit one, 57pt / 16pt in Bloks), so both are measured off a row
-// Facebook draws beside the tweak's; the constants here are the fallbacks for a
-// menu that has not laid out yet. The glyph-to-label gap is 12pt in both.
+// A menu row is a 1pt rule and a 24x24 glyph with the label beside it. Height
+// and leading inset differ between the two menus and are measured off a row
+// Facebook draws; these are the fallbacks before the menu lays out.
 static const CGFloat kFBPSidebarRule = 1.0;
 static const CGFloat kFBPSidebarGlyph = 24.0;
 static const CGFloat kFBPSidebarGlyphGap = 12.0;
 static const CGFloat kFBPSidebarDefaultInset = 16.0;
 static const CGFloat kFBPSidebarDefaultHeight = 57.0;
 
-/// The tweak's row in the left menu, just above log out. Opens Facebook Plus
-/// settings, and is always present.
-///
-/// Named with the FBP prefix on purpose: the OLED sweep and the font replacement
-/// both skip FBP-prefixed views, so the row keeps the colours set here while the
-/// rest of the menu is repainted.
+/// The tweak's row, just above log out. The FBP prefix is deliberate: the OLED
+/// sweep and the font replacement both skip FBP-prefixed views, so this row
+/// keeps the colours set here.
 @interface FBPSidebarEntryRow : UIControl
-/// Where Facebook starts its own rows' glyphs, measured off a row beside it.
+/// Facebook's own glyph inset, measured off a row beside the tweak's.
 @property (nonatomic) CGFloat leadingInset;
 @property (nonatomic) BOOL insetMeasured;
-/// A move the row has made but not yet animated: see FBPSidebarMoveEntry.
 @property (nonatomic) BOOL moveWaiting;
 @property (nonatomic) CGPoint movedFrom;
 @property (nonatomic) CGRect movedTo;
@@ -80,8 +66,7 @@ static const CGFloat kFBPSidebarDefaultHeight = 57.0;
 
     _leadingInset = kFBPSidebarDefaultInset;
     self.backgroundColor = UIColor.clearColor;
-    // "Facebook Plus" is the product's name, so it reads the same in every
-    // language and is not run through the string catalog.
+    // A product name, so not run through the string catalog.
     self.accessibilityLabel = @"Facebook Plus";
     self.accessibilityTraits = UIAccessibilityTraitButton;
     self.isAccessibilityElement = YES;
@@ -90,17 +75,15 @@ static const CGFloat kFBPSidebarDefaultHeight = 57.0;
     _rule.backgroundColor = [UIColor colorWithWhite:0.5 alpha:0.22];
     [self addSubview:_rule];
 
-    // Facebook's own rows are each separated by a rule at their top, and the
-    // log-out button below has none of its own, so the row draws the one that
-    // closes it off.
+    // Facebook's rows each carry a rule at their top and the log-out button
+    // below has none, so this row draws the one that closes it off.
     _bottomRule = [[UIView alloc] initWithFrame:CGRectZero];
     _bottomRule.backgroundColor = _rule.backgroundColor;
     [self addSubview:_bottomRule];
 
     _glyph = [[UIImageView alloc] initWithFrame:CGRectZero];
     _glyph.contentMode = UIViewContentModeScaleAspectFit;
-    // The logo is a colour mark, so keep it original — fbp_imageNamed: would
-    // render it as a flat template silhouette.
+    // A colour mark: fbp_imageNamed: would flatten it to a template.
     _glyph.image = [[UIImage imageNamed:@"logo"
                               inBundle:NSBundle.fbp_resourceBundle
          compatibleWithTraitCollection:nil]
@@ -112,8 +95,7 @@ static const CGFloat kFBPSidebarDefaultHeight = 57.0;
     _label = [[UILabel alloc] initWithFrame:CGRectZero];
     _label.text = @"Facebook Plus";
     _label.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
-    // Facebook's own primary label colour: #050505 light, #E4E6EB dark. Set as a
-    // dynamic colour so the row follows the app's theme, light or dark.
+    // Facebook's own primary label colour, dynamic so it follows the theme.
     _label.textColor = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
         return traits.userInterfaceStyle == UIUserInterfaceStyleDark
             ? [UIColor colorWithRed:0.894 green:0.902 blue:0.922 alpha:1.0]
@@ -131,8 +113,8 @@ static const CGFloat kFBPSidebarDefaultHeight = 57.0;
     [super layoutSubviews];
     CGFloat width = self.bounds.size.width;
     CGFloat height = self.bounds.size.height;
-    // Rules on the row's own edges and the contents centred between them, so the
-    // row reads at the weight of its neighbours whatever height it is given.
+    // Rules on the edges and the contents centred, so the row reads at its
+    // neighbours' weight whatever height it is given.
     CGFloat inset = _leadingInset > 0.0 ? _leadingInset : kFBPSidebarDefaultInset;
     CGFloat labelX = inset + kFBPSidebarGlyph + kFBPSidebarGlyphGap;
     _rule.frame = CGRectMake(0, 0, width, kFBPSidebarRule);
@@ -168,17 +150,13 @@ static const CGFloat kFBPSidebarDefaultHeight = 57.0;
 
 static const void *kFBPSidebarIsMenuKey = &kFBPSidebarIsMenuKey;
 
-/// YES when @c list is the menu's own list rather than one of the many other
-/// collections in the app.
-///
-/// Read from the live hierarchy rather than from a class name, because the two
-/// menu renderings nest differently: walking out of the list reaches either
-/// @c FBBookmarksPanelNavigationController (the Bloks panel — the
+/// YES when @c list is the menu's own list, read from the live hierarchy rather
+/// than a class name because the two renderings nest differently: walking out
+/// reaches either FBBookmarksPanelNavigationController (Bloks; the
 /// identically-classed container in the main app answers
-/// @c FBNewNavigationController instead) or @c FBBookmarksViewController (the
-/// ComponentKit surface). The menu's list is also the outer collection: the
-/// horizontal shortcuts strip inside it has a collection view ancestor, and is
-/// rejected by that test.
+/// FBNewNavigationController instead) or FBBookmarksViewController. The menu's
+/// list is also the OUTER collection, which rejects the shortcuts strip inside
+/// it.
 static BOOL FBPSidebarListIsMenu(UIView *list) {
     UIView *view = list.superview;
     NSInteger hops = 0;
@@ -195,9 +173,8 @@ static BOOL FBPSidebarListIsMenu(UIView *list) {
     return NO;
 }
 
-/// Cached answer for @c FBPSidebarListIsMenu, so the walk runs once per view
-/// instead of on every layout pass. Nothing is cached before the view reaches a
-/// window, because the chain it reads is not in place yet.
+/// Cached, so the walk runs once per view. Nothing is cached before the view
+/// reaches a window, because the chain it reads is not in place yet.
 static BOOL FBPSidebarIsMenuList(UIView *list) {
     NSNumber *cached = objc_getAssociatedObject(list, kFBPSidebarIsMenuKey);
     if (cached) return cached.boolValue;
@@ -217,16 +194,14 @@ static FBPSidebarEntryRow *FBPSidebarExistingRow(UIScrollView *list) {
 
 #pragma mark - Making room for the row
 
-// Items shorter than this are spacers and rules, not rows — including the two
-// rows the hide switches above collapse to zero height.
+// Items shorter than this are spacers and rules, not rows.
 static const CGFloat kFBPSidebarMinRowHeight = 24.0;
 
 static const void *kFBPSidebarAnchorKey = &kFBPSidebarAnchorKey;
 static const void *kFBPSidebarAnchorHeightKey = &kFBPSidebarAnchorHeightKey;
 
-/// Set while the hooks below ask the layout what it would do on its own, so the
-/// answer they get back is Facebook's, not the shifted one. Layout runs on the
-/// main thread, so a plain flag is enough.
+/// Set while the hooks ask the layout what it would do on its own, so the answer
+/// is Facebook's and not the shifted one. Main thread, so a plain flag will do.
 static BOOL gFBPSidebarAskingOriginal = NO;
 
 /// YES when @c layout drives the left menu's list.
@@ -244,21 +219,17 @@ static CGSize FBPSidebarOriginalContentSize(UICollectionViewLayout *layout) {
     return size;
 }
 
-/// Where the tweak's row goes: the top of Facebook's own last row, which is the
-/// log-out row, so the tweak sits directly above it.
-///
-/// Read from the layout rather than from any row's text, so it holds in every
-/// language: the menu's last item is a short spacer, and the last one tall
-/// enough to be a row is log out.
+/// Where the tweak's row goes: the top of Facebook's last row, which is log
+/// out. Read from the layout rather than any row's text, so it holds in every
+/// language — the last item is a short spacer, and the last one tall enough to
+/// be a row is log out.
 static const void *kFBPSidebarHeightKey = &kFBPSidebarHeightKey;
 
-/// Items this tall or more are rows; anything taller than the maximum is a
-/// header or a card, not something the tweak's row should be sized against.
+/// Rows sit between these; anything taller is a header or a card.
 static const CGFloat kFBPSidebarMaxRowHeight = 120.0;
 
-/// Measures the menu once: where the tweak's row goes, and how tall it should be
-/// to sit level with the row Facebook draws above it. Both answers are cached
-/// against the content height they were read from.
+/// Where the tweak's row goes and how tall it should be to sit level with the
+/// row above it. Cached against the content height they were read from.
 static void FBPSidebarMeasure(UICollectionViewLayout *layout, CGSize content) {
     NSNumber *cachedFor = objc_getAssociatedObject(layout, kFBPSidebarAnchorHeightKey);
     if (cachedFor && fabs(cachedFor.doubleValue - content.height) < 0.5) return;
@@ -270,8 +241,7 @@ static void FBPSidebarMeasure(UICollectionViewLayout *layout, CGSize content) {
             CGRectMake(0, 0, MAX(content.width, 1.0), MAX(content.height, 1.0))];
     gFBPSidebarAskingOriginal = saved;
 
-    // The last row is where the tweak's row goes; the one before it is the row
-    // to match, since that is what the tweak's row ends up sitting against.
+    // The one before the last row is what the tweak's row sits against.
     CGFloat anchor = -1.0, anchorHeight = 0.0;
     CGFloat beforeTop = -1.0, beforeHeight = 0.0;
     for (UICollectionViewLayoutAttributes *attributes in items) {
@@ -289,8 +259,7 @@ static void FBPSidebarMeasure(UICollectionViewLayout *layout, CGSize content) {
             beforeHeight = height;
         }
     }
-    // An empty or still-loading menu has no row to sit above; fall back to the
-    // end of the content so the row is never placed over something.
+    // An empty or still-loading menu has no row to sit above.
     if (anchor < 0.0) anchor = content.height;
     if (beforeHeight < kFBPSidebarMinRowHeight || beforeHeight > kFBPSidebarMaxRowHeight) {
         beforeHeight = kFBPSidebarDefaultHeight;
@@ -310,17 +279,15 @@ static CGFloat FBPSidebarAnchorY(UICollectionViewLayout *layout, CGSize content)
     return anchor ? anchor.doubleValue : content.height;
 }
 
-/// How tall the tweak's row is in this menu: the height of Facebook's own row
-/// above it.
+/// The height of Facebook's own row above the tweak's.
 static CGFloat FBPSidebarEntryHeight(UICollectionViewLayout *layout, CGSize content) {
     FBPSidebarMeasure(layout, content);
     NSNumber *height = objc_getAssociatedObject(layout, kFBPSidebarHeightKey);
     return height ? height.doubleValue : kFBPSidebarDefaultHeight;
 }
 
-/// A copy of @c attributes pushed down by the row's height when it sits at or
-/// below the anchor. The layout hands out objects from its own cache, so the
-/// originals are copied rather than moved.
+/// A copy pushed down by the row's height when it sits at or below the anchor.
+/// The layout hands out objects from its own cache, so never move an original.
 static UICollectionViewLayoutAttributes *FBPSidebarShifted(
         UICollectionViewLayoutAttributes *attributes, CGFloat anchor, CGFloat entryHeight) {
     if (attributes.representedElementCategory != UICollectionElementCategoryCell) {
@@ -340,8 +307,7 @@ static UICollectionViewLayoutAttributes *FBPSidebarShifted(
 /// @c FBBookmarksMasonryGridCollectionViewLayout, remembered once it exists.
 ///
 /// Not a dispatch_once: the class ships in FBRarelyUsedFramework, which loads
-/// long after the app's first cells lay out, so a single lookup would cache nil
-/// and never find it. Only a hit is kept.
+/// long after the first cells lay out, so one lookup would cache nil forever.
 static Class FBPSidebarMasonryClass(void) {
     static Class masonry;
     if (!masonry) masonry = objc_getClass("FBBookmarksMasonryGridCollectionViewLayout");
@@ -350,9 +316,8 @@ static Class FBPSidebarMasonryClass(void) {
 
 #pragma mark - Reading the ComponentKit menu's rows
 
-// Facebook's own names for the two rows the hide switches cover. They come from
-// FBBookmarkDropdownButtonModel.identifier, a developer string Facebook does not
-// translate, so this holds whatever language the app is running in.
+// From FBBookmarkDropdownButtonModel.identifier, a developer string Facebook
+// does not translate, so these hold in whatever language the app runs in.
 static NSString *const kFBPSidebarUpgradesID = @"dropdown_section_name-upsell";
 static NSString *const kFBPSidebarAlsoFromMetaID =
     @"dropdown_section_name-products_from_facebook";
@@ -360,7 +325,6 @@ static NSString *const kFBPSidebarAlsoFromMetaID =
 // Items shorter than this are rules and spacers, not rows.
 static const CGFloat kFBPSidebarRuleMaxHeight = 2.0;
 
-/// Which hide switches are on.
 static NSUInteger FBPSidebarHideMask(void) {
     NSUInteger mask = 0;
     if (FBPEnabled(FBPKeyHideSidebarUpgrades)) mask |= 1 << 0;
@@ -368,30 +332,21 @@ static NSUInteger FBPSidebarHideMask(void) {
     return mask;
 }
 
-/// What kind of row sits at @c indexPath.
-///
-/// Only two kinds need naming, because only two of them bound a section. Read
-/// off a live menu, the list serves: BKModel for the profile block at the top,
-/// FBBookmarksSettingsItemModel for each shortcut, _FBBookmarksFDSButtonModel
-/// for "See more", _FBBookmarksSeparatorModel for the rules, one
-/// FBBookmarkDropdownButtonModel per collapsible section, and a single
-/// FBBookmarkModel at the very bottom, which is log out.
+/// What kind of row sits at @c indexPath. Only two kinds need naming, because
+/// only two of them bound a section.
 typedef NS_ENUM(NSUInteger, FBPSidebarRowKind) {
-    /// Anything else: a shortcut, a rule, a promo card, an app row. Which
-    /// section it belongs to, if any, is decided by what came before it.
+    /// Anything else; which section it belongs to is decided by what preceded it.
     FBPSidebarRowOther = 0,
     /// A collapsible section's own header. @c identifier names which one.
     FBPSidebarRowSection,
-    /// A plain bookmark, which in this menu means the log-out row. It is the
-    /// one row known to come after every section, so it ends the last one.
+    /// In this menu, the log-out row: the one row known to come after every
+    /// section, so it ends the last one.
     FBPSidebarRowBookmark,
 };
 
-/// Classifies the row at @c indexPath and, for a section header, hands back the
-/// identifier Facebook gives it.
-///
-/// Read from the data source's model, never from the cell — see
-/// FBPBookmarksModelChain for the chain and for why the cell cannot be trusted.
+/// Classifies the row and, for a section header, hands back its identifier.
+/// Read from the data source's model, never the cell — see
+/// FBPBookmarksModelChain for the chain and why a cell cannot be trusted.
 static FBPSidebarRowKind FBPSidebarRowKindAt(UICollectionView *list,
                                              NSIndexPath *indexPath,
                                              NSString **identifier) {
@@ -432,17 +387,14 @@ static BOOL FBPSidebarIdentifierIsHidden(NSString *identifier, NSUInteger mask) 
 
 #pragma mark - The ComponentKit menu's plan
 
-/// What the ComponentKit menu's layout has to do differently: which rows come
-/// out, how much height that removes above a given point, and where the tweak's
-/// row goes. Built entirely from the data source's models, so it does not depend
-/// on which cell happens to be holding a row at the time.
+/// What the layout does differently: which rows come out, how much height that
+/// removes above a point, where the tweak's row goes. Built from the data
+/// source's models, not whichever cell holds a row at the time.
 @interface FBPSidebarPlan : NSObject
-/// {origin.y, height} of each item that comes out, in the layout's own
-/// coordinates: a hidden row, and the rule drawn at its top.
+/// {origin.y, height} of each item removed, in the layout's own coordinates.
 @property (nonatomic, strong) NSArray<NSValue *> *cuts;
 @property (nonatomic) CGFloat collapsed;
 @property (nonatomic) CGFloat anchorY;
-/// How tall the tweak's row is here: the height of the row above it.
 @property (nonatomic) CGFloat entryHeight;
 @property (nonatomic) CGFloat builtHeight;
 @property (nonatomic) NSUInteger builtMask;
@@ -473,8 +425,8 @@ static FBPSidebarPlan *FBPSidebarPlanFor(UICollectionViewLayout *layout) {
     return plan;
 }
 
-/// Moves a hidden section's gathered rows into the plan, now that something has
-/// marked the end of it. Leaves the gathering lists empty either way.
+/// Moves a hidden section's gathered rows into the plan now that something has
+/// ended it; leaves the gathering lists empty either way.
 static void FBPSidebarCloseRun(NSMutableArray<NSValue *> *cuts,
                                NSMutableArray<NSNumber *> *cutTops,
                                NSMutableArray<NSValue *> *pending,
@@ -508,8 +460,8 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
     CGFloat collapsed = 0.0;
     CGFloat anchor = -1.0;
 
-    // In document order. The walk below carries a running state down the list,
-    // and layoutAttributesForElementsInRect: promises no order at all.
+    // In document order: the walk carries running state, and
+    // layoutAttributesForElementsInRect: promises no order at all.
     NSArray<UICollectionViewLayoutAttributes *> *ordered =
         [items sortedArrayUsingComparator:^NSComparisonResult(UICollectionViewLayoutAttributes *a,
                                                               UICollectionViewLayoutAttributes *b) {
@@ -519,41 +471,18 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
         return NSOrderedSame;
     }];
 
-    // A section is its header AND the rows under it, so both go.
+    // A section is its header AND the rows under it. An open section puts its
+    // contents in the list as rows of their own, and nothing on them says which
+    // section they belong to, so position decides it: a section runs from its
+    // header to the next header or to the log-out row, rules included, which
+    // stops two of them meeting where the section was. Collapsing the section
+    // instead, by answering NO from FBBookmarkDropdownButtonModel.isExpanded,
+    // does not work: the contents are already in the data source.
     //
-    // Cutting the header alone was enough for as long as the sections were
-    // shut, which is how they come on a small screen. Open one and Facebook
-    // puts its contents in the list as rows of their own: on an iPhone 16 Pro
-    // Max with "Also from Meta" open, hiding the header left the Meta Verified
-    // card and the Meta AI, Edits, Threads, Instagram and WhatsApp rows behind,
-    // with no heading above them.
-    //
-    // Nothing on those rows says which section they belong to, so position
-    // decides it: a section runs from its header to the next header, or to the
-    // log-out row, and everything in between goes with it. The rules in between
-    // go too, which is what keeps two of them from meeting where the section
-    // used to be. A shut section has nothing in between, so this still cuts the
-    // header alone and the menu looks exactly as it did.
-    //
-    // Collapsing the section instead, by answering NO from
-    // FBBookmarkDropdownButtonModel.isExpanded, does not work: the contents are
-    // already in the data source and that flag does not put them there.
-    //
-    // THE RUN HAS TO BE CLOSED BY SOMETHING
-    //
-    // "From this header to the next" is only safe while a next one arrives. A
-    // user on an iPhone 17 Pro Max reported the menu coming back nearly empty,
-    // with grey blocks where the rows had been, and turning "Hide Also from
-    // Meta" off put it right: that section's run was never closed, so it took
-    // the whole rest of the list with it. Nothing in the walk said no.
-    //
-    // So a run's contents are held back until a boundary actually arrives, and
-    // dropped if none does. The header's own row is cut the moment it is seen:
-    // hiding a header alone is what this did before its contents were ever
-    // involved, it is what a shut section still gets, and it cannot run away.
-    // The outcome on a list this walk cannot read is therefore the old
-    // behaviour — a hidden heading with its rows left in place — rather than a
-    // menu with most of it missing.
+    // "From this header to the next" is only safe while a next one arrives: an
+    // unclosed run took the whole rest of the list with it. So a run's contents
+    // are held back until a boundary arrives and dropped if none does, while
+    // the header's own row is cut as soon as it is seen.
     BOOL insideHidden = NO;
     NSMutableArray<NSValue *> *pending = [NSMutableArray array];
     NSMutableArray<NSNumber *> *pendingTops = [NSMutableArray array];
@@ -572,14 +501,12 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
             NSString *identifier = nil;
             switch (FBPSidebarRowKindAt(list, attributes.indexPath, &identifier)) {
                 case FBPSidebarRowSection:
-                    // Whatever this header is, it ends the run before it.
                     isHeader = YES;
                     FBPSidebarCloseRun(cuts, cutTops, pending, pendingTops,
                                        &collapsed, &pendingHeight);
                     insideHidden = FBPSidebarIdentifierIsHidden(identifier, mask);
                     break;
                 case FBPSidebarRowBookmark:
-                    // The log-out row: past the last section.
                     FBPSidebarCloseRun(cuts, cutTops, pending, pendingTops,
                                        &collapsed, &pendingHeight);
                     insideHidden = NO;
@@ -602,23 +529,21 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
         pendingHeight += height;
     }
 
-    // Still open at the end of the list: nothing ever closed it, so the rows it
-    // gathered stay where they are. Only the heading goes.
+    // Nothing ever closed this run, so only the heading goes.
     BOOL unclosed = pending.count > 0;
     [pending removeAllObjects];
     [pendingTops removeAllObjects];
     pendingHeight = 0.0;
 
-    // Each of Facebook's rows carries a hairline at its own top. Taking only the
-    // row out would leave that line behind, stacked against the next one.
+    // Each row carries a hairline at its top, which would otherwise be left
+    // behind stacked against the next one.
     for (UICollectionViewLayoutAttributes *attributes in items) {
         if (attributes.representedElementCategory != UICollectionElementCategoryCell) continue;
         CGFloat height = CGRectGetHeight(attributes.frame);
         if (height <= 0.0 || height > kFBPSidebarRuleMaxHeight) continue;
         CGFloat top = CGRectGetMinY(attributes.frame);
-        // A rule inside a hidden section was taken by the walk above. Counting
-        // it again here would subtract its height from the content size twice
-        // and pull everything below the section up too far.
+        // Already taken by the walk above; counting it twice would pull
+        // everything below the section up too far.
         BOOL already = NO;
         for (NSValue *cut in cuts) {
             if (fabs(cut.CGPointValue.x - top) < 0.5) { already = YES; break; }
@@ -632,16 +557,10 @@ static void FBPSidebarRebuildPlan(UICollectionViewLayout *layout,
         }
     }
 
-    // THE BACKSTOP
-    //
-    // Two hide switches, each covering one heading, cannot honestly account for
-    // half a menu. If the walk says they do, it misread this list — a build
-    // whose models are arranged differently, a rendering it has not seen — and
-    // the right answer is then to change nothing at all. A menu left exactly as
-    // Facebook drew it is a switch that did not work; a menu with most of it
-    // removed is the bug a user reported from an iPhone 17 Pro Max — and the
-    // tweak's own row goes with it, so the most obvious way back into the
-    // settings panel is gone too.
+    // Backstop: two hide switches, each covering one heading, cannot account
+    // for half a menu. If the walk says they do it misread this list, and the
+    // right answer is to change nothing — a switch that did not work beats a
+    // menu with most of it removed, the tweak's own row included.
     BOOL abandoned = NO;
     if (content.height > 0.0 && collapsed > content.height * 0.5) {
         abandoned = YES;
@@ -682,9 +601,8 @@ static CGFloat FBPSidebarDropAbove(FBPSidebarPlan *plan, CGFloat y) {
     return drop;
 }
 
-/// A copy of @c attributes with the hidden rows taken out of its position and the
-/// tweak's row allowed for. The layout hands out objects from its own cache, so
-/// the originals are copied rather than moved.
+/// A copy with the hidden rows taken out of its position and the tweak's row
+/// allowed for. Never move an original: they come from the layout's cache.
 static UICollectionViewLayoutAttributes *FBPSidebarAdjusted(
         UICollectionViewLayoutAttributes *attributes, FBPSidebarPlan *plan) {
     if (attributes.representedElementCategory != UICollectionElementCategoryCell) {
@@ -708,13 +626,11 @@ static UICollectionViewLayoutAttributes *FBPSidebarAdjusted(
     frame.origin.y = moved;
     if (cut) frame.size.height = 0.0;
     copy.frame = frame;
-    // A zero-height cell would still draw its content outside its bounds.
     if (cut) copy.hidden = YES;
     return copy;
 }
 
-/// Where the tweak's row is drawn: the log-out row's place, with any rows taken
-/// out above it already accounted for.
+/// The log-out row's place, with rows removed above it accounted for.
 static CGFloat FBPSidebarRowTop(UICollectionViewLayout *layout, CGSize content) {
     Class masonry = FBPSidebarMasonryClass();
     if (masonry && [layout isKindOfClass:masonry]) {
@@ -725,24 +641,19 @@ static CGFloat FBPSidebarRowTop(UICollectionViewLayout *layout, CGSize content) 
     return FBPSidebarAnchorY(layout, content);
 }
 
-/// Asks the menu to work itself out again when the hide switches have moved
-/// since the plan was made — the switches live on a screen presented over the
-/// menu, so the menu itself is not told.
+/// The hide switches live on a screen presented over the menu, so the menu is
+/// never told they moved; this asks it to work itself out again.
 static void FBPSidebarRefreshForSwitches(UICollectionView *list) {
     UICollectionViewLayout *layout = list.collectionViewLayout;
     if (FBPSidebarPlanFor(layout).builtMask == FBPSidebarHideMask()) return;
     dispatch_async(dispatch_get_main_queue(), ^{ [layout invalidateLayout]; });
 }
 
-/// Where Facebook starts the glyph on its own rows: 12pt in the ComponentKit
-/// menu, 16pt in the Bloks one. Returns 0 when there is nothing to read, and the
-/// row keeps its default.
-///
-/// Measured off the nearest row of the same height, which is what picks out a
-/// row of the same kind: the menu's shortcut rows are a different height and lay
-/// their contents out differently. Any such row will do, because the list only
-/// keeps the cells it is showing and the row directly above the tweak's is off
-/// screen when the menu first opens.
+/// Where Facebook starts the glyph on its own rows; 0 when there is nothing to
+/// read, and the row keeps its default. Measured off the nearest row of the
+/// same height, which is what picks out a row of the same kind. Any such row
+/// will do, because the list only keeps the cells it is showing and the row
+/// directly above the tweak's is off screen when the menu first opens.
 static CGFloat FBPSidebarMeasuredInset(UIScrollView *list, CGRect rowFrame) {
     UIView *sibling = nil;
     CGFloat nearest = CGFLOAT_MAX;
@@ -765,7 +676,6 @@ static CGFloat FBPSidebarMeasuredInset(UIScrollView *list, CGRect rowFrame) {
         if ([view isKindOfClass:UIImageView.class]) {
             CGRect box = [view convertRect:view.bounds toView:sibling];
             CGFloat side = CGRectGetWidth(box);
-            // The row's own glyph, not a badge or the chevron beside it.
             if (side >= 20.0 && side <= 32.0) return CGRectGetMinX(box);
         }
         [queue addObjectsFromArray:view.subviews];
@@ -778,14 +688,11 @@ static CGFloat FBPSidebarMeasuredInset(UIScrollView *list, CGRect rowFrame) {
 /// The animation the list has just put on its own cells, or nil when there is
 /// none to join.
 ///
-/// Opening "Settings and privacy" on the SE: the collection view puts the whole
-/// change inside one performBatchUpdates and hands every cell a 0.3s
-/// easeInEaseOut animation — the log-out cell's presentation layer was measured
-/// gliding from y 809.6 to 1377.4 over that window. A zero beginTime is what
-/// says those animations are still in the open transaction rather than already
-/// running, and that is the only moment the row can start alongside them.
-/// Preferring a position animation picks a row that is moving over one that is
-/// only fading in; the timing is the same either way.
+/// Opening a section puts the whole change inside one performBatchUpdates and
+/// hands every cell a 0.3s easeInEaseOut animation. A zero beginTime says those
+/// animations are still in the open transaction rather than already running,
+/// which is the only moment the row can start alongside them. Preferring a
+/// position animation picks a row that is moving over one only fading in.
 static CAAnimation *FBPSidebarListAnimation(UIScrollView *list) {
     CAAnimation *any = nil;
     for (UIView *sub in list.subviews) {
@@ -806,19 +713,17 @@ static CAAnimation *FBPSidebarListAnimation(UIScrollView *list) {
 /// Moves the row to @c frame, keeping step with the list when the list is
 /// animating.
 ///
-/// The row is a subview rather than a cell, so nothing animates it: its frame is
-/// set from a cell's -layoutSubviews, which the collection view runs inside its
-/// batch update with animations off — +areAnimationsEnabled was NO on every one
-/// of those passes. The row therefore arrived at its final place in the first
-/// frame of the update and then stood there for the 0.3s Facebook's own rows
-/// spent travelling, which reads as the row vanishing from where it was and
-/// turning up early somewhere else. It joins them by taking their animation.
+/// The row is a subview rather than a cell, so nothing animates it: its frame
+/// is set from a cell's -layoutSubviews, which the collection view runs inside
+/// its batch update with +areAnimationsEnabled NO. The row therefore lands in
+/// its final place on the first frame while Facebook's rows spend 0.3s
+/// travelling, so it joins them by taking their animation.
 ///
 /// Taking it needs a second pass: the move lands on the first cell laid out in
-/// the update, and the cells are given their animations a few passes later —
-/// 0.130s against 0.135s in the run measured. So the move is remembered and
-/// every later pass through the same update is another chance to catch it,
-/// which is why this runs even when the frame has not changed.
+/// the update, and the cells are given their animations a few passes later. So
+/// the move is remembered and every later pass through the same update is
+/// another chance to catch it — which is why this runs even when the frame has
+/// not changed.
 static void FBPSidebarMoveEntry(UIScrollView *list, FBPSidebarEntryRow *row, CGRect frame) {
     if (!CGRectEqualToRect(row.frame, frame)) {
         CGRect was = row.frame;
@@ -859,8 +764,6 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
                               FBPSidebarEntryHeight(layout, content));
     FBPSidebarMoveEntry(list, row, frame);
 
-    // Once a measurement lands the row keeps it; until then every pass is
-    // another chance at one.
     if (!row.insetMeasured) {
         CGFloat inset = FBPSidebarMeasuredInset(list, frame);
         if (inset > 0.0) {
@@ -872,12 +775,9 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
     if (list.subviews.lastObject != row) [list bringSubviewToFront:row];
 }
 
-// The ComponentKit menu's layout: it takes the hidden rows out and opens the
-// slot for the tweak's row, since the cells cannot size themselves.
-//
 // FBBookmarksMasonryGridCollectionViewLayout ships in FBRarelyUsedFramework,
-// which is not loaded when the tweak starts, so this group cannot be installed
-// with the rest; it goes in on the first menu cell laid out under that layout.
+// which is not loaded when the tweak starts, so this group cannot go in with
+// the rest: it installs on the first menu cell laid out under that layout.
 %group FBPSidebarMasonry
 
 %hook FBBookmarksMasonryGridCollectionViewLayout
@@ -904,11 +804,9 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
     CGSize content = FBPSidebarOriginalContentSize((UICollectionViewLayout *)self);
     FBPSidebarPlan *plan = FBPSidebarPlanFor((UICollectionViewLayout *)self);
     FBPSidebarRebuildPlan((UICollectionViewLayout *)self, plan, content);
-    // The rect is in the coordinates the collection view has been told about,
-    // while Facebook's layout answers in its own. A row that ends up inside this
-    // rect started as much as one row height above it (pushed down for the
-    // tweak's row) or as much as the removed height below it, so ask about that
-    // whole span — otherwise cells near the edges go missing.
+    // The rect is in the coordinates the collection view was told about, while
+    // Facebook's layout answers in its own, so widen the question by a row
+    // height above and the removed height below or cells near the edges vanish.
     CGRect widened = rect;
     widened.origin.y -= plan.entryHeight;
     widened.size.height += plan.entryHeight + plan.collapsed;
@@ -941,10 +839,9 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
 
 %group FBPSidebar
 
-// The menu list's layout. Hooking it — rather than nudging cell frames after
-// the fact — is what keeps the row's slot stable: the collection view positions
-// every cell from these answers itself, so nothing has to be re-corrected on each
-// pass, and the taller content size means the list scrolls to the row natively
+// Hooking the layout, rather than nudging cell frames afterwards, is what keeps
+// the slot stable: the collection view positions every cell from these answers
+// itself, and the taller content size makes the list scroll to the row natively
 // instead of living on a bottom contentInset.
 %hook BKCollectionViewLayout
 
@@ -962,11 +859,8 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
         return %orig;
     }
 
-    // The rect asked about is in the shifted coordinates the collection view has
-    // been told about, while Facebook's layout still answers in its own. An item
-    // that has been pushed down into the top of this rect started one row height
-    // above it, so widen the question by exactly that much — otherwise the first
-    // cells below the row would be missing from the answer and leave a gap.
+    // As above: an item pushed down into the top of this rect started one row
+    // height above it, so widen the question by exactly that much.
     CGSize content = FBPSidebarOriginalContentSize((UICollectionViewLayout *)self);
     CGFloat anchor = FBPSidebarAnchorY((UICollectionViewLayout *)self, content);
     CGFloat entryHeight = FBPSidebarEntryHeight((UICollectionViewLayout *)self, content);
@@ -1010,8 +904,7 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
 %end
 
 // Every ComponentKit cell in the app goes through this, the feed's included, so
-// the first thing it does is leave unless this cell belongs to the menu's list —
-// two comparisons, before anything walks a view tree.
+// it leaves on two comparisons before anything walks a view tree.
 %hook FBComponentHostingCollectionViewCell
 
 - (void)layoutSubviews {
@@ -1023,9 +916,8 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
     if (!masonry || ![list.collectionViewLayout isKindOfClass:masonry]) return;
     if (!FBPSidebarIsMenuList(list)) return;
 
-    // First menu cell seen: the framework carrying the layout is loaded now, so
-    // its hooks can go in. The layout has already answered this pass, so ask it
-    // to work the list out again through them.
+    // The framework carrying the layout is loaded by now, so its hooks can go
+    // in; it has already answered this pass, so ask it again through them.
     FBP_ONCE(gMasonry) {
         %init(FBPSidebarMasonry);
         FBPTraceLine(@"sidebar masonry layout hooked");
@@ -1044,8 +936,7 @@ static void FBPSidebarInstallEntry(UIScrollView *list) {
 
 
 void FBPInitSidebarHooks(void) {
-    // Generic Bloks classes plus the ComponentKit menu's own: a launch gets one
-    // rendering or the other, and the group covers both.
+    // A launch gets one rendering or the other, and the group covers both.
     if (objc_getClass("BKCollectionView") ||
         objc_getClass("BKCollectionViewLayout") ||
         objc_getClass("FBBookmarksMasonryGridCollectionViewLayout") ||
