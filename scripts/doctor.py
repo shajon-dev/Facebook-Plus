@@ -608,6 +608,13 @@ class LintCheck(Check):
     # failure branch too, which is where both survivors of the narrower rule
     # were found — "class not found" repeats just as happily as "installed".
     INSTALLER = re.compile(r"^(?:void|static\s+void)\s+(FBPInit\w+)\s*\([^)]*\)\s*\{", re.M)
+    PREMAIN_HINT = ("UIScreen", "UIView", "UIWindow", "UIImageView", "UIApplication",
+                    "CALayer", "CAMetalLayer", "AVPlayerLayer",
+                    "AVSampleBufferDisplayLayer")
+    # Class-level only. -respondsToSelector: on an instance is safe: by the time
+    # one exists the class has been initialized.
+    RESOLVERS_HINT = ("class_getInstanceMethod", "class_getClassMethod",
+                      "instancesRespondToSelector:")
     UNGUARDED = re.compile(r"\b(FBPLog|FBPTraceLine|FBPTraceEmit|FBPDiag|FBPDiagFail)\s*\(")
 
     @staticmethod
@@ -654,6 +661,33 @@ class LintCheck(Check):
                         "or every image dyld loads logs it again",
                         path=rel, line=line,
                         detail=body[at:body.find("\n", at)].strip()))
+
+        # An installer runs from a dyld initializer, before main. Asking the
+        # objc runtime to resolve a method on a UIKit or Core Animation class
+        # runs that class's +initialize, and +[UIScreen initialize] waits on a
+        # UIKit dispatch_once that cannot finish yet: the launch watchdog kills
+        # the app at twenty seconds. Read the method lists instead.
+        #
+        # Checked per file rather than per line, because the class name and the
+        # resolver are rarely on the same line: the name is usually passed to a
+        # helper. A file that both installs hooks and names a UIKit class is the
+        # place this can happen, so a raw resolver anywhere in it is the flag.
+        for path in ctx.sources:
+            text = ctx.index.clean[path]
+            if not self.INSTALLER.search(text):
+                continue
+            if not any(f'"{c}"' in text for c in self.PREMAIN_HINT):
+                continue
+            for i, line in enumerate(text.splitlines(), 1):
+                hit = next((r for r in self.RESOLVERS_HINT if r in line), None)
+                if not hit:
+                    continue
+                findings.append(Finding(
+                    self.name,
+                    f"{hit} in a file that installs hooks and names a UIKit "
+                    "class: resolving a selector runs +initialize and can hang "
+                    "the launch watchdog. Walk the method lists instead",
+                    path=ctx.repo.rel(path), line=i, detail=line.strip()[:110]))
 
         # The sideload redirects must ask whether this process actually holds
         # the entitlement before rewriting anything: on a jailbroken App Store
