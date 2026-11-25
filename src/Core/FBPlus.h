@@ -75,6 +75,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// without an app relaunch.
 extern NSNotificationName const FBPSettingsDidChangeNotification;
 
+/// Posted continuously when floating video button opacity or saved positions
+/// change, allowing live buttons to update immediately without triggering full
+/// theme/feed re-walks on every slider step.
+extern NSNotificationName const FBPVideoButtonsDidChangeNotification;
+
 /// Posted as Facebook slides its tab bar in or out. userInfo carries
 /// @c FBPTabBarFractionKey as an NSNumber<double>, 0 = fully visible.
 extern NSNotificationName const FBPTabBarVisibilityDidChangeNotification;
@@ -95,6 +100,7 @@ extern NSString *const FBPKeyNoGroupSuggestions;// Remove "groups you should joi
 extern NSString *const FBPKeyNoSuggestedPages;  // Remove "suggested pages for you"
 extern NSString *const FBPKeyNoSurveys;         // Remove "are you interested in this post?" surveys
 extern NSString *const FBPKeyNoCommentProductBanner; // Remove the affiliate/product link banner in the comment sheet
+extern NSString *const FBPKeyNoCommentEmojiBar; // Remove the quick reaction emoji bar above the comment composer
 extern NSString *const FBPKeyNoReelsRecommended; // Remove the "Recommended" mid-card interstitial in Reels
 
 // Confirmations (opt-in: guard an action behind a prompt)
@@ -112,8 +118,13 @@ extern NSString *const FBPKeyStoryDownloaderEnabled;
 /// before the picker existed.
 extern NSString *const FBPKeyDownloadQualityPicker;
 
-// Reels
+// Reels & floating video controls
 extern NSString *const FBPKeyReelsHideOverlay;  // Strip the Reels overlay (always on; no toggle)
+extern NSString *const FBPKeyVideoButtonsOpacity;    // Floating Eye & Download button opacity [0.15 .. 1.0]
+extern NSString *const FBPKeyVideoDownloadPosition;  // Normalized "x,y" center for Reels Download button
+extern NSString *const FBPKeyVideoEyePosition;       // Normalized "x,y" center for Reels Eye button
+extern NSString *const FBPKeyStoryDownloadPosition;  // Normalized "x,y" center for Story Download button
+extern NSString *const FBPKeyStoryEyePosition;       // Normalized "x,y" center for Story Eye button
 
 // Stories
 extern NSString *const FBPKeyAnonymousStories;
@@ -226,5 +237,21 @@ extern NSString *const FBPAXNavSettingsButton;  // nav-settings-button
 typedef NS_ENUM(NSInteger, FBPViewTag) {
     FBPViewTagStoryButton  = 0x7B902,
 };
+
+#pragma mark - Floating video controls (opacity & drag positioning)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+CGFloat FBPVideoButtonsAlpha(void);
+void FBPAttachDraggableBehavior(UIButton *button, NSString *prefKey);
+BOOL FBPIsButtonDragging(UIButton *button);
+BOOL FBPShouldSuppressTapAfterDrag(UIButton *button);
+CGPoint FBPResolvedButtonCenter(NSString *prefKey, CGPoint defaultCenter,
+                                CGSize buttonSize, UIView *container);
+void FBPResetVideoButtonPositions(void);
+#ifdef __cplusplus
+}
+#endif
 
 NS_ASSUME_NONNULL_END

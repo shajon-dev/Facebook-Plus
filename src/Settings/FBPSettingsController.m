@@ -56,12 +56,14 @@ static BOOL FBPRowGatesOtherRows(NSString *key);
 // Associated-object key for a switch's confirm-on-enable payload. Its address is
 // the key; the stored value is the kRowConfirm dictionary.
 static const void *kFBPSwitchConfirmKey = &kFBPSwitchConfirmKey;
+static const void *kFBPSliderValueLabelKey = &kFBPSliderValueLabelKey;
 
 static NSString *const kTypeSwitch   = @"switch";
 static NSString *const kTypeAction   = @"action";
 static NSString *const kTypeInfo     = @"info";
 static NSString *const kTypeCategory = @"catnav";
 static NSString *const kTypeButton   = @"button";  // title with a trailing pill button
+static NSString *const kTypeSlider   = @"slider";  // title + percentage badge + inline UISlider
 
 static NSString *const kSecRows   = @"rows";
 static NSString *const kSecFooter = @"footer";
@@ -79,6 +81,7 @@ static NSString *const kActionDownloads   = @"downloads";
 static NSString *const kActionLogExport  = @"logExport";
 static NSString *const kActionLogClear   = @"logClear";
 static NSString *const kActionPlusMode   = @"plusMode";
+static NSString *const kActionResetVideoButtons = @"resetVideoButtons";
 
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
@@ -114,6 +117,17 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 @property (nonatomic, strong) UILabel *descLabel;
 @property (nonatomic, strong) UIStackView *labelStack;
 @property (nonatomic, strong) UIView *accessoryContainer;
+@property (nonatomic, strong) UISlider *slider;
+@property (nonatomic, strong) NSLayoutConstraint *iconCenterYConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *iconTopSliderConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *labelCenterYConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *labelTopSliderConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *labelBottomRegularConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *accessoryCenterYRegularConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *accessoryCenterYSliderConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *sliderTopConstraint;
+@property (nonatomic, strong) NSLayoutConstraint *sliderBottomConstraint;
+- (void)setSliderMode:(BOOL)sliderMode;
 @end
 
 @implementation FBPSettingsCell
@@ -174,6 +188,11 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         _accessoryContainer.translatesAutoresizingMaskIntoConstraints = NO;
         [self.contentView addSubview:_accessoryContainer];
 
+        _slider = [[UISlider alloc] init];
+        _slider.translatesAutoresizingMaskIntoConstraints = NO;
+        _slider.hidden = YES;
+        [self.contentView addSubview:_slider];
+
         [_labelStack setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
                                                      forAxis:UILayoutConstraintAxisHorizontal];
         [_accessoryContainer setContentHuggingPriority:UILayoutPriorityRequired
@@ -181,8 +200,20 @@ static UIImage *FBPSettingsIcon(NSString *name) {
         [_accessoryContainer setContentCompressionResistancePriority:UILayoutPriorityRequired
                                                              forAxis:UILayoutConstraintAxisHorizontal];
 
-        NSLayoutConstraint *centerY = [_labelStack.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor];
-        centerY.priority = UILayoutPriorityDefaultHigh;
+        _iconCenterYConstraint = [_iconTile.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor];
+        _iconTopSliderConstraint = [_iconTile.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:12];
+
+        _labelCenterYConstraint = [_labelStack.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor];
+        _labelCenterYConstraint.priority = UILayoutPriorityDefaultHigh;
+        _labelTopSliderConstraint = [_labelStack.topAnchor constraintEqualToAnchor:self.contentView.topAnchor constant:11];
+        _labelBottomRegularConstraint = [self.contentView.bottomAnchor constraintGreaterThanOrEqualToAnchor:_labelStack.bottomAnchor constant:9];
+
+        _accessoryCenterYRegularConstraint = [_accessoryContainer.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor];
+        _accessoryCenterYSliderConstraint = [_accessoryContainer.centerYAnchor constraintEqualToAnchor:_titleLabel.centerYAnchor];
+
+        _sliderTopConstraint = [_slider.topAnchor constraintEqualToAnchor:_labelStack.bottomAnchor constant:8];
+        _sliderBottomConstraint = [self.contentView.bottomAnchor constraintEqualToAnchor:_slider.bottomAnchor constant:12];
+        _sliderBottomConstraint.priority = UILayoutPriorityDefaultHigh;
 
         NSLayoutConstraint *cvWidth = [self.contentView.widthAnchor constraintEqualToAnchor:self.widthAnchor];
         cvWidth.priority = UILayoutPriorityDefaultHigh;
@@ -192,7 +223,7 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 
             [_iconTile.leadingAnchor constraintEqualToAnchor:self.contentView.leadingAnchor
                                                     constant:kContentInset],
-            [_iconTile.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+            _iconCenterYConstraint,
             [_iconTile.widthAnchor constraintEqualToConstant:29],
             [_iconTile.heightAnchor constraintEqualToConstant:29],
 
@@ -202,21 +233,50 @@ static UIImage *FBPSettingsIcon(NSString *name) {
             [_iconView.heightAnchor constraintEqualToConstant:22],
 
             [_labelStack.leadingAnchor constraintEqualToAnchor:_iconTile.trailingAnchor constant:12],
-            centerY,
+            _labelCenterYConstraint,
             [_labelStack.topAnchor constraintGreaterThanOrEqualToAnchor:self.contentView.topAnchor
                                                                constant:9],
-            [self.contentView.bottomAnchor constraintGreaterThanOrEqualToAnchor:_labelStack.bottomAnchor
-                                                                       constant:9],
+            _labelBottomRegularConstraint,
             [_labelStack.trailingAnchor constraintLessThanOrEqualToAnchor:_accessoryContainer.leadingAnchor
                                                                  constant:-10],
 
             [_accessoryContainer.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
                                                                constant:-kContentInset],
-            [_accessoryContainer.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+            _accessoryCenterYRegularConstraint,
+            [_slider.leadingAnchor constraintEqualToAnchor:_labelStack.leadingAnchor],
+            [_slider.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
+                                                   constant:-kContentInset],
             [self.contentView.heightAnchor constraintGreaterThanOrEqualToConstant:52],
         ]];
     }
     return self;
+}
+
+- (void)setSliderMode:(BOOL)sliderMode {
+    self.slider.hidden = !sliderMode;
+    if (sliderMode) {
+        self.iconCenterYConstraint.active = NO;
+        self.labelCenterYConstraint.active = NO;
+        self.labelBottomRegularConstraint.active = NO;
+        self.accessoryCenterYRegularConstraint.active = NO;
+
+        self.iconTopSliderConstraint.active = YES;
+        self.labelTopSliderConstraint.active = YES;
+        self.accessoryCenterYSliderConstraint.active = YES;
+        self.sliderTopConstraint.active = YES;
+        self.sliderBottomConstraint.active = YES;
+    } else {
+        self.iconTopSliderConstraint.active = NO;
+        self.labelTopSliderConstraint.active = NO;
+        self.accessoryCenterYSliderConstraint.active = NO;
+        self.sliderTopConstraint.active = NO;
+        self.sliderBottomConstraint.active = NO;
+
+        self.iconCenterYConstraint.active = YES;
+        self.labelCenterYConstraint.active = YES;
+        self.labelBottomRegularConstraint.active = YES;
+        self.accessoryCenterYRegularConstraint.active = YES;
+    }
 }
 
 - (void)layoutSubviews {
@@ -236,6 +296,10 @@ static UIImage *FBPSettingsIcon(NSString *name) {
 
 - (void)prepareForReuse {
     [super prepareForReuse];
+    [self setSliderMode:NO];
+    [self.slider removeTarget:nil action:NULL forControlEvents:UIControlEventAllEvents];
+    objc_setAssociatedObject(self.slider, @selector(tag), nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self.slider, kFBPSliderValueLabelKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     for (UIView *subview in self.accessoryContainer.subviews) [subview removeFromSuperview];
     for (NSLayoutConstraint *c in self.accessoryContainer.constraints.copy) {
         [self.accessoryContainer removeConstraint:c];
@@ -373,8 +437,36 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
     cell.iconView.tintColor = FBPIconColor();
 
     NSString *type = row[kRowType];
+    [cell setSliderMode:[type isEqualToString:kTypeSlider]];
 
-    if ([type isEqualToString:kTypeSwitch]) {
+    if ([type isEqualToString:kTypeSlider]) {
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        CGFloat current = FBPVideoButtonsAlpha();
+
+        UILabel *pctLabel = [[UILabel alloc] init];
+        pctLabel.font = [UIFont monospacedDigitSystemFontOfSize:15 weight:UIFontWeightSemibold];
+        pctLabel.textColor = FBPTintColor();
+        pctLabel.textAlignment = NSTextAlignmentRight;
+        pctLabel.text = [NSString stringWithFormat:@"%d%%", (int)lround(current * 100.0)];
+        [self setAccessory:pctLabel inCell:cell];
+
+        cell.slider.minimumValue = 0.15f;
+        cell.slider.maximumValue = 1.00f;
+        cell.slider.value = (float)current;
+        cell.slider.minimumTrackTintColor = FBPTintColor();
+        cell.slider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.18];
+        objc_setAssociatedObject(cell.slider, @selector(tag), row[kRowKey],
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(cell.slider, kFBPSliderValueLabelKey, pctLabel,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [cell.slider addTarget:self action:@selector(fbpSliderChanged:)
+              forControlEvents:UIControlEventValueChanged];
+        [cell.slider addTarget:self action:@selector(fbpSliderFinished:)
+              forControlEvents:UIControlEventTouchUpInside |
+                               UIControlEventTouchUpOutside |
+                               UIControlEventTouchCancel];
+
+    } else if ([type isEqualToString:kTypeSwitch]) {
         UISwitch *toggle = [[UISwitch alloc] init];
         toggle.onTintColor = FBPTintColor();
         toggle.on = FBPEnabled(row[kRowKey]);
@@ -540,6 +632,29 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
     if (FBPRowGatesOtherRows(key)) [self.tableView reloadData];
 }
 
+- (void)fbpSliderChanged:(UISlider *)sender {
+    NSString *key = objc_getAssociatedObject(sender, @selector(tag));
+    if (!key) return;
+
+    double snapped = round((double)sender.value * 100.0) / 100.0;
+    if (snapped < 0.15) snapped = 0.15;
+    if (snapped > 1.00) snapped = 1.00;
+
+    UILabel *pctLabel = objc_getAssociatedObject(sender, kFBPSliderValueLabelKey);
+    if (pctLabel) {
+        pctLabel.text = [NSString stringWithFormat:@"%d%%", (int)lround(snapped * 100.0)];
+    }
+
+    [FBPPrefs.shared setDouble:snapped forKey:key];
+    [NSNotificationCenter.defaultCenter
+        postNotificationName:FBPVideoButtonsDidChangeNotification
+                      object:nil];
+}
+
+- (void)fbpSliderFinished:(__unused UISlider *)sender {
+    [FBPPrefs.shared commit];
+}
+
 #pragma mark Photos permission
 
 /// Add-only is all a download save needs; a full-access grant covers it too.
@@ -618,6 +733,12 @@ static NSDictionary *FBPInfoRow(NSString *title, NSString *value, NSString *icon
     NSMutableDictionary *row = [@{ kRowType : kTypeInfo, kRowTitle : title,
                                    kRowValue : value, kRowIcon : icon } mutableCopy];
     if (link.length) row[kRowLink] = link;
+    return row;
+}
+static NSDictionary *FBPSliderRow(NSString *key, NSString *title, NSString *desc, NSString *icon) {
+    NSMutableDictionary *row = [@{ kRowType : kTypeSlider, kRowKey : key,
+                                   kRowTitle : title, kRowIcon : icon } mutableCopy];
+    if (desc.length) row[kRowDesc] = desc;
     return row;
 }
 static NSDictionary *FBPSection(NSString *footer, NSArray *rows) {
@@ -723,6 +844,7 @@ static NSArray<NSDictionary *> *FBPCategoryCatalog(void) {
                 FBPSwitchRow(FBPKeyNoSuggestedPages, FBPL(@"row.nosuggestedpages.title"), nil, @"group"),
                 FBPSwitchRow(FBPKeyNoSurveys, FBPL(@"row.nosurveys.title"), FBPL(@"row.nosurveys.desc"), @"magic"),
                 FBPSwitchRow(FBPKeyNoCommentProductBanner, FBPL(@"row.nocommentbanner.title"), FBPL(@"row.nocommentbanner.desc"), @"ads"),
+                FBPSwitchRow(FBPKeyNoCommentEmojiBar, FBPL(@"row.nocommentemojibar.title"), FBPL(@"row.nocommentemojibar.desc"), @"ads"),
             ]),
         ]},
         @{ kRowTitle : FBPL(@"cat.confirm.title"), kRowDesc : FBPL(@"cat.confirm.summary"),
@@ -761,6 +883,10 @@ static NSArray<NSDictionary *> *FBPCategoryCatalog(void) {
                 FBPSwitchRow(FBPKeyReelsDownloaderEnabled, FBPL(@"row.downloadreels.title"), FBPL(@"row.downloadreels.desc"), @"download"),
                 FBPSwitchRow(FBPKeyStoryDownloaderEnabled, FBPL(@"row.downloadstories.title"), FBPL(@"row.downloadstories.desc"), @"download"),
                 FBPSwitchRow(FBPKeyDownloadQualityPicker, FBPL(@"row.downloadquality.title"), FBPL(@"row.downloadquality.desc"), @"arrow.down.circle"),
+            ]),
+            FBPSection(FBPL(@"footer.videobuttons"), @[
+                FBPSliderRow(FBPKeyVideoButtonsOpacity, FBPL(@"row.videobuttonsopacity.title"), FBPL(@"row.videobuttonsopacity.desc"), @"eye"),
+                FBPActionRow(kActionResetVideoButtons, FBPL(@"row.resetvideobuttons.title"), FBPL(@"row.resetvideobuttons.desc"), @"arrow.counterclockwise", NO),
             ]),
         ]},
         @{ kRowTitle : FBPL(@"cat.appearance.title"), kRowDesc : FBPL(@"cat.appearance.summary"),
@@ -935,6 +1061,9 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         [self presentPlusModePicker];
     } else if ([action isEqualToString:kActionCacheSchedule]) {
         [self presentCacheSchedulePicker];
+    } else if ([action isEqualToString:kActionResetVideoButtons]) {
+        FBPResetVideoButtonPositions();
+        [FBPToastManager.shared showMessage:FBPL(@"toast.videoButtonsReset") success:YES];
     }
 }
 

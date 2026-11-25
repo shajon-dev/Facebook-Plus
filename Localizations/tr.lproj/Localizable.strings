@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Akıştaki “Tanıyor Olabileceğin Kişiler / Katılabileceğin Gruplar / Senin İçin” kısımlarını gizler.";
 "footer.metaplus" = "Yalnızca önizleme. Sunucu taraflı özellikler çalışmayacaktır.";
 "footer.plusmode" = "Doğrudan modu özellikleri anında zorlayarak açar.\nDeneme modu uygulamada aktif bir deneme süresi simüle eder.";
+"footer.videobuttons" = "Göz veya İndir düğmesini taşımak için video üzerinde basılı tutup sürükleyin.";
 
 
 "info.developer" = "Geliştirici";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Sıfırla";
 "reset.message" = "Her seçenek varsayılanına döner. Bu işlem geri alınamaz.";
 "reset.title" = "Tüm Ayarları Sıfırla";
-
-
 
 
 "row.anonstories.desc" = "Okundu bilgisi göndermeden hikâyeleri izle.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Otomatik İlerlemeyi Kapat";
 "row.nocommentbanner.desc" = "Yorum sayfasına sabitlenen ortaklık / ürün bağlantısı afişini gizler.";
 "row.nocommentbanner.title" = "Yorum ürün afişini kaldır";
+"row.nocommentemojibar.desc" = "Yorum yazarken metin kutusunun üzerindeki hızlı emoji çubuğunu gizler.";
+"row.nocommentemojibar.title" = "Yorum Hızlı Emoji Çubuğunu Kaldır";
 "row.nogroups.title" = "Grup Önerilerini Kaldır";
+"row.nomainstories.desc" = "Akışın en üstündeki ana hikâye çubuğunu gizler.";
+"row.nomainstories.title" = "Üst Hikâye Şeridini Kaldır";
 "row.nopymk.title" = "“Tanıyor Olabileceğin Kişiler”i Kaldır";
 "row.norecs.desc" = "Algoritmanın önerdiği gönderileri gizler.";
 "row.norecs.title" = "Önerileri Kaldır";
 "row.noreels.title" = "Akıştan Reels'ı Kaldır";
 "row.noreelsrecommended.desc" = "Reels videoları arasında gösterilen tam ekran “Önerilen” kartını gizler.";
 "row.noreelsrecommended.title" = "Reels önerilen kartını kaldır";
-"row.nomainstories.desc" = "Akışın en üstündeki ana hikâye çubuğunu gizler.";
-"row.nomainstories.title" = "Üst Hikâye Şeridini Kaldır";
 "row.nostories.desc" = "Akıştaki tekil hikâye kartlarını ve önerileri gizler.";
 "row.nostories.title" = "Akıştan Hikâyeleri Kaldır";
 "row.nostorypymk.desc" = "Hikaye çubuğundan “Tanıyor olabileceğin kişiler” kısmını kaldırır.";
@@ -235,8 +236,12 @@
 "row.plusmode.title" = "Kilit Açma Yöntemi";
 "row.plusmode.trial" = "Deneme";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
+"row.resetvideobuttons.desc" = "Göz ve İndir düğmelerini varsayılan konumlarına döndürür.";
+"row.resetvideobuttons.title" = "Video Düğmeleri Konumunu Sıfırla";
 "row.suspend.desc" = "Facebook’u zorla kapatır; değişiklikleri uygulamak için yeniden açın.";
 "row.suspend.title" = "Uygulamayı Kapat";
+"row.videobuttonsopacity.desc" = "Yüzen Göz ve İndir düğmelerinin saydamlığını ayarlayın.";
+"row.videobuttonsopacity.title" = "Video Düğmeleri Saydamlığı";
 "row.welcome.title" = "Karşılama Ekranını Göster";
 
 
@@ -247,6 +252,7 @@
 "toast.logCleared" = "Günlükler temizlendi.";
 "toast.logEmpty" = "Henüz kayıtlı günlük yok.";
 "toast.settingsReset" = "Ayarlar sıfırlandı";
+"toast.videoButtonsReset" = "Video düğmeleri konumu sıfırlandı";
 
 
 "update.failed" = "Güncellemeler denetlenemedi.";

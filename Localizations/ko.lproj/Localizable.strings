@@ -128,6 +128,7 @@
 "footer.feedClutter" = "피드에서 “알 수도 있는 사람 / 가입할 만한 그룹 / 추천” 섹션을 숨깁니다.";
 "footer.metaplus" = "미리보기 전용입니다. 서버 측 기능은 작동하지 않습니다.";
 "footer.plusmode" = "다이렉트는 기능을 즉시 강제로 활성화합니다.\n체험판은 앱에서 활성 체험판 상태를 시뮬레이션합니다.";
+"footer.videobuttons" = "동영상 화면에서 눈 또는 다운로드 버튼을 길게 눌러 원하는 위치로 드래그하세요.";
 
 
 "info.developer" = "개발자";
@@ -151,8 +152,6 @@
 "reset.confirm" = "초기화";
 "reset.message" = "모든 옵션이 기본값으로 돌아갑니다. 되돌릴 수 없습니다.";
 "reset.title" = "모든 설정 초기화";
-
-
 
 
 "row.anonstories.desc" = "읽음 표시를 보내지 않고 스토리를 봅니다.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "자동 넘김 끄기";
 "row.nocommentbanner.desc" = "댓글 시트에 고정된 제휴 / 상품 링크 배너를 숨깁니다.";
 "row.nocommentbanner.title" = "댓글 상품 배너 제거";
+"row.nocommentemojibar.desc" = "댓글 작성 시 입력창 위에 표시되는 빠른 이모티콘 바를 숨깁니다.";
+"row.nocommentemojibar.title" = "댓글 빠른 이모티콘 바 제거";
 "row.nogroups.title" = "그룹 추천 제거";
+"row.nomainstories.desc" = "피드 맨 위에 있는 기본 스토리 바를 숨깁니다.";
+"row.nomainstories.title" = "상단 스토리 바 제거";
 "row.nopymk.title" = "“알 수도 있는 사람” 숨기기";
 "row.norecs.desc" = "알고리즘이 추천한 게시물을 숨깁니다.";
 "row.norecs.title" = "추천 게시물 제거";
 "row.noreels.title" = "피드에서 릴스 제거";
 "row.noreelsrecommended.desc" = "릴스 사이에 표시되는 전체 화면 “추천” 카드를 숨깁니다.";
 "row.noreelsrecommended.title" = "Reels 추천 카드 제거";
-"row.nomainstories.desc" = "피드 맨 위에 있는 기본 스토리 바를 숨깁니다.";
-"row.nomainstories.title" = "상단 스토리 바 제거";
 "row.nostories.desc" = "피드의 개별 스토리 카드 및 추천 스토리를 숨깁니다.";
 "row.nostories.title" = "피드에서 스토리 제거";
 "row.nostorypymk.desc" = "스토리 트레이에서 “알 수도 있는 사람”을 제거합니다.";
@@ -235,8 +236,12 @@
 "row.plusmode.title" = "잠금 해제 방식";
 "row.plusmode.trial" = "체험판";
 "row.reset.title" = "모든 설정 초기화";
+"row.resetvideobuttons.desc" = "눈 및 다운로드 버튼을 기본 위치로 되돌립니다.";
+"row.resetvideobuttons.title" = "동영상 버튼 위치 초기화";
 "row.suspend.desc" = "Facebook을 강제 종료합니다. 변경 사항을 적용하려면 다시 염니다.";
 "row.suspend.title" = "앱 종료";
+"row.videobuttonsopacity.desc" = "눈 및 다운로드 플로팅 버튼의 투명도를 조절합니다.";
+"row.videobuttonsopacity.title" = "동영상 버튼 투명도";
 "row.welcome.title" = "시작 화면 표시";
 
 
@@ -247,6 +252,7 @@
 "toast.logCleared" = "로그가 삭제되었습니다.";
 "toast.logEmpty" = "기록된 로그가 없습니다.";
 "toast.settingsReset" = "설정을 초기화했습니다";
+"toast.videoButtonsReset" = "동영상 버튼 위치가 초기화되었습니다";
 
 
 "update.failed" = "업데이트를 확인하지 못했습니다.";

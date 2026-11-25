@@ -128,6 +128,7 @@
 "footer.feedClutter" = "फ़ीड से “शायद आप जानते हों / ग्रुप से जुड़ें / आपके लिए” वाले सुझाव छुपाता है।";
 "footer.metaplus" = "केवल पूर्वावलोकन। सर्वर-आधारित सुविधाएँ काम नहीं करेंगी।";
 "footer.plusmode" = "डायरेक्ट सीधे सुविधाओं को लागू करता है।\nट्रायल ऐप में एक सक्रिय परीक्षण का अनुकरण करता है।";
+"footer.videobuttons" = "आँख या डाउनलोड बटन को कहीं भी ले जाने के लिए वीडियो पर सीधे दबाकर खींचें।";
 
 
 "info.developer" = "डेवलपर";
@@ -151,8 +152,6 @@
 "reset.confirm" = "रीसेट करें";
 "reset.message" = "हर विकल्प अपने डिफ़ॉल्ट पर लौट आएगा। इसे पूर्ववत नहीं किया जा सकता।";
 "reset.title" = "सभी सेटिंग रीसेट करें";
-
-
 
 
 "row.anonstories.desc" = "पढ़े जाने की सूचना भेजे बिना स्टोरी देखें।";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "ऑटो-आगे बढ़ना बंद करें";
 "row.nocommentbanner.desc" = "कमेंट शीट में पिन किया गया एफिलिएट / प्रोडक्ट लिंक बैनर छिपाता है।";
 "row.nocommentbanner.title" = "कमेंट प्रोडक्ट बैनर हटाएँ";
+"row.nocommentemojibar.desc" = "कमेंट लिखते समय इनपुट बॉक्स के ऊपर दिखने वाली क्विक इमोजी पट्टी को छुपाता है।";
+"row.nocommentemojibar.title" = "कमेंट क्विक इमोजी बार हटाएँ";
 "row.nogroups.title" = "समूह सुझाव हटाएँ";
+"row.nomainstories.desc" = "फ़ीड के सबसे ऊपर मौजूद मुख्य स्टोरी बार को छुपाता है।";
+"row.nomainstories.title" = "शीर्ष स्टोरी ट्रे हटाएँ";
 "row.nopymk.title" = "“शायद आप जानते हों” छुपाएँ";
 "row.norecs.desc" = "एल्गोरिद्म द्वारा सुझाई गई पोस्ट छिपाता है।";
 "row.norecs.title" = "सुझाव हटाएँ";
 "row.noreels.title" = "फ़ीड से Reels हटाएँ";
 "row.noreelsrecommended.desc" = "Reels के बीच दिखने वाला फ़ुल-स्क्रीन “अनुशंसित” कार्ड छुपाता है।";
 "row.noreelsrecommended.title" = "Reels का अनुशंसित कार्ड हटाएँ";
-"row.nomainstories.desc" = "फ़ीड के सबसे ऊपर मौजूद मुख्य स्टोरी बार को छुपाता है।";
-"row.nomainstories.title" = "शीर्ष स्टोरी ट्रे हटाएँ";
 "row.nostories.desc" = "फ़ीड में दिखने वाले अलग स्टोरी कार्ड और सुझाव छिपाता है।";
 "row.nostories.title" = "फ़ीड से स्टोरी हटाएँ";
 "row.nostorypymk.desc" = "स्टोरी ट्रे से “शायद आप जानते हों” हटाएँ।";
@@ -235,8 +236,12 @@
 "row.plusmode.title" = "अनलॉक तरीका";
 "row.plusmode.trial" = "ट्रायल";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
+"row.resetvideobuttons.desc" = "आँख और डाउनलोड बटन को उनकी डिफ़ॉल्ट स्थिति में वापस लाएँ।";
+"row.resetvideobuttons.title" = "वीडियो बटन की स्थिति रीसेट करें";
 "row.suspend.desc" = "Facebook को ज़बरदस्ती बंद करें; बदलाव लागू करने के लिए फिर से खोलें।";
 "row.suspend.title" = "ऐप बंद करें";
+"row.videobuttonsopacity.desc" = "तैरते हुए आँख और डाउनलोड बटन की पारदर्शिता समायोजित करें।";
+"row.videobuttonsopacity.title" = "वीडियो बटन पारदर्शिता";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
 
 
@@ -247,6 +252,7 @@
 "toast.logCleared" = "लॉग साफ़ कर दिए गए।";
 "toast.logEmpty" = "अभी तक कोई लॉग दर्ज नहीं हुआ।";
 "toast.settingsReset" = "सेटिंग रीसेट हो गईं";
+"toast.videoButtonsReset" = "वीडियो बटन की स्थिति रीसेट हो गई";
 
 
 "update.failed" = "अपडेट जाँच नहीं सका।";
