@@ -34,7 +34,7 @@
     <tr><td nowrap>📞 <b>Calls</b></td><td>Silently block incoming VoIP and Messenger calls</td></tr>
     <tr><td nowrap rowspan="2">✅ <b>Confirmations</b></td><td>Opt-in prompts that catch accidental taps, with Cancel to stop the action</td></tr>
     <tr><td>Covers Like, Comment, Share, Post, Friend request and Follow / Join</td></tr>
-    <tr><td nowrap rowspan="2">🩺 <b>Diagnostics</b></td><td>Exportable in-app activity log for bug reports: kept across launches, cleared daily</td></tr>
+    <tr><td nowrap rowspan="2">🩺 <b>Diagnostics</b></td><td>Exportable in-app activity log for bug reports: kept across launches, cleared every 12 hours</td></tr>
     <tr><td>About card with Facebook Plus, Facebook, iOS and device details</td></tr>
     <tr><td nowrap rowspan="5">⬇️ <b>Downloads</b></td><td>Choose a quality before saving: every rung the video actually offers, not just HD/SD</td></tr>
     <tr><td>Lossless merge of Facebook's separate video and audio streams</td></tr>

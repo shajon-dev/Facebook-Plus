@@ -595,37 +595,64 @@ class LintCheck(Check):
     summary = "repository rules whose violations have shipped before"
 
     # The installers re-run for every image dyld loads — 781 of them in one
-    # device launch — so a report placed next to an FBP_ONCE install instead of
-    # inside it logs 781 times. Five such lines filled a 4,000-line log and
-    # pushed everything else out of it.
-    ONCE = re.compile(r"^(\s*)FBP_ONCE\(")
-    LOG = re.compile(r"^\s*FBPLog\(")
+    # device launch — so anything an FBPInit* function logs outside an FBP_ONCE
+    # is logged once per image. It has happened twice. The first time, five
+    # reports sitting NEXT to their FBP_ONCE filled a 4,000-line log; the
+    # second, a device export from 2026-11-21 came back with 9,171 of its
+    # 10,000 lines spent on the same five, and nothing left of the session the
+    # report was about.
+    #
+    # So the rule is the whole installer, not the line after FBP_ONCE: inside
+    # an FBPInit*, the only way to say something is FBPLogOnce. That covers the
+    # failure branch too, which is where both survivors of the narrower rule
+    # were found — "class not found" repeats just as happily as "installed".
+    INSTALLER = re.compile(r"^(?:void|static\s+void)\s+(FBPInit\w+)\s*\([^)]*\)\s*\{", re.M)
+    UNGUARDED = re.compile(r"\b(FBPLog|FBPTraceLine|FBPTraceEmit|FBPDiag|FBPDiagFail)\s*\(")
+
+    @staticmethod
+    def _block_end(text: str, open_brace: int) -> int:
+        """Index just past the brace at open_brace's matching close."""
+        depth = 0
+        for i in range(open_brace, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    return i + 1
+        return len(text)
+
+    def _guarded_spans(self, body: str) -> list[tuple[int, int]]:
+        """The FBP_ONCE blocks inside body, as (start, end) offsets."""
+        spans = []
+        for m in re.finditer(r"FBP_ONCE\([^)]*\)", body):
+            brace = body.find("{", m.end())
+            if brace < 0:
+                continue
+            spans.append((m.start(), self._block_end(body, brace)))
+        return spans
 
     def run(self, ctx: "Doctor") -> list[Finding]:
         findings: list[Finding] = []
         for path in ctx.sources:
-            lines = ctx.index.lines(path)
+            text = ctx.index.clean[path]
             rel = ctx.repo.rel(path)
-            for i, line in enumerate(lines):
-                if not self.ONCE.match(line):
-                    continue
-                # A report on the line after a one-line FBP_ONCE, at the same
-                # indentation, is outside the guard.
-                indent = self.ONCE.match(line).group(1)
-                if not line.rstrip().endswith("}"):
-                    continue
-                # The offset matters: reporting a fixed line number sends the
-                # reader to the wrong line whenever the report is not exactly
-                # one line down, which is most of the time.
-                for offset, follow in enumerate(lines[i + 1:i + 3], start=1):
-                    if follow.startswith(indent + "FBPLog("):
-                        findings.append(Finding(
-                            self.name,
-                            "install report sits outside its FBP_ONCE — use FBPLogOnce, "
-                            "or the installer's every re-run logs it again",
-                            path=rel, line=i + 1 + offset,
-                            detail=follow.strip()))
-                        break
+            for m in self.INSTALLER.finditer(text):
+                start = text.index("{", m.end() - 1)
+                end = self._block_end(text, start)
+                body = text[start:end]
+                spans = self._guarded_spans(body)
+                for call in self.UNGUARDED.finditer(body):
+                    at = call.start()
+                    if any(lo <= at < hi for lo, hi in spans):
+                        continue
+                    line = text.count("\n", 0, start + at) + 1
+                    findings.append(Finding(
+                        self.name,
+                        f"{m.group(1)} logs outside an FBP_ONCE — use FBPLogOnce, "
+                        "or every image dyld loads logs it again",
+                        path=rel, line=line,
+                        detail=body[at:body.find("\n", at)].strip()))
 
         # The sideload redirects must ask whether this process actually holds
         # the entitlement before rewriting anything: on a jailbroken App Store
