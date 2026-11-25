@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Oculta las secciones de “Personas que quizás conozcas”, sugerencias de grupos y “Para ti”.";
 "footer.metaplus" = "Solo vista previa. Las funciones del lado del servidor no estarán disponibles.";
 "footer.plusmode" = "Directo fuerza la activación de las funciones.\nPrueba simula un periodo de prueba activo en la app.";
+"footer.videobuttons" = "Mantén pulsado y arrastra el botón de ojo o descarga directamente sobre el video para moverlo.";
 
 
 "info.developer" = "Desarrollador";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Restablecer";
 "reset.message" = "Cada opción vuelve a su valor predeterminado. Esta acción no se puede deshacer.";
 "reset.title" = "Restablecer todos los ajustes";
-
-
 
 
 "row.anonstories.desc" = "Ver historias sin enviar confirmación de lectura.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Desactivar avance automático";
 "row.nocommentbanner.desc" = "Oculta el banner de enlace de afiliado / producto fijado en la hoja de comentarios.";
 "row.nocommentbanner.title" = "Quitar el banner de producto en comentarios";
+"row.nocommentemojibar.desc" = "Oculta la barra rápida de emojis sobre el cuadro de comentarios al escribir.";
+"row.nocommentemojibar.title" = "Ocultar barra rápida de emojis en comentarios";
 "row.nogroups.title" = "Eliminar sugerencias de grupos";
+"row.nomainstories.desc" = "Oculta la barra principal de historias en la parte superior del feed.";
+"row.nomainstories.title" = "Eliminar barra superior de historias";
 "row.nopymk.title" = "Ocultar “Personas que quizás conozcas”";
 "row.norecs.desc" = "Oculta las publicaciones sugeridas por el algoritmo.";
 "row.norecs.title" = "Eliminar recomendaciones";
 "row.noreels.title" = "Eliminar Reels del feed";
 "row.noreelsrecommended.desc" = "Oculta la tarjeta de “Recomendado” a pantalla completa entre Reels.";
 "row.noreelsrecommended.title" = "Quitar tarjeta recomendada de Reels";
-"row.nomainstories.desc" = "Oculta la barra principal de historias en la parte superior del feed.";
-"row.nomainstories.title" = "Eliminar barra superior de historias";
 "row.nostories.desc" = "Oculta las tarjetas de historias individuales y sugerencias del feed.";
 "row.nostories.title" = "Eliminar historias del feed";
 "row.nostorypymk.desc" = "Elimina “Personas que quizás conozcas” de la barra de historias.";
@@ -235,8 +236,12 @@
 "row.plusmode.title" = "Método de desbloqueo";
 "row.plusmode.trial" = "Prueba";
 "row.reset.title" = "Restablecer todos los ajustes";
+"row.resetvideobuttons.desc" = "Restaura los botones de ojo y descarga a su posición predeterminada.";
+"row.resetvideobuttons.title" = "Restablecer posición de botones de video";
 "row.suspend.desc" = "Fuerza el cierre de Facebook; vuelve a abrirlo para aplicar los cambios.";
 "row.suspend.title" = "Cerrar la app";
+"row.videobuttonsopacity.desc" = "Ajusta la transparencia de los botones flotantes de ojo y descarga.";
+"row.videobuttonsopacity.title" = "Opacidad de botones de video";
 "row.welcome.title" = "Mostrar pantalla de bienvenida";
 
 
@@ -247,6 +252,7 @@
 "toast.logCleared" = "Registros borrados.";
 "toast.logEmpty" = "No hay registros disponibles.";
 "toast.settingsReset" = "Ajustes restablecidos";
+"toast.videoButtonsReset" = "Posición de botones de video restablecida";
 
 
 "update.failed" = "No se pudieron comprobar las actualizaciones.";

@@ -41,6 +41,116 @@
 
 #import <objc/runtime.h>
 
+#pragma mark - Comment composer quick reaction emoji bar
+
+// Facebook mounts a 52pt static emoji strip (❤️ 🙌 🔥 👏 😢 😍 😮 😂,
+// accessibilityIdentifier = "static-emoji-banner") directly above the comment
+// input row via FBStaticEmojiBannerController in FBSharedFramework. Merely
+// setting static-emoji-banner.hidden = YES leaves a 52pt blank dark slot
+// because FBCommentComposerWithDrawersComponentView sizes its background container
+// to 104.3pt while a bannerProvidingBlock is active.
+//
+// Preventing FBStaticEmojiBannerController from publishing its banner block (and
+// invoking -hideBannerDueToPrimaryBanner, which clears the block on
+// FBCommentComposerBannerHostingAnnouncer) makes ComponentKit collapse the
+// composer container cleanly from 104.3pt to 52pt with zero empty gap while
+// keeping the top hairline border, text box, media button, and '+' button intact.
+
+@interface FBStaticEmojiBannerController : NSObject
+- (void)hideBannerDueToPrimaryBanner;
+- (void)commentComposerComponentDidMount;
+@end
+
+static NSHashTable<FBStaticEmojiBannerController *> *gEmojiBannerControllers = nil;
+
+static void FBPTrackEmojiBannerController(FBStaticEmojiBannerController *ctrl) {
+    if (!ctrl) return;
+    @synchronized (FBStaticEmojiBannerController.class) {
+        if (!gEmojiBannerControllers) {
+            gEmojiBannerControllers = [NSHashTable weakObjectsHashTable];
+        }
+        [gEmojiBannerControllers addObject:ctrl];
+    }
+}
+
+static void FBPApplyEmojiBannerPreferenceLive(void) {
+    NSArray<FBStaticEmojiBannerController *> *live = nil;
+    @synchronized (FBStaticEmojiBannerController.class) {
+        live = gEmojiBannerControllers.allObjects;
+    }
+    BOOL blockBar = FBPEnabled(FBPKeyNoCommentEmojiBar);
+    for (FBStaticEmojiBannerController *ctrl in live) {
+        if (blockBar) {
+            if ([ctrl respondsToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
+                [ctrl hideBannerDueToPrimaryBanner];
+            }
+        } else {
+            if ([ctrl respondsToSelector:@selector(commentComposerComponentDidMount)]) {
+                [ctrl commentComposerComponentDidMount];
+            }
+        }
+    }
+}
+
+%group FBPCommentEmojiBanner
+
+%hook FBStaticEmojiBannerController
+
+- (id)initWithBannerDelegate:(id)bannerDelegate
+               guideDelegate:(id)guideDelegate
+       navigationCoordinator:(id)navigationCoordinator
+                     session:(id)session
+                   sessionId:(id)sessionId
+                      logger:(id)logger {
+    id instance = %orig;
+    if (instance) {
+        FBPTrackEmojiBannerController((FBStaticEmojiBannerController *)instance);
+    }
+    return instance;
+}
+
+- (void)commentComposerComponentDidMount {
+    FBPTrackEmojiBannerController(self);
+    if (FBPEnabled(FBPKeyNoCommentEmojiBar)) {
+        FBPTraceFire("comments.FBStaticEmojiBannerController.didMount.suppressed");
+        if ([self respondsToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
+            [self hideBannerDueToPrimaryBanner];
+        }
+        return;
+    }
+    %orig;
+}
+
+- (void)showBannerIfValidWithComposerState:(id)state {
+    FBPTrackEmojiBannerController(self);
+    if (FBPEnabled(FBPKeyNoCommentEmojiBar)) {
+        FBPTraceFire("comments.FBStaticEmojiBannerController.showBanner.suppressed");
+        if ([self respondsToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
+            [self hideBannerDueToPrimaryBanner];
+        }
+        return;
+    }
+    %orig;
+}
+
+- (BOOL)shouldHideComposerViewTopBorder {
+    if (FBPEnabled(FBPKeyNoCommentEmojiBar)) {
+        return NO;
+    }
+    return %orig;
+}
+
+- (id)_bannerProvidingBlock {
+    if (FBPEnabled(FBPKeyNoCommentEmojiBar)) {
+        return nil;
+    }
+    return %orig;
+}
+
+%end
+
+%end // FBPCommentEmojiBanner
+
 #pragma mark - Comment-stream sticky footer (affiliate / product banner)
 
 %group FBPCommentProductBanner
@@ -361,5 +471,25 @@ void FBPInitCommentHooks(void) {
             %init(FBPVideoProductBanner, FDSTouchStateComponentView = touchView);
             FBPLogOnce(@"comments: FDSTouchStateComponentView banner killer installed");
         }
+    }
+
+    // Comment composer quick-reaction emoji bar suppression.
+    Class emojiCtrl = objc_getClass("FBStaticEmojiBannerController");
+    if (emojiCtrl &&
+        [emojiCtrl instancesRespondToSelector:@selector(showBannerIfValidWithComposerState:)] &&
+        [emojiCtrl instancesRespondToSelector:@selector(hideBannerDueToPrimaryBanner)]) {
+        FBP_ONCE(gCommentEmojiBanner) {
+            %init(FBPCommentEmojiBanner);
+            [NSNotificationCenter.defaultCenter
+                addObserverForName:FBPSettingsDidChangeNotification
+                            object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:^(__unused NSNotification *note) {
+                FBPApplyEmojiBannerPreferenceLive();
+            }];
+            FBPLogOnce(@"comments: FBStaticEmojiBannerController quick-emoji blocker installed");
+        }
+    } else {
+        FBPLogOnce(@"comments: FBStaticEmojiBannerController not found — quick emoji bar not hidden");
     }
 }

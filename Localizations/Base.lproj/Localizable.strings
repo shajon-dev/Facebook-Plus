@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Hides the “you may know / should join / for you” units.";
 "footer.metaplus" = "Preview only. Server-side features will not work.";
 "footer.plusmode" = "Direct forces the features on outright.\nTrial makes the app simulate an active trial.";
+"footer.videobuttons" = "Press and drag the Eye or Download button directly on a video to move it anywhere.";
 
 
 "info.developer" = "Developer Name";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Reset";
 "reset.message" = "Every option returns to its default. This cannot be undone.";
 "reset.title" = "Reset All Settings";
-
-
 
 
 "row.anonstories.desc" = "View stories without sending a read receipt.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Disable Auto-Advance";
 "row.nocommentbanner.desc" = "Hides the affiliate / product link banner pinned in the comment sheet.";
 "row.nocommentbanner.title" = "Remove Comment Product Banner";
+"row.nocommentemojibar.desc" = "Hides the quick reaction emoji strip above the comment box while commenting.";
+"row.nocommentemojibar.title" = "Remove Comment Quick Emoji Bar";
 "row.nogroups.title" = "Remove Group Suggestions";
+"row.nomainstories.desc" = "Hides the main horizontal Stories bar at the very top of the feed.";
+"row.nomainstories.title" = "Remove Top Stories Tray";
 "row.nopymk.title" = "Remove People You May Know";
 "row.norecs.desc" = "Hides algorithmically suggested posts.";
 "row.norecs.title" = "Remove Recommendations";
 "row.noreels.title" = "Remove Reels from Feed";
 "row.noreelsrecommended.desc" = "Hides the full-screen “Recommended” card shown between Reels.";
 "row.noreelsrecommended.title" = "Remove Reels Recommended Card";
-"row.nomainstories.desc" = "Hides the main horizontal Stories bar at the very top of the feed.";
-"row.nomainstories.title" = "Remove Top Stories Tray";
 "row.nostories.desc" = "Hides inline story cards and ephemeral story recommendations from the feed.";
 "row.nostories.title" = "Remove Stories from Feed";
 "row.nostorypymk.desc" = "Removes “people you may know” from the story tray.";
@@ -235,8 +236,12 @@
 "row.plusmode.title" = "Unlock Method";
 "row.plusmode.trial" = "Trial";
 "row.reset.title" = "Reset All Settings";
+"row.resetvideobuttons.desc" = "Restore the Eye and Download buttons to their default positions.";
+"row.resetvideobuttons.title" = "Reset Video Buttons Position";
 "row.suspend.desc" = "Force-close Facebook; reopen it to apply changes.";
 "row.suspend.title" = "Suspend App";
+"row.videobuttonsopacity.desc" = "Adjust transparency of the floating Eye and Download buttons.";
+"row.videobuttonsopacity.title" = "Video Buttons Opacity";
 "row.welcome.title" = "Show Welcome Screen";
 
 
@@ -247,6 +252,7 @@
 "toast.logCleared" = "Logs cleared.";
 "toast.logEmpty" = "No logs recorded yet.";
 "toast.settingsReset" = "Settings reset";
+"toast.videoButtonsReset" = "Video buttons position reset";
 
 
 "update.failed" = "Couldn't check for updates.";

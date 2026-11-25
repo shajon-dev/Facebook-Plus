@@ -934,22 +934,24 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
 
 - (void)downloadTouchDown:
     (UIButton *)sender {
-
-    sender.alpha =
-        0.45;
+    if (FBPIsButtonDragging(sender)) return;
+    sender.alpha = MAX(0.12, FBPVideoButtonsAlpha() * 0.50);
 }
 
 - (void)downloadTouchFinished:
     (UIButton *)sender {
-
-    sender.alpha =
-        1.0;
+    if (FBPIsButtonDragging(sender)) return;
+    sender.alpha = FBPVideoButtonsAlpha();
 }
 
 - (void)downloadButtonPressed:
     (UIButton *)sender {
+    if (FBPShouldSuppressTapAfterDrag(sender)) {
+        sender.alpha = FBPVideoButtonsAlpha();
+        return;
+    }
 
-    sender.alpha = 1.0;
+    sender.alpha = FBPVideoButtonsAlpha();
 
     NSArray<FBPDownloadVariant *> *variants = nil;
     NSString *videoID = nil;
@@ -1053,8 +1055,12 @@ static void FBPUpdateHideOverlayButtonIcon(UIButton *button);
 
 - (void)hideOverlayButtonPressed:
     (UIButton *)sender {
+    if (FBPShouldSuppressTapAfterDrag(sender)) {
+        sender.alpha = FBPVideoButtonsAlpha();
+        return;
+    }
 
-    sender.alpha = 1.0;
+    sender.alpha = FBPVideoButtonsAlpha();
 
     gOverlayHidden = !gOverlayHidden;
 
@@ -1337,6 +1343,7 @@ FBPGetOrCreateWindowButton(
         forControlEvents:
             UIControlEventTouchUpInside];
 
+    FBPAttachDraggableBehavior(button, FBPKeyVideoDownloadPosition);
     [window addSubview:button];
 
     return button;
@@ -1440,6 +1447,7 @@ FBPGetOrCreateHideOverlayButton(
         forControlEvents:
             UIControlEventTouchUpInside];
 
+    FBPAttachDraggableBehavior(button, FBPKeyVideoEyePosition);
     [window addSubview:button];
 
     return button;
@@ -1490,8 +1498,10 @@ FBPGetOrCreateHideOverlayButton(
     if (!button) return;
 
     if (visible) {
-        if (!button.hidden && button.alpha > 0.99 &&
-            button.userInteractionEnabled) return;
+        if (FBPIsButtonDragging(button)) return;
+        CGFloat targetAlpha = FBPVideoButtonsAlpha();
+        if (!button.hidden && button.userInteractionEnabled &&
+            (button.isHighlighted || fabs(button.alpha - targetAlpha) < 0.01)) return;
         button.hidden = NO;
         button.userInteractionEnabled = YES;
         [UIView animateWithDuration:0.10
@@ -1499,9 +1509,10 @@ FBPGetOrCreateHideOverlayButton(
                             options:UIViewAnimationOptionBeginFromCurrentState |
                                     UIViewAnimationOptionAllowUserInteraction |
                                     UIViewAnimationOptionCurveEaseOut
-                         animations:^{ button.alpha = 1.0; }
+                         animations:^{ button.alpha = targetAlpha; }
                          completion:nil];
     } else {
+        if (FBPIsButtonDragging(button)) return;
         if (button.hidden || button.alpha < 0.01) return;
         button.userInteractionEnabled = NO;
         [UIView animateWithDuration:0.05
@@ -1629,6 +1640,11 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
         (UIButton *)[window viewWithTag:kFBPDownloadButtonTag];
     UIButton *toggleButton =
         (UIButton *)[window viewWithTag:kFBPHideOverlayButtonTag];
+
+    if ((downloadButton && FBPIsButtonDragging(downloadButton)) ||
+        (toggleButton && FBPIsButtonDragging(toggleButton))) {
+        return;
+    }
 
     // Toggle feature switched off in settings while chrome was hidden: restore
     // everything so the user is never stuck looking at a stripped reel.
@@ -1783,7 +1799,13 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
         CGRect base = CGRectIntegral(bestButtonFrame);
 
         if (download) {
-            download.frame = base;
+            CGPoint defaultCenter = CGPointMake(CGRectGetMidX(base), CGRectGetMidY(base));
+            CGPoint resolved = FBPResolvedButtonCenter(FBPKeyVideoDownloadPosition,
+                                                       defaultCenter, base.size, window);
+            CGRect resolvedFrame = CGRectMake(resolved.x - base.size.width * 0.5,
+                                              resolved.y - base.size.height * 0.5,
+                                              base.size.width, base.size.height);
+            download.frame = CGRectIntegral(resolvedFrame);
             [window bringSubviewToFront:download];
             [self setButton:download visible:YES];
         }
@@ -1791,7 +1813,15 @@ static BOOL FBPPlusSettingsIsPresented(UIWindow *window) {
         if (toggle) {
             CGRect toggleFrame = base;
             toggleFrame.origin.y -= (base.size.height + kFBPButtonGap);
-            toggle.frame = CGRectIntegral(toggleFrame);
+            CGPoint defaultToggleCenter = CGPointMake(CGRectGetMidX(toggleFrame),
+                                                      CGRectGetMidY(toggleFrame));
+            CGPoint resolvedToggle = FBPResolvedButtonCenter(FBPKeyVideoEyePosition,
+                                                             defaultToggleCenter,
+                                                             toggleFrame.size, window);
+            CGRect resolvedToggleFrame = CGRectMake(resolvedToggle.x - toggleFrame.size.width * 0.5,
+                                                    resolvedToggle.y - toggleFrame.size.height * 0.5,
+                                                    toggleFrame.size.width, toggleFrame.size.height);
+            toggle.frame = CGRectIntegral(resolvedToggleFrame);
             [window bringSubviewToFront:toggle];
             [self setButton:toggle visible:YES];
         }
@@ -2279,6 +2309,34 @@ void FBPInitReelsDownloader(void) {
     // same reason as the diagnostic: downloads in general, not Reels, and this
     // is the installer FBPEntry always runs.
     FBP_ONCE(gDownloadActivity) { FBPDownloadActivityInstall(); }
+
+    FBP_ONCE(gVideoButtonLiveSync) {
+        void (^syncButtons)(NSNotification *) = ^(__unused NSNotification *note) {
+            CGFloat targetAlpha = FBPVideoButtonsAlpha();
+            for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+                if (![scene isKindOfClass:UIWindowScene.class]) continue;
+                for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+                    NSInteger tags[] = { kFBPDownloadButtonTag, kFBPHideOverlayButtonTag };
+                    for (size_t i = 0; i < sizeof(tags) / sizeof(tags[0]); i++) {
+                        UIButton *btn = (UIButton *)[window viewWithTag:tags[i]];
+                        if (btn && !btn.hidden && !FBPIsButtonDragging(btn)) {
+                            btn.alpha = targetAlpha;
+                        }
+                    }
+                }
+            }
+        };
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:FBPSettingsDidChangeNotification
+                        object:nil
+                         queue:NSOperationQueue.mainQueue
+                    usingBlock:syncButtons];
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:FBPVideoButtonsDidChangeNotification
+                        object:nil
+                         queue:NSOperationQueue.mainQueue
+                    usingBlock:syncButtons];
+    }
 
     FBPInstallPlayerHook();
     FBPInstallSidebarHook();

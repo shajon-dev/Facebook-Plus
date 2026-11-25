@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Blendet die Bereiche „Personen, die du vielleicht kennst / Gruppen, denen du beitreten solltest / Für dich“ aus.";
 "footer.metaplus" = "Nur Vorschau. Serverbasierte Funktionen funktionieren nicht.";
 "footer.plusmode" = "Direkt erzwingt die Funktionen sofort.\nTestphase simuliert eine aktive Testphase in der App.";
+"footer.videobuttons" = "Halte die Augen- oder Download-Taste direkt im Video gedrückt und ziehe sie an eine beliebige Stelle.";
 
 
 "info.developer" = "Entwickler";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Zurücksetzen";
 "reset.message" = "Jede Option wird auf den Standard zurückgesetzt. Dies kann nicht rückgängig gemacht werden.";
 "reset.title" = "Alle Einstellungen zurücksetzen";
-
-
 
 
 "row.anonstories.desc" = "Storys ansehen, ohne eine Lesebestätigung zu senden.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Automatisches Weiterblättern deaktivieren";
 "row.nocommentbanner.desc" = "Blendet das im Kommentarbereich angeheftete Affiliate-/Produktlink-Banner aus.";
 "row.nocommentbanner.title" = "Kommentar-Produktbanner entfernen";
+"row.nocommentemojibar.desc" = "Blendet die Schnell-Emoji-Leiste über dem Kommentarfeld beim Schreiben aus.";
+"row.nocommentemojibar.title" = "Schnell-Emoji-Leiste in Kommentaren ausblenden";
 "row.nogroups.title" = "Gruppenvorschläge entfernen";
+"row.nomainstories.desc" = "Blendet die Haupt-Story-Leiste ganz oben im Feed aus.";
+"row.nomainstories.title" = "Oberen Story-Bereich entfernen";
 "row.nopymk.title" = "„Personen, die du vielleicht kennst“ entfernen";
 "row.norecs.desc" = "Blendet algorithmisch vorgeschlagene Beiträge aus.";
 "row.norecs.title" = "Empfehlungen entfernen";
 "row.noreels.title" = "Reels aus dem Feed entfernen";
 "row.noreelsrecommended.desc" = "Blendet die Vollbildkarte „Empfohlen“ zwischen Reels aus.";
 "row.noreelsrecommended.title" = "Reels-Empfehlungskarte entfernen";
-"row.nomainstories.desc" = "Blendet die Haupt-Story-Leiste ganz oben im Feed aus.";
-"row.nomainstories.title" = "Oberen Story-Bereich entfernen";
 "row.nostories.desc" = "Blendet einzelne Story-Karten und Empfehlungen aus dem Feed aus.";
 "row.nostories.title" = "Storys aus dem Feed entfernen";
 "row.nostorypymk.desc" = "Entfernt „Personen, die du vielleicht kennst“ aus der Story-Leiste.";
@@ -235,8 +236,12 @@
 "row.plusmode.title" = "Freischaltmethode";
 "row.plusmode.trial" = "Test";
 "row.reset.title" = "Alle Einstellungen zurücksetzen";
+"row.resetvideobuttons.desc" = "Setzt die Augen- und Download-Taste auf ihre Standardposition zurück.";
+"row.resetvideobuttons.title" = "Position der Videotasten zurücksetzen";
 "row.suspend.desc" = "Facebook erzwungen schließen; zum Anwenden erneut öffnen.";
 "row.suspend.title" = "App beenden";
+"row.videobuttonsopacity.desc" = "Passt die Deckkraft der schwebenden Augen- und Download-Tasten an.";
+"row.videobuttonsopacity.title" = "Deckkraft der Videotasten";
 "row.welcome.title" = "Willkommensbildschirm anzeigen";
 
 
@@ -247,6 +252,7 @@
 "toast.logCleared" = "Protokolle gelöscht.";
 "toast.logEmpty" = "Noch keine Protokolle vorhanden.";
 "toast.settingsReset" = "Einstellungen zurückgesetzt";
+"toast.videoButtonsReset" = "Position der Videotasten zurückgesetzt";
 
 
 "update.failed" = "Updates konnten nicht geprüft werden.";
