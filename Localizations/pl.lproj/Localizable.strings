@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Ukrywa sekcje „Osoby, które możesz znać / Grupy, do których warto dołączyć / Dla Ciebie” w aktualnościach.";
 "footer.metaplus" = "Tylko podgląd. Funkcje wymagające serwera nie będą działać.";
 "footer.plusmode" = "Metoda bezpośrednia wymusza włączenie funkcji.\nTryb próbny symuluje aktywny okres próbny w aplikacji.";
+"footer.videobuttons" = "Przytrzymaj i przeciągnij przycisk Oko lub Pobierz bezpośrednio na wideo, aby zmienić jego pozycję.";
 
 
 "info.developer" = "Deweloper";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Resetuj";
 "reset.message" = "Wszystkie opcje powrócą do wartości domyślnych. Tej operacji nie można cofnąć.";
 "reset.title" = "Zresetuj wszystkie ustawienia";
-
-
 
 
 "row.anonstories.desc" = "Pozwala oglądać relacje bez wysyłania potwierdzenia odczytu.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Wyłącz automatyczne przechodzenie dalej";
 "row.nocommentbanner.desc" = "Ukrywa baner z linkiem afiliacyjnym / produktem przypięty w arkuszu komentarzy.";
 "row.nocommentbanner.title" = "Usuń baner produktu w komentarzach";
+"row.nocommentemojibar.desc" = "Ukrywa pasek szybkich reakcji emoji nad polem wpisywania komentarza.";
+"row.nocommentemojibar.title" = "Ukryj pasek szybkich emoji w komentarzach";
 "row.nogroups.title" = "Usuń sugestie grup";
+"row.nomainstories.desc" = "Ukrywa główny pasek relacji na samej górze aktualności.";
+"row.nomainstories.title" = "Usuń górny pasek relacji";
 "row.nopymk.title" = "Ukryj „Osoby, które możesz znać”";
 "row.norecs.desc" = "Ukrywa posty sugerowane algorytmicznie.";
 "row.norecs.title" = "Usuń rekomendacje";
 "row.noreels.title" = "Usuń rolki z aktualności";
 "row.noreelsrecommended.desc" = "Ukrywa pełnoekranową kartę „Polecane” między rolkami.";
 "row.noreelsrecommended.title" = "Usuń kartę polecanych w Reels";
-"row.nomainstories.desc" = "Ukrywa główny pasek relacji na samej górze aktualności.";
-"row.nomainstories.title" = "Usuń górny pasek relacji";
 "row.nostories.desc" = "Ukrywa pojedyncze karty relacji i rekomendacje w aktualnościach.";
 "row.nostories.title" = "Usuń relacje z aktualności";
 "row.nostorypymk.desc" = "Usuwa „Osoby, które możesz znać” z paska relacji.";
@@ -235,8 +236,16 @@
 "row.plusmode.title" = "Metoda odblokowania";
 "row.plusmode.trial" = "Wersja próbna";
 "row.reset.title" = "Zresetuj wszystkie ustawienia";
+"row.resetvideobuttons.desc" = "Przywróć domyślne położenie przycisków Oko i Pobierz.";
+"row.resetvideobuttons.title" = "Resetuj pozycję przycisków wideo";
 "row.suspend.desc" = "Wymusza zamknięcie Facebooka; otwórz go ponownie, aby zastosować zmiany.";
 "row.suspend.title" = "Zamknij aplikację";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
+"row.videobuttonsopacity.desc" = "Dostosuj przezroczystość pływających przycisków Oko i Pobierz.";
+"row.videobuttonsopacity.title" = "Przezroczystość przycisków wideo";
 "row.welcome.title" = "Pokaż ekran powitalny";
 
 
@@ -247,6 +256,7 @@
 "toast.logCleared" = "Dzienniki wyczyszczone.";
 "toast.logEmpty" = "Brak zarejestrowanych dzienników.";
 "toast.settingsReset" = "Ustawienia zostały zresetowane";
+"toast.videoButtonsReset" = "Zresetowano pozycję przycisków wideo";
 
 
 "update.failed" = "Nie udało się sprawdzić dostępności aktualizacji.";

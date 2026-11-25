@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Sembunyikan bagian “orang yang mungkin Anda kenal / grup yang disarankan / untuk Anda” dari beranda.";
 "footer.metaplus" = "Hanya pratinjau. Fitur sisi server tidak akan berfungsi.";
 "footer.plusmode" = "Langsung mengaktifkan fitur secara langsung.\nUji Coba membuat aplikasi mensimulasikan uji coba aktif.";
+"footer.videobuttons" = "Tekan dan seret tombol Mata atau Unduh langsung pada video untuk memindahkannya.";
 
 
 "info.developer" = "Pengembang";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Setel Ulang";
 "reset.message" = "Setiap opsi kembali ke default. Tindakan ini tidak dapat dibatalkan.";
 "reset.title" = "Setel Ulang Semua Pengaturan";
-
-
 
 
 "row.anonstories.desc" = "Lihat story tanpa mengirim tanda telah dibaca.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Matikan Lanjut Otomatis";
 "row.nocommentbanner.desc" = "Menyembunyikan banner tautan afiliasi / produk yang disematkan di lembar komentar.";
 "row.nocommentbanner.title" = "Hapus Banner Produk Komentar";
+"row.nocommentemojibar.desc" = "Menyembunyikan baris emoji cepat di atas kolom komentar saat mengetik.";
+"row.nocommentemojibar.title" = "Sembunyikan Baris Emoji Cepat Komentar";
 "row.nogroups.title" = "Hapus Saran Grup";
+"row.nomainstories.desc" = "Menyembunyikan bilah Story utama di bagian paling atas feed.";
+"row.nomainstories.title" = "Hapus Bilah Story Atas";
 "row.nopymk.title" = "Sembunyikan “Orang yang Mungkin Anda Kenal”";
 "row.norecs.desc" = "Menyembunyikan postingan yang disarankan algoritma.";
 "row.norecs.title" = "Hapus Rekomendasi";
 "row.noreels.title" = "Hapus Reels dari Feed";
 "row.noreelsrecommended.desc" = "Sembunyikan kartu layar penuh “Direkomendasikan” di antara Reels.";
 "row.noreelsrecommended.title" = "Hapus kartu Rekomendasi Reels";
-"row.nomainstories.desc" = "Menyembunyikan bilah Story utama di bagian paling atas feed.";
-"row.nomainstories.title" = "Hapus Bilah Story Atas";
 "row.nostories.desc" = "Menyembunyikan kartu story tunggal dan rekomendasi dari feed.";
 "row.nostories.title" = "Hapus Story dari Feed";
 "row.nostorypymk.desc" = "Hapus “orang yang mungkin Anda kenal” dari deretan cerita.";
@@ -235,8 +236,16 @@
 "row.plusmode.title" = "Metode Buka";
 "row.plusmode.trial" = "Uji coba";
 "row.reset.title" = "Setel Ulang Semua Pengaturan";
+"row.resetvideobuttons.desc" = "Kembalikan tombol Mata dan Unduh ke posisi bawaan.";
+"row.resetvideobuttons.title" = "Atur Ulang Posisi Tombol Video";
 "row.suspend.desc" = "Menutup paksa Facebook; buka lagi untuk menerapkan perubahan.";
 "row.suspend.title" = "Tutup Paksa Aplikasi";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
+"row.videobuttonsopacity.desc" = "Atur transparansi tombol mengambang Mata dan Unduh.";
+"row.videobuttonsopacity.title" = "Opasitas Tombol Video";
 "row.welcome.title" = "Tampilkan Layar Selamat Datang";
 
 
@@ -247,6 +256,7 @@
 "toast.logCleared" = "Log berhasil dihapus.";
 "toast.logEmpty" = "Belum ada log yang tercatat.";
 "toast.settingsReset" = "Pengaturan disetel ulang";
+"toast.videoButtonsReset" = "Posisi tombol video diatur ulang";
 
 
 "update.failed" = "Tidak dapat memeriksa pembaruan.";

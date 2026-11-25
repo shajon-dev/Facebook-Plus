@@ -195,10 +195,22 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     [FBPToastManager.shared showMessage:@"Marked as seen" success:YES];
 }
 
+- (void)storyEyeTouchDown:(UIButton *)sender {
+    if (FBPIsButtonDragging(sender)) return;
+    FBPNoteVideoButtonsInteraction();
+    sender.alpha = MAX(0.25, FBPVideoButtonsAlpha() * 0.72);
+}
+
 /// Asks first, then marks seen. Mark-as-seen is the eye button's only action, so
 /// it is wired straight to a confirmation prompt — matching the like confirmation
 /// — rather than an intermediate one-item menu.
-- (void)confirmAndMarkAsSeen {
+- (void)confirmAndMarkAsSeen:(UIButton *)sender {
+    FBPNoteVideoButtonsInteraction();
+    if (FBPShouldSuppressTapAfterDrag(sender)) {
+        sender.alpha = FBPVideoButtonsEffectiveAlpha();
+        return;
+    }
+    sender.alpha = FBPVideoButtonsEffectiveAlpha();
     UIViewController *host = self.controller;
     if (!host) return;
     while (host.presentedViewController) host = host.presentedViewController;
@@ -383,50 +395,55 @@ static BOOL gStoryRowInstalled = NO;
 static const void *kStoryButtonTargetKey = &kStoryButtonTargetKey;
 
 static void FBPInstallStoryFallbackButton(UIViewController *controller) {
-    if (gStoryRowInstalled) return;
-    if (!FBPEnabled(FBPKeyAnonymousStories)) return;
-    if (!controller.isViewLoaded) return;
-
+    if (!controller || !controller.isViewLoaded) return;
     UIView *host = controller.view;
-    if (!host || [host viewWithTag:FBPViewTagStoryButton]) return;
+    if (!host) return;
 
-    FBPStoryMenuTarget *target = [[FBPStoryMenuTarget alloc] init];
-    target.controller = controller;
-    objc_setAssociatedObject(controller, kStoryButtonTargetKey, target,
-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    UIButton *button = (UIButton *)[host viewWithTag:FBPViewTagStoryButton];
+    if (gStoryRowInstalled || !FBPEnabled(FBPKeyAnonymousStories)) {
+        if (button) button.hidden = YES;
+        return;
+    }
 
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    button.tag = FBPViewTagStoryButton;
-    button.tintColor = UIColor.whiteColor;
-    // The tweak's own eye glyph (resources/svg/eye.svg, template-rendered). A plain
-    // glyph, not a circled one: Facebook's own "⌄ ⋯ ✕" in this header are bare white
-    // symbols, and a filled circle among them would read as out of place.
-    [button setImage:[UIImage fbp_imageNamed:@"eye"] forState:UIControlStateNormal];
-    button.imageView.contentMode = UIViewContentModeScaleAspectFit;
-    // Keep the 38pt tap target but shrink the glyph to match Facebook's own
-    // header controls (the "⌄ ⋯ ✕" symbols above it).
-    button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
-    // A single dedicated action: tap the eye, confirm, done — no intermediate
-    // one-item menu.
-    [button addTarget:target
-               action:@selector(confirmAndMarkAsSeen)
-     forControlEvents:UIControlEventTouchUpInside];
-    button.translatesAutoresizingMaskIntoConstraints = NO;
-    button.layer.shadowColor = UIColor.blackColor.CGColor;
-    button.layer.shadowOpacity = 0.5;
-    button.layer.shadowOffset = CGSizeMake(0, 1);
-    button.layer.shadowRadius = 3.0;
-    [host addSubview:button];
-    [host bringSubviewToFront:button];
+    if (![button isKindOfClass:UIButton.class]) {
+        FBPStoryMenuTarget *target = [[FBPStoryMenuTarget alloc] init];
+        target.controller = controller;
+        objc_setAssociatedObject(controller, kStoryButtonTargetKey, target,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+        button = [UIButton buttonWithType:UIButtonTypeSystem];
+        button.tag = FBPViewTagStoryButton;
+        button.frame = CGRectMake(0, 0, 38.0, 38.0);
+        button.tintColor = UIColor.whiteColor;
+        // The tweak's own eye glyph (resources/svg/eye.svg, template-rendered). A plain
+        // glyph, not a circled one: Facebook's own "⌄ ⋯ ✕" in this header are bare white
+        // symbols, and a filled circle among them would read as out of place.
+        [button setImage:[UIImage fbp_imageNamed:@"eye"] forState:UIControlStateNormal];
+        button.imageView.contentMode = UIViewContentModeScaleAspectFit;
+        // Keep the 38pt tap target but shrink the glyph to match Facebook's own
+        // header controls (the "⌄ ⋯ ✕" symbols above it).
+        button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
+        // A single dedicated action: tap the eye, confirm, done — no intermediate
+        // one-item menu.
+        [button addTarget:target
+                   action:@selector(storyEyeTouchDown:)
+         forControlEvents:UIControlEventTouchDown];
+        [button addTarget:target
+                   action:@selector(confirmAndMarkAsSeen:)
+         forControlEvents:UIControlEventTouchUpInside];
+        button.layer.shadowColor = UIColor.blackColor.CGColor;
+        button.layer.shadowOpacity = 0.5;
+        button.layer.shadowOffset = CGSizeMake(0, 1);
+        button.layer.shadowRadius = 3.0;
+        FBPAttachDraggableBehavior(button, FBPKeyStoryEyePosition);
+        [host addSubview:button];
+        FBPNoteVideoButtonsInteraction();
+    }
 
     // A second row rather than a fourth slot in the first.
     //
     //     ⌄   ⋯   ✕
     //             ⬇      <- this button, directly under the close button
-    //
-    // Placing it beside "⋯" crowded a row Facebook already fills, and on a narrow
-    // screen it collided with the author's name. Sitting under ✕ keeps it on the
-    // same right-hand axis, clear of the other controls, and visually distinct.
     //
     // Measured from a device screenshot (iPhone 13, 390pt wide, 47pt safe-area
     // top): the "⌄ ⋯ ✕" row is centred 41pt below the safe-area top, with ✕
@@ -436,16 +453,30 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
     static const CGFloat kRowGap = 44.0;
     static const CGFloat kButtonBox = 38.0;
 
-    [NSLayoutConstraint activateConstraints:@[
-        [button.centerXAnchor
-            constraintEqualToAnchor:host.safeAreaLayoutGuide.trailingAnchor
-                           constant:-kCloseCentreFromRight],
-        [button.centerYAnchor
-            constraintEqualToAnchor:host.safeAreaLayoutGuide.topAnchor
-                           constant:kHeaderRowCentre + kRowGap],
-        [button.widthAnchor constraintEqualToConstant:kButtonBox],
-        [button.heightAnchor constraintEqualToConstant:kButtonBox],
-    ]];
+    button.hidden = NO;
+    if (!FBPIsButtonDragging(button)) {
+        CGFloat cx = CGRectGetWidth(host.bounds) - host.safeAreaInsets.right - kCloseCentreFromRight;
+        CGFloat cy = host.safeAreaInsets.top + kHeaderRowCentre + kRowGap;
+        CGPoint resolved = FBPResolvedButtonCenter(FBPKeyStoryEyePosition,
+                                                   CGPointMake(cx, cy),
+                                                   CGSizeMake(kButtonBox, kButtonBox),
+                                                   host);
+        button.frame = CGRectMake(round(resolved.x - kButtonBox * 0.5),
+                                  round(resolved.y - kButtonBox * 0.5),
+                                  kButtonBox, kButtonBox);
+        CGFloat targetAlpha = FBPVideoButtonsEffectiveAlpha();
+        if (fabs(button.alpha - targetAlpha) >= 0.004) {
+            NSTimeInterval dur = (targetAlpha < button.alpha) ? 0.32 : 0.12;
+            [UIView animateWithDuration:dur
+                                  delay:0.0
+                                options:UIViewAnimationOptionBeginFromCurrentState |
+                                        UIViewAnimationOptionAllowUserInteraction |
+                                        UIViewAnimationOptionCurveEaseOut
+                             animations:^{ button.alpha = targetAlpha; }
+                             completion:nil];
+        }
+    }
+    [host bringSubviewToFront:button];
 }
 
 %group FBPStoryFallback
@@ -540,7 +571,23 @@ void FBPInitStoryHooks(void) {
     }
 
     if (objc_getClass("FBSnacksBucketViewController")) {
-        FBP_ONCE(gStoryFallback) { %init(FBPStoryFallback); }
+        FBP_ONCE(gStoryFallback) {
+            %init(FBPStoryFallback);
+            void (^syncStoryEye)(NSNotification *) = ^(__unused NSNotification *note) {
+                UIViewController *viewer = FBPCurrentStoryViewer();
+                if (viewer) FBPInstallStoryFallbackButton(viewer);
+            };
+            [NSNotificationCenter.defaultCenter
+                addObserverForName:FBPSettingsDidChangeNotification
+                            object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:syncStoryEye];
+            [NSNotificationCenter.defaultCenter
+                addObserverForName:FBPVideoButtonsDidChangeNotification
+                            object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:syncStoryEye];
+        }
     }
 
     // The section component only exists once the feed stack is up, so this is

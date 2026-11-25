@@ -125,7 +125,8 @@ static void FBPStoryHideButton(void) {
 static void FBPStorySetButtonState(BOOL enabled) {
     dispatch_async(dispatch_get_main_queue(), ^{
         gStoryDownloadButton.enabled = enabled;
-        gStoryDownloadButton.alpha = enabled ? 1.0 : 0.45;
+        CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
+        gStoryDownloadButton.alpha = enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
     });
 }
 
@@ -634,6 +635,7 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
 
 @interface FBPStoryDownloadTarget : NSObject
 + (instancetype)shared;
+- (void)downloadTouchDown:(UIButton *)sender;
 - (void)downloadTapped:(UIButton *)sender;
 @end
 
@@ -644,7 +646,18 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
     dispatch_once(&onceToken, ^{ obj = [FBPStoryDownloadTarget new]; });
     return obj;
 }
+- (void)downloadTouchDown:(UIButton *)sender {
+    if (FBPIsButtonDragging(sender)) return;
+    FBPNoteVideoButtonsInteraction();
+    sender.alpha = MAX(0.25, FBPVideoButtonsAlpha() * 0.72);
+}
 - (void)downloadTapped:(UIButton *)sender {
+    FBPNoteVideoButtonsInteraction();
+    if (FBPShouldSuppressTapAfterDrag(sender)) {
+        CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
+        sender.alpha = sender.enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
+        return;
+    }
     FBPStoryLog(@"button tapped currentVideoID=%@", gStoryVideoID);
 
     // While a two-stream save runs this button is a stop button — see
@@ -739,9 +752,14 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
         // which in turn matches Facebook's own header controls.
         button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
         [button addTarget:[FBPStoryDownloadTarget shared]
+                   action:@selector(downloadTouchDown:)
+         forControlEvents:UIControlEventTouchDown];
+        [button addTarget:[FBPStoryDownloadTarget shared]
                    action:@selector(downloadTapped:)
          forControlEvents:UIControlEventTouchUpInside];
+        FBPAttachDraggableBehavior(button, FBPKeyStoryDownloadPosition);
         [host addSubview:button];
+        FBPNoteVideoButtonsInteraction();
     }
 
     UIProgressView *progress = (UIProgressView *)[host viewWithTag:kFBPStoryProgressTag];
@@ -755,14 +773,22 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
     // Directly under the eye (mark-as-seen) button, same right-hand axis, one
     // row-gap below. Mirrors the eye button's grid in FBPStoryHooks.xm: centre =
     // safe-area top + header row (41) + one gap (44) per row. The eye is at row 1
-    // (safeTop + 41 + 44); Download is the next row.
+    // (safeTop + 41 + 44); Download is the next row — unless dragged elsewhere.
     static const CGFloat kHeaderRowCentre = 41.0;
     static const CGFloat kCloseCentreFromRight = 24.0;
     static const CGFloat kRowGap = 44.0;
     CGFloat cx = CGRectGetWidth(host.bounds) - host.safeAreaInsets.right - kCloseCentreFromRight;
     CGFloat cy = host.safeAreaInsets.top + kHeaderRowCentre + kRowGap * 2.0;
-    button.center = CGPointMake(cx, cy);
-    progress.frame = CGRectMake(cx - 15.0, cy + 21.0, 30.0, 2.0);
+    if (!FBPIsButtonDragging(button)) {
+        CGPoint resolved = FBPResolvedButtonCenter(FBPKeyStoryDownloadPosition,
+                                                   CGPointMake(cx, cy),
+                                                   CGSizeMake(38.0, 38.0),
+                                                   host);
+        button.frame = CGRectMake(round(resolved.x - 19.0),
+                                  round(resolved.y - 19.0),
+                                  38.0, 38.0);
+    }
+    progress.frame = CGRectMake(button.center.x - 15.0, button.center.y + 21.0, 30.0, 2.0);
 
     [host bringSubviewToFront:button];
     [host bringSubviewToFront:progress];
@@ -772,7 +798,20 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
     // stop control for as long as it lasts, including across a layout pass from
     // the next story starting to play.
     button.enabled = !gStoryDownloading || gStoryDashDownload != nil;
-    button.alpha = button.enabled ? 1.0 : 0.45;
+    if (!FBPIsButtonDragging(button)) {
+        CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
+        CGFloat targetAlpha = button.enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
+        if (fabs(button.alpha - targetAlpha) >= 0.004) {
+            NSTimeInterval dur = (targetAlpha < button.alpha) ? 0.32 : 0.12;
+            [UIView animateWithDuration:dur
+                                  delay:0.0
+                                options:UIViewAnimationOptionBeginFromCurrentState |
+                                        UIViewAnimationOptionAllowUserInteraction |
+                                        UIViewAnimationOptionCurveEaseOut
+                             animations:^{ button.alpha = targetAlpha; }
+                             completion:nil];
+        }
+    }
 
     gStoryDownloadButton = button;
     gStoryProgress = progress;
@@ -893,6 +932,42 @@ static void FBPInstallStoryDownloader(void) {
 __attribute__((constructor))
 static void FBPStoryDownloaderCtor(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        void (^syncStoryButton)(NSNotification *) = ^(__unused NSNotification *note) {
+            if (!gStoryDownloadButton) return;
+            if (gStoryProgress) {
+                gStoryProgress.frame = CGRectMake(gStoryDownloadButton.center.x - 15.0,
+                                                  gStoryDownloadButton.center.y + 21.0,
+                                                  30.0, 2.0);
+            }
+            if (gStoryController && FBPStoryControllerVisible(gStoryController)) {
+                FBPStoryInstallOrUpdateButton(gStoryController);
+            } else if (!gStoryDownloadButton.hidden && !FBPIsButtonDragging(gStoryDownloadButton)) {
+                CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
+                CGFloat targetAlpha = gStoryDownloadButton.enabled
+                    ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
+                if (fabs(gStoryDownloadButton.alpha - targetAlpha) >= 0.004) {
+                    NSTimeInterval dur = (targetAlpha < gStoryDownloadButton.alpha) ? 0.32 : 0.12;
+                    [UIView animateWithDuration:dur
+                                          delay:0.0
+                                        options:UIViewAnimationOptionBeginFromCurrentState |
+                                                UIViewAnimationOptionAllowUserInteraction |
+                                                UIViewAnimationOptionCurveEaseOut
+                                     animations:^{ gStoryDownloadButton.alpha = targetAlpha; }
+                                     completion:nil];
+                }
+            }
+        };
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:FBPSettingsDidChangeNotification
+                        object:nil
+                         queue:NSOperationQueue.mainQueue
+                    usingBlock:syncStoryButton];
+        [NSNotificationCenter.defaultCenter
+            addObserverForName:FBPVideoButtonsDidChangeNotification
+                        object:nil
+                         queue:NSOperationQueue.mainQueue
+                    usingBlock:syncStoryButton];
+
         FBPInstallStoryDownloader();
 
         if (!gStoryHookInstalled) {

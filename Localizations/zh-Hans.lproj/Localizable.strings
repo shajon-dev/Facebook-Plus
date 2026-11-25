@@ -128,6 +128,7 @@
 "footer.feedClutter" = "隐藏动态中的“你可能认识的人 / 建议加入的小组 / 为你推荐”等模块。";
 "footer.metaplus" = "仅供预览，服务端功能将无法使用。";
 "footer.plusmode" = "直接挂钩会直接强制开启功能。\n试用模式会让应用模拟处于有效试用期。";
+"footer.videobuttons" = "在视频画面上直接按住并拖动“眼睛”或“下载”按钮即可自由移动位置。";
 
 
 "info.developer" = "开发者";
@@ -151,8 +152,6 @@
 "reset.confirm" = "重置";
 "reset.message" = "所有选项将恢复默认值，此操作无法撤销。";
 "reset.title" = "重置所有设置";
-
-
 
 
 "row.anonstories.desc" = "查看快拍时不发送已读回执。";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "关闭自动播放下一个";
 "row.nocommentbanner.desc" = "隐藏固定在评论面板中的联盟 / 商品链接横幅。";
 "row.nocommentbanner.title" = "移除评论商品横幅";
+"row.nocommentemojibar.desc" = "在评论输入时隐藏输入框上方的快捷表情栏。";
+"row.nocommentemojibar.title" = "隐藏评论快捷表情栏";
 "row.nogroups.title" = "移除小组推荐";
+"row.nomainstories.desc" = "隐藏信息流最顶部的快拍栏。";
+"row.nomainstories.title" = "移除顶部快拍栏";
 "row.nopymk.title" = "移除“你可能认识的人”";
 "row.norecs.desc" = "隐藏算法推荐的帖子。";
 "row.norecs.title" = "移除推荐内容";
 "row.noreels.title" = "从信息流中移除 Reels";
 "row.noreelsrecommended.desc" = "隐藏 Reels 之间显示的全屏“推荐”卡片。";
 "row.noreelsrecommended.title" = "移除 Reels 推荐卡片";
-"row.nomainstories.desc" = "隐藏信息流最顶部的快拍栏。";
-"row.nomainstories.title" = "移除顶部快拍栏";
 "row.nostories.desc" = "隐藏信息流中的单个快拍卡片和快拍推荐。";
 "row.nostories.title" = "从信息流中移除快拍";
 "row.nostorypymk.desc" = "从快拍栏中移除“你可能认识的人”。";
@@ -235,8 +236,16 @@
 "row.plusmode.title" = "解锁方式";
 "row.plusmode.trial" = "试用";
 "row.reset.title" = "重置所有设置";
+"row.resetvideobuttons.desc" = "将“眼睛”和“下载”按钮恢复到默认位置。";
+"row.resetvideobuttons.title" = "重置视频按钮位置";
 "row.suspend.desc" = "强制关闭 Facebook；重新打开以应用更改。";
 "row.suspend.title" = "关闭应用";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
+"row.videobuttonsopacity.desc" = "调节视频画面上悬浮“眼睛”和“下载”按钮的不透明度。";
+"row.videobuttonsopacity.title" = "视频按钮不透明度";
 "row.welcome.title" = "显示欢迎界面";
 
 
@@ -247,6 +256,7 @@
 "toast.logCleared" = "日志已清除。";
 "toast.logEmpty" = "暂无记录的日志。";
 "toast.settingsReset" = "设置已重置";
+"toast.videoButtonsReset" = "已重置视频按钮位置";
 
 
 "update.failed" = "无法检查更新。";

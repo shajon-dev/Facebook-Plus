@@ -128,6 +128,7 @@
 "footer.feedClutter" = "フィードの「知り合いかも / おすすめグループ / おすすめ」セクションを非表示にします。";
 "footer.metaplus" = "プレビュー専用です。サーバー側で処理される機能は動作しません。";
 "footer.plusmode" = "ダイレクトは機能を直接強制有効化します。\nトライアルはアプリ内で無料トライアル状態を模擬します。";
+"footer.videobuttons" = "動画上の目のボタンや保存ボタンをドラッグして自由な位置へ移動できます。";
 
 
 "info.developer" = "開発者";
@@ -151,8 +152,6 @@
 "reset.confirm" = "リセット";
 "reset.message" = "すべての項目が初期値に戻ります。この操作は取り消せません。";
 "reset.title" = "すべての設定をリセット";
-
-
 
 
 "row.anonstories.desc" = "既読を送らずにストーリーズを見ます。";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "自動送りを無効化";
 "row.nocommentbanner.desc" = "コメントシートに固定されたアフィリエイト / 商品リンクのバナーを非表示にします。";
 "row.nocommentbanner.title" = "コメントの商品バナーを削除";
+"row.nocommentemojibar.desc" = "コメント入力欄の上に表示されるクイック絵文字バーを非表示にします。";
+"row.nocommentemojibar.title" = "コメントのクイック絵文字バーを非表示";
 "row.nogroups.title" = "グループの提案を削除";
+"row.nomainstories.desc" = "フィードの最上部にあるメインのストーリーズバーを非表示にします。";
+"row.nomainstories.title" = "上部ストーリーズバーを削除";
 "row.nopymk.title" = "「知り合いかも」を非表示";
 "row.norecs.desc" = "アルゴリズムによるおすすめ投稿を非表示にします。";
 "row.norecs.title" = "おすすめを削除";
 "row.noreels.title" = "フィードからリールを削除";
 "row.noreelsrecommended.desc" = "リール間に表示される全画面の「おすすめ」カードを非表示にします。";
 "row.noreelsrecommended.title" = "Reels のおすすめカードを非表示";
-"row.nomainstories.desc" = "フィードの最上部にあるメインのストーリーズバーを非表示にします。";
-"row.nomainstories.title" = "上部ストーリーズバーを削除";
 "row.nostories.desc" = "フィード内の単体ストーリーズカードやおすすめを非表示にします。";
 "row.nostories.title" = "フィードからストーリーズを削除";
 "row.nostorypymk.desc" = "ストーリートレイから「知り合いかも」を削除します。";
@@ -235,8 +236,16 @@
 "row.plusmode.title" = "解除方法";
 "row.plusmode.trial" = "トライアル";
 "row.reset.title" = "すべての設定をリセット";
+"row.resetvideobuttons.desc" = "目のボタンと保存ボタンを初期位置に戻します。";
+"row.resetvideobuttons.title" = "動画ボタンの位置をリセット";
 "row.suspend.desc" = "Facebook を強制終了します。変更を適用するには開き直してください。";
 "row.suspend.title" = "アプリを終了";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
+"row.videobuttonsopacity.desc" = "動画上の目のボタンと保存ボタンの透明度を調整します。";
+"row.videobuttonsopacity.title" = "動画ボタンの不透明度";
 "row.welcome.title" = "ようこそ画面を表示";
 
 
@@ -247,6 +256,7 @@
 "toast.logCleared" = "ログを消去しました。";
 "toast.logEmpty" = "記録されたログはありません。";
 "toast.settingsReset" = "設定をリセットしました";
+"toast.videoButtonsReset" = "動画ボタンの位置をリセットしました";
 
 
 "update.failed" = "アップデートを確認できませんでした。";

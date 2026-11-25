@@ -128,6 +128,7 @@
 "footer.feedClutter" = "Скрывает блоки “Вы можете их знать”, рекомендации групп и “Для вас”.";
 "footer.metaplus" = "Только предпросмотр. Функции, требующие связи с сервером, работать не будут.";
 "footer.plusmode" = "Прямой режим принудительно включает функции.\nПробный период имитирует активную подписку в приложении.";
+"footer.videobuttons" = "Удерживайте и перетащите кнопку «Глаз» или «Скачать» прямо на видео в любое место.";
 
 
 "info.developer" = "Разработчик";
@@ -151,8 +152,6 @@
 "reset.confirm" = "Сбросить";
 "reset.message" = "Все параметры вернутся к значениям по умолчанию. Отменить нельзя.";
 "reset.title" = "Сбросить все настройки";
-
-
 
 
 "row.anonstories.desc" = "Смотреть истории без отправки отметки о просмотре.";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "Отключить автопереход";
 "row.nocommentbanner.desc" = "Скрывает партнёрский / товарный баннер, закреплённый в панели комментариев.";
 "row.nocommentbanner.title" = "Убрать баннер товара в комментариях";
+"row.nocommentemojibar.desc" = "Скрывает панель быстрых эмодзи над полем ввода комментария.";
+"row.nocommentemojibar.title" = "Скрыть панель быстрых эмодзи в комментариях";
 "row.nogroups.title" = "Убрать предложения групп";
+"row.nomainstories.desc" = "Скрывает главную панель историй в самом верху ленты.";
+"row.nomainstories.title" = "Убрать верхнюю панель историй";
 "row.nopymk.title" = "Скрыть “Вы можете их знать”";
 "row.norecs.desc" = "Скрывает посты, предложенные алгоритмом.";
 "row.norecs.title" = "Убрать рекомендации";
 "row.noreels.title" = "Убрать Reels из ленты";
 "row.noreelsrecommended.desc" = "Скрывает полноэкранную карточку “Рекомендовано” между Reels.";
 "row.noreelsrecommended.title" = "Убрать карточку рекомендаций в Reels";
-"row.nomainstories.desc" = "Скрывает главную панель историй в самом верху ленты.";
-"row.nomainstories.title" = "Убрать верхнюю панель историй";
 "row.nostories.desc" = "Скрывает отдельные карточки историй и рекомендации из ленты.";
 "row.nostories.title" = "Убрать истории из ленты";
 "row.nostorypymk.desc" = "Удаляет блок “Вы можете их знать” из ленты историй.";
@@ -235,8 +236,16 @@
 "row.plusmode.title" = "Способ разблокировки";
 "row.plusmode.trial" = "Пробный";
 "row.reset.title" = "Сбросить все настройки";
+"row.resetvideobuttons.desc" = "Вернуть кнопки «Глаз» и «Скачать» на исходные места.";
+"row.resetvideobuttons.title" = "Сбросить позицию кнопок видео";
 "row.suspend.desc" = "Принудительно закрывает Facebook; откройте снова, чтобы применить изменения.";
 "row.suspend.title" = "Закрыть приложение";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
+"row.videobuttonsopacity.desc" = "Настройка прозрачности плавающих кнопок «Глаз» и «Скачать».";
+"row.videobuttonsopacity.title" = "Прозрачность кнопок видео";
 "row.welcome.title" = "Показать экран приветствия";
 
 
@@ -247,6 +256,7 @@
 "toast.logCleared" = "Журналы очищены.";
 "toast.logEmpty" = "Журнал пуст.";
 "toast.settingsReset" = "Настройки сброшены";
+"toast.videoButtonsReset" = "Позиция кнопок видео сброшена";
 
 
 "update.failed" = "Не удалось проверить обновления.";

@@ -128,6 +128,7 @@
 "footer.feedClutter" = "ফিডের “আপনি চিনতে পারেন / যে গ্রুপে যোগ দিতে পারেন / আপনার জন্য” অংশগুলি লুকায়।";
 "footer.metaplus" = "শুধুমাত্র প্রিভিউ। সার্ভার-নির্ভর ফিচারগুলো কাজ করবে না।";
 "footer.plusmode" = "ডিরেক্ট সরাসরি ফিচার চালু করে।\nট্রায়াল অ্যাপে একটি সক্রিয় ট্রায়াল সিমুলেট করে।";
+"footer.videobuttons" = "অবস্থান পরিবর্তন করতে ভিডিও স্ক্রিনে চোখ বা ডাউনলোড বোতাম ধরে টেনে আনুন।";
 
 
 "info.developer" = "ডেভেলপার";
@@ -151,8 +152,6 @@
 "reset.confirm" = "রিসেট";
 "reset.message" = "প্রতিটি অপশন ডিফল্টে ফিরে যাবে। এটি আর ফেরানো যাবে না।";
 "reset.title" = "সব সেটিং রিসেট করুন";
-
-
 
 
 "row.anonstories.desc" = "পড়ার রসিদ না পাঠিয়ে স্টোরি দেখুন।";
@@ -208,15 +207,17 @@
 "row.noautonext.title" = "অটো-এগিয়ে যাওয়া বন্ধ করুন";
 "row.nocommentbanner.desc" = "কমেন্ট শিটে আটকে থাকা অ্যাফিলিয়েট / প্রোডাক্ট লিংক ব্যানার লুকায়।";
 "row.nocommentbanner.title" = "কমেন্ট প্রোডাক্ট ব্যানার সরান";
+"row.nocommentemojibar.desc" = "মন্তব্য লেখার সময় ইনপুট বক্সের উপরের কুইক ইমোজি বার লুকিয়ে রাখে।";
+"row.nocommentemojibar.title" = "মন্তব্যের কুইক ইমোজি বার সরান";
 "row.nogroups.title" = "গ্রুপ সাজেশন সরান";
+"row.nomainstories.desc" = "ফিডের একেবারে শীর্ষে থাকা প্রধান অনুভূমিক স্টোরি বারটি লুকায়।";
+"row.nomainstories.title" = "শীর্ষের স্টোরি বার সরান";
 "row.nopymk.title" = "“আপনি চিনতে পারেন” সরান";
 "row.norecs.desc" = "অ্যালগরিদমে সাজেস্ট করা পোস্ট লুকায়।";
 "row.norecs.title" = "সুপারিশ সরান";
 "row.noreels.title" = "ফিড থেকে Reels সরান";
 "row.noreelsrecommended.desc" = "Reels-এর মাঝে দেখানো ফুল-স্ক্রিন “সুপারিশকৃত” কার্ড লুকায়।";
 "row.noreelsrecommended.title" = "Reels-এর Recommended কার্ড সরান";
-"row.nomainstories.desc" = "ফিডের একেবারে শীর্ষে থাকা প্রধান অনুভূমিক স্টোরি বারটি লুকায়।";
-"row.nomainstories.title" = "শীর্ষের স্টোরি বার সরান";
 "row.nostories.desc" = "ফিড স্ক্রোল করার সময় আসা ইনলাইন স্টোরি কার্ড এবং সুপারিশগুলি লুকায়।";
 "row.nostories.title" = "ফিড থেকে স্টোরি সরান";
 "row.nostorypymk.desc" = "স্টোরি ট্রে থেকে “পরিচিত ব্যক্তিরা” অংশটি সরান।";
@@ -235,8 +236,16 @@
 "row.plusmode.title" = "আনলক পদ্ধতি";
 "row.plusmode.trial" = "ট্রায়াল";
 "row.reset.title" = "সব সেটিং রিসেট করুন";
+"row.resetvideobuttons.desc" = "চোখ এবং ডাউনলোড বোতাম ডিফল্ট অবস্থানে ফিরিয়ে আনুন।";
+"row.resetvideobuttons.title" = "ভিডিও বোতামের অবস্থান রিসেট করুন";
 "row.suspend.desc" = "Facebook জোর করে বন্ধ করে; পরিবর্তন প্রয়োগ করতে আবার খুলুন।";
 "row.suspend.title" = "অ্যাপ বন্ধ করুন";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
+"row.videobuttonsopacity.desc" = "ভাসমান চোখ এবং ডাউনলোড বোতামের স্বচ্ছতা সামঞ্জস্য করুন।";
+"row.videobuttonsopacity.title" = "ভিডিও বোতামের স্বচ্ছতা";
 "row.welcome.title" = "স্বাগত স্ক্রিন দেখান";
 
 
@@ -247,6 +256,7 @@
 "toast.logCleared" = "লগ মুছে ফেলা হয়েছে।";
 "toast.logEmpty" = "এখনও কোনো লগ রেকর্ড করা হয়নি।";
 "toast.settingsReset" = "সেটিং রিসেট হয়েছে";
+"toast.videoButtonsReset" = "ভিডিও বোতামের অবস্থান রিসেট হয়েছে";
 
 
 "update.failed" = "আপডেট চেক করা যায়নি।";
