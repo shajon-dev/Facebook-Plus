@@ -42,10 +42,22 @@ from typing import ClassVar
 try:
     from dotenv import load_dotenv
 except ImportError:
-    # python-dotenv is a local-dev convenience for loading .env; CI has neither
-    # the package nor a .env, so fall back to a no-op there.
-    def load_dotenv(*_args, **_kwargs):
-        return False
+    # The fallback has to actually read the file. A no-op here is silent: the
+    # device credentials in .env go missing and an SSH install reaches for the
+    # default key over a USB forward that a Wi-Fi device does not answer.
+    def load_dotenv(path=None, *_args, **_kwargs):
+        try:
+            text = Path(path or ".env").read_text()
+        except OSError:
+            return False
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, _, value = line.partition("=")
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(name.strip(), value)
+        return True
 
 ROOT = str(Path(__file__).resolve().parent)
 
@@ -907,7 +919,11 @@ class SSHInstaller:
         self.iproxy = None
 
     def _common_opts(self):
-        return ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-o", "LogLevel=ERROR", "-o", "ConnectTimeout=10"]
+        # IdentitiesOnly: without it ssh offers every agent key first and the
+        # device's sshd closes the connection on its auth-try limit.
+        return ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "LogLevel=ERROR", "-o", "ConnectTimeout=10",
+                "-o", "IdentitiesOnly=yes"]
 
     def _ssh_base(self):
         target, port = self._target()
