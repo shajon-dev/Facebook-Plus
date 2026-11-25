@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "동영상 버튼 위치 초기화";
 "row.suspend.desc" = "Facebook을 강제 종료합니다. 변경 사항을 적용하려면 다시 염니다.";
 "row.suspend.title" = "앱 종료";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "눈 및 다운로드 플로팅 버튼의 투명도를 조절합니다.";
 "row.videobuttonsopacity.title" = "동영상 버튼 투명도";
 "row.welcome.title" = "시작 화면 표시";

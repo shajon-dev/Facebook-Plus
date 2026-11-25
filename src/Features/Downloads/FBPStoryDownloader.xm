@@ -125,7 +125,7 @@ static void FBPStoryHideButton(void) {
 static void FBPStorySetButtonState(BOOL enabled) {
     dispatch_async(dispatch_get_main_queue(), ^{
         gStoryDownloadButton.enabled = enabled;
-        CGFloat baseAlpha = FBPVideoButtonsAlpha();
+        CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
         gStoryDownloadButton.alpha = enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
     });
 }
@@ -635,6 +635,7 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
 
 @interface FBPStoryDownloadTarget : NSObject
 + (instancetype)shared;
+- (void)downloadTouchDown:(UIButton *)sender;
 - (void)downloadTapped:(UIButton *)sender;
 @end
 
@@ -645,9 +646,15 @@ static void FBPStoryBeginDownload(FBPDownloadVariant *variant,
     dispatch_once(&onceToken, ^{ obj = [FBPStoryDownloadTarget new]; });
     return obj;
 }
+- (void)downloadTouchDown:(UIButton *)sender {
+    if (FBPIsButtonDragging(sender)) return;
+    FBPNoteVideoButtonsInteraction();
+    sender.alpha = MAX(0.25, FBPVideoButtonsAlpha() * 0.72);
+}
 - (void)downloadTapped:(UIButton *)sender {
+    FBPNoteVideoButtonsInteraction();
     if (FBPShouldSuppressTapAfterDrag(sender)) {
-        CGFloat baseAlpha = FBPVideoButtonsAlpha();
+        CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
         sender.alpha = sender.enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
         return;
     }
@@ -745,10 +752,14 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
         // which in turn matches Facebook's own header controls.
         button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
         [button addTarget:[FBPStoryDownloadTarget shared]
+                   action:@selector(downloadTouchDown:)
+         forControlEvents:UIControlEventTouchDown];
+        [button addTarget:[FBPStoryDownloadTarget shared]
                    action:@selector(downloadTapped:)
          forControlEvents:UIControlEventTouchUpInside];
         FBPAttachDraggableBehavior(button, FBPKeyStoryDownloadPosition);
         [host addSubview:button];
+        FBPNoteVideoButtonsInteraction();
     }
 
     UIProgressView *progress = (UIProgressView *)[host viewWithTag:kFBPStoryProgressTag];
@@ -773,8 +784,9 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
                                                    CGPointMake(cx, cy),
                                                    CGSizeMake(38.0, 38.0),
                                                    host);
-        button.center = resolved;
-        button.frame = CGRectIntegral(button.frame);
+        button.frame = CGRectMake(round(resolved.x - 19.0),
+                                  round(resolved.y - 19.0),
+                                  38.0, 38.0);
     }
     progress.frame = CGRectMake(button.center.x - 15.0, button.center.y + 21.0, 30.0, 2.0);
 
@@ -787,8 +799,18 @@ static void FBPStoryInstallOrUpdateButton(UIViewController *vc) {
     // the next story starting to play.
     button.enabled = !gStoryDownloading || gStoryDashDownload != nil;
     if (!FBPIsButtonDragging(button)) {
-        CGFloat baseAlpha = FBPVideoButtonsAlpha();
-        button.alpha = button.enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
+        CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
+        CGFloat targetAlpha = button.enabled ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
+        if (fabs(button.alpha - targetAlpha) >= 0.004) {
+            NSTimeInterval dur = (targetAlpha < button.alpha) ? 0.32 : 0.12;
+            [UIView animateWithDuration:dur
+                                  delay:0.0
+                                options:UIViewAnimationOptionBeginFromCurrentState |
+                                        UIViewAnimationOptionAllowUserInteraction |
+                                        UIViewAnimationOptionCurveEaseOut
+                             animations:^{ button.alpha = targetAlpha; }
+                             completion:nil];
+        }
     }
 
     gStoryDownloadButton = button;
@@ -920,9 +942,19 @@ static void FBPStoryDownloaderCtor(void) {
             if (gStoryController && FBPStoryControllerVisible(gStoryController)) {
                 FBPStoryInstallOrUpdateButton(gStoryController);
             } else if (!gStoryDownloadButton.hidden && !FBPIsButtonDragging(gStoryDownloadButton)) {
-                CGFloat baseAlpha = FBPVideoButtonsAlpha();
-                gStoryDownloadButton.alpha = gStoryDownloadButton.enabled
+                CGFloat baseAlpha = FBPVideoButtonsEffectiveAlpha();
+                CGFloat targetAlpha = gStoryDownloadButton.enabled
                     ? baseAlpha : MAX(0.12, baseAlpha * 0.45);
+                if (fabs(gStoryDownloadButton.alpha - targetAlpha) >= 0.004) {
+                    NSTimeInterval dur = (targetAlpha < gStoryDownloadButton.alpha) ? 0.32 : 0.12;
+                    [UIView animateWithDuration:dur
+                                          delay:0.0
+                                        options:UIViewAnimationOptionBeginFromCurrentState |
+                                                UIViewAnimationOptionAllowUserInteraction |
+                                                UIViewAnimationOptionCurveEaseOut
+                                     animations:^{ gStoryDownloadButton.alpha = targetAlpha; }
+                                     completion:nil];
+                }
             }
         };
         [NSNotificationCenter.defaultCenter

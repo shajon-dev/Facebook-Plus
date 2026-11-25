@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "Сбросить позицию кнопок видео";
 "row.suspend.desc" = "Принудительно закрывает Facebook; откройте снова, чтобы применить изменения.";
 "row.suspend.title" = "Закрыть приложение";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "Настройка прозрачности плавающих кнопок «Глаз» и «Скачать».";
 "row.videobuttonsopacity.title" = "Прозрачность кнопок видео";
 "row.welcome.title" = "Показать экран приветствия";

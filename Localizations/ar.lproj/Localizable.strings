@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "إعادة تعيين موضع أزرار الفيديو";
 "row.suspend.desc" = "أغلق Facebook إجبارياً؛ أعد فتحه لتطبيق التغييرات.";
 "row.suspend.title" = "تعليق التطبيق";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "ضبط شفافية زري العين والتنزيل أثناء مشاهدة الفيديو.";
 "row.videobuttonsopacity.title" = "شفافية أزرار الفيديو";
 "row.welcome.title" = "عرض شاشة الترحيب";

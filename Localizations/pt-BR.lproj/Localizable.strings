@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "Redefinir posição dos botões de vídeo";
 "row.suspend.desc" = "Força o fechamento do Facebook; reabra para aplicar as alterações.";
 "row.suspend.title" = "Fechar o app";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "Ajusta a transparência dos botões flutuantes Olho e Baixar.";
 "row.videobuttonsopacity.title" = "Opacidade dos botões de vídeo";
 "row.welcome.title" = "Mostrar tela de boas-vindas";

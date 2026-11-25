@@ -240,6 +240,10 @@
 "row.resetvideobuttons.title" = "重置视频按钮位置";
 "row.suspend.desc" = "强制关闭 Facebook；重新打开以应用更改。";
 "row.suspend.title" = "关闭应用";
+"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
+"row.videobuttons_idle.title" = "Idle Opacity After 2s";
+"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
+"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
 "row.videobuttonsopacity.desc" = "调节视频画面上悬浮“眼睛”和“下载”按钮的不透明度。";
 "row.videobuttonsopacity.title" = "视频按钮不透明度";
 "row.welcome.title" = "显示欢迎界面";
