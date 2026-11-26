@@ -232,7 +232,7 @@ static UIColor *FBPResolve(UIColor *color) {
 /// that band. Deliberately tight: a loose "is it darkish" luma test also caught
 /// dividers, pressed states, chips and placeholders and painted them as solid
 /// black rectangles.
-static const CGFloat kFBPBgMaxLuma    = 0.26;   // just above #3A3B3C (luma ~0.231)
+static const CGFloat kFBPBgMaxLuma    = 0.30;   // #46484B, the search field fill
 static const CGFloat kFBPBgMaxChroma  = 0.05;   // near-neutral only (FB greys are ~neutral)
 
 static BOOL FBPColorIsDark(UIColor *color) {
@@ -327,6 +327,39 @@ static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
     return paint;
 }
 
+/// A pale wash: Facebook lays white at a low alpha over a surface for touch
+/// highlights, and on black that reads as a grey tile. The colour is as far
+/// from dark as it gets, so the usual test can never reach it.
+static BOOL FBPColorIsPaleWash(UIColor *color) {
+    if (!color) return NO;
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if ([color getRed:&r green:&g blue:&b alpha:&a]) {
+        return a > 0.04 && a <= 0.30 && MIN(r, MIN(g, b)) > 0.85;
+    }
+    CGFloat w = 0, wa = 0;
+    if ([color getWhite:&w alpha:&wa]) return wa > 0.04 && wa <= 0.30 && w > 0.85;
+    return NO;
+}
+
+/// Black at the wash's own alpha while Dark, the original the moment it is not.
+static UIColor *FBPWashFollowingAppearance(UIColor *original) {
+    if (FBPIsOurPaint(original)) return original;
+    UIColor *paint;
+    if (@available(iOS 13.0, *)) {
+        paint = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+            if (!gOLEDEnabled || traits.userInterfaceStyle != UIUserInterfaceStyleDark) {
+                return original ?: UIColor.clearColor;
+            }
+            return FBPBlackKeepingAlpha(original);
+        }];
+    } else {
+        paint = FBPBlackKeepingAlpha(original);
+    }
+    objc_setAssociatedObject(paint, kFBPOurPaint, @YES,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return paint;
+}
+
 #pragma mark - Save / restore
 
 // Each surface Facebook will not repaint itself is stashed before darkening and
@@ -335,6 +368,7 @@ static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
 static const void *kFBPTouched     = &kFBPTouched;     // UIView: OLED modified it
 static const void *kFBPSavedViewBG = &kFBPSavedViewBG; // UIView: original backgroundColor
 static const void *kFBPSavedLayerBG = &kFBPSavedLayerBG;// CALayer: original backgroundColor
+static const void *kFBPSavedBorder  = &kFBPSavedBorder; // CALayer: original borderColor
 static const void *kFBPSavedColors = &kFBPSavedColors; // CAGradientLayer: original colors
 static const void *kFBPSavedFill   = &kFBPSavedFill;   // CAShapeLayer: original fillColor
 static const void *kFBPSavedNav    = &kFBPSavedNav;    // UINavigationBar: original appearance
@@ -891,6 +925,22 @@ static void FBPGreyReport(UIView *view, BOOL light) {
 }
 #endif
 
+/// A hairline outline in near-white at a low alpha draws a grey rectangle on
+/// black. Nothing else in this file reads borderColor.
+static void FBPSaveBorder(CALayer *layer) {
+    if (objc_getAssociatedObject(layer, kFBPSavedBorder)) return;
+    id box = layer.borderColor ? (id)[UIColor colorWithCGColor:layer.borderColor]
+                               : (id)NSNull.null;
+    objc_setAssociatedObject(layer, kFBPSavedBorder, box, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+static void FBPRestoreBorder(CALayer *layer) {
+    id saved = objc_getAssociatedObject(layer, kFBPSavedBorder);
+    if (!saved) return;
+    layer.borderColor = (saved == NSNull.null) ? NULL : ((UIColor *)saved).CGColor;
+    objc_setAssociatedObject(layer, kFBPSavedBorder, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
 #pragma mark - Per-view apply
 
 /// YES when the layer colour is just the view colour resolved, one storage. A
@@ -921,6 +971,7 @@ static void FBPApplyView(UIView *view, BOOL active) {
         if (!FBPWasTouched(view)) return;
         FBPRestoreViewBG(view);
         FBPRestoreLayerBG(view.layer);
+        FBPRestoreBorder(view.layer);
         FBPApplySublayers(view.layer, NO);
         FBPClearTouched(view);
         return;
@@ -957,10 +1008,15 @@ static void FBPApplyView(UIView *view, BOOL active) {
 
     UIColor *bg = view.backgroundColor;
     if (bg) {
-        if (!FBPIsOurPaint(bg) && FBPColorIsDark(FBPResolve(bg))) {
+        UIColor *shown = FBPResolve(bg);
+        if (!FBPIsOurPaint(bg) && FBPColorIsDark(shown)) {
             FBPSaveViewBG(view, bg);
             FBPMarkTouched(view);
             view.backgroundColor = FBPBlackFollowingAppearance(bg);
+        } else if (!FBPIsOurPaint(bg) && FBPColorIsPaleWash(shown)) {
+            FBPSaveViewBG(view, bg);
+            FBPMarkTouched(view);
+            view.backgroundColor = FBPWashFollowingAppearance(shown);
         }
     } else if (FBPCGColorIsDark(view.layer.backgroundColor)) {
         // ComponentKit cards that paint straight onto their own layer, written
@@ -986,6 +1042,14 @@ static void FBPApplyView(UIView *view, BOOL active) {
         FBPSaveLayerBG(view.layer);
         FBPMarkTouched(view);
         view.layer.backgroundColor = FBPBlackCGKeepingAlpha(layerBG);
+    }
+
+    CGColorRef border = view.layer.borderColor;
+    if (view.layer.borderWidth > 0 && border && !FBPCGIsPureBlack(border) &&
+        FBPColorIsPaleWash([UIColor colorWithCGColor:border])) {
+        FBPSaveBorder(view.layer);
+        FBPMarkTouched(view);
+        view.layer.borderColor = FBPBlackCGKeepingAlpha(border);
     }
 
     // Cards and fades that paint onto a sublayer rather than the view or its own
