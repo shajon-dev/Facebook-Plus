@@ -252,9 +252,21 @@ static CGColorRef FBPBlackCGKeepingAlpha(CGColorRef cg) {
 /// it is the same object either side of a switch and only its answer changes.
 /// A flat black throws that away, and a container Facebook believes unchanged
 /// is never repainted.
+// Set on every colour this file paints with. Wrapping one again nests a
+// provider whose block captures the last one, and a layout pass does that on
+// every painted view: the chain grows without bound, resolving it recurses
+// through every level, and releasing a deep one overruns the stack.
+static const void *kFBPOurPaint = &kFBPOurPaint;
+
+static BOOL FBPIsOurPaint(UIColor *color) {
+    return color && objc_getAssociatedObject(color, kFBPOurPaint) != nil;
+}
+
 static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
+    if (FBPIsOurPaint(original)) return original;
+    UIColor *paint;
     if (@available(iOS 13.0, *)) {
-        return [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
+        paint = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
             if (!gOLEDEnabled || traits.userInterfaceStyle != UIUserInterfaceStyleDark) {
                 return original ?: UIColor.clearColor;
             }
@@ -265,8 +277,12 @@ static UIColor *FBPBlackFollowingAppearance(UIColor *original) {
             // The same test the caller made: a light-locked card keeps its own.
             return FBPColorIsDark(resolved) ? FBPBlackKeepingAlpha(resolved) : resolved;
         }];
+    } else {
+        paint = FBPBlackKeepingAlpha(original);
     }
-    return FBPBlackKeepingAlpha(original);
+    objc_setAssociatedObject(paint, kFBPOurPaint, @YES,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return paint;
 }
 
 #pragma mark - Save / restore
@@ -737,7 +753,7 @@ static void FBPApplyView(UIView *view, BOOL active) {
 
     UIColor *bg = view.backgroundColor;
     if (bg) {
-        if (FBPColorIsDark(FBPResolve(bg))) {
+        if (!FBPIsOurPaint(bg) && FBPColorIsDark(FBPResolve(bg))) {
             FBPSaveViewBG(view, bg);
             FBPMarkTouched(view);
             view.backgroundColor = FBPBlackFollowingAppearance(bg);
@@ -766,6 +782,8 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
     // it again is how a restored view ends up black and unrecorded.
     if (gFBPRestoring) return color;
     if (FBPOLEDActiveFor(self) && !FBPOLEDSkip(self)) {
+        // Already ours: it is saved, flagged and black on its own.
+        if (FBPIsOurPaint(color)) return color;
         if (FBPColorIsDark(FBPResolve(color))) {
             // Still saved and flagged: the layer and sublayer paths have no
             // dynamic equivalent and the restore pass walks both.
@@ -1058,7 +1076,35 @@ static void FBPAdoptAppearance(UIUserInterfaceStyle style) {
 /// Idempotent. Two populations, because neither covers the other: the register
 /// holds every painted view, mounted or not, while the tree walk finds surfaces
 /// about to be blackened, which are not on the register yet.
+// A sweep is only ever useful when the answer has moved: the layout hooks
+// already paint whatever mounts while it stays put. The budget covers the ticks
+// after a switch, because UIKit has not finished answering on the first one.
+static BOOL gFBPLastSweptActive = NO;
+static int gFBPSweepBudget = 0;
+
 static void FBPSweepAppearance(void) {
+    // The scene is the only honest answer: Facebook pins its windows' own
+    // style, so a window cannot be asked. One read per tick is what makes this
+    // reliable without a trait callback, which iOS 18 never sends.
+    if (@available(iOS 13.0, *)) {
+        UIUserInterfaceStyle style = FBPSystemStyleFromScenes();
+        if (style != UIUserInterfaceStyleUnspecified && style != gFBPSystemStyle) {
+            FBPUpdateSystemStyle(style);
+            FBPOLEDLogState("sweep-style-changed");
+            FBPAdoptAppearance(style);
+        }
+    }
+
+    BOOL active = FBPOLEDActive();
+    if (active != gFBPLastSweptActive) {
+        gFBPLastSweptActive = active;
+        gFBPSweepBudget = 3;
+    }
+    // The common case, twice a second for the life of the process: two global
+    // loads and a branch. Walking the app here is what made scrolling stutter.
+    if (gFBPSweepBudget <= 0) return;
+    gFBPSweepBudget--;
+
     NSHashTable<UIView *> *table = FBPTouchedViews();
     NSArray<UIView *> *painted;
     // A snapshot: FBPApplyView takes a restored view off the list as it goes.
@@ -1076,6 +1122,7 @@ static void FBPSweepAppearance(void) {
     }
     FBPNudgeOLEDRelayout();
 
+#if FBP_DIAG
     NSUInteger remaining;
     @synchronized (table) { remaining = table.count; }
     // After a switch to Light everything painted should have come back, so
@@ -1088,6 +1135,9 @@ static void FBPSweepAppearance(void) {
                 stats.visited, stats.deepest, stats.capped,
                 stats.restored, stats.stray);
     }
+#else
+    (void)listed;
+#endif
 }
 
 /// Runs the sweep on a slow repeat for the life of the process, because
@@ -1111,6 +1161,14 @@ static void FBPStartAppearanceSweep(void) {
 static void FBPTrackWindowStyle(UIWindow *window) {
     if (@available(iOS 13.0, *)) {
         if (!window) return;
+
+        // Windows lay out constantly while scrolling, and the scene read below
+        // is not free. The sweep catches a switch within a tick regardless, so
+        // this path only has to be prompter than that, not run every pass.
+        static CFTimeInterval last = 0;
+        CFTimeInterval now = CACurrentMediaTime();
+        if (now - last < 0.25) return;
+        last = now;
 
         // Our own windows follow iOS directly, a different question.
         if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) return;
