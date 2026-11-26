@@ -929,6 +929,10 @@ static NSArray<NSDictionary *> *FBPCategoryCatalog(void) {
                            @"doc.text", nil),
                 FBPSwitchRow(FBPKeyLogsKeep, FBPL(@"row.logskeep.title"),
                              FBPL(@"row.logskeep.desc"), @"tray.and.arrow.down.fill"),
+#if FBP_DIAG
+                FBPSwitchRow(FBPKeyOLEDGreyDiag, FBPL(@"row.oledgreydiag.title"),
+                             FBPL(@"row.oledgreydiag.desc"), @"ladybug.fill"),
+#endif
             ]),
             FBPSection(nil, @[
                 FBPActionRow(kActionLogExport, FBPL(@"row.logexport.title"),

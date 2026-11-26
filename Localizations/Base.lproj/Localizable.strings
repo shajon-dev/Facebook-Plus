@@ -230,6 +230,8 @@
 "row.oled.title" = "OLED Dark Mode";
 "row.oleddividers.desc" = "Keeps the faint lines between posts in OLED mode. Turn off for a fully black feed.";
 "row.oleddividers.title" = "Show Post Dividers";
+"row.oledgreydiag.desc" = "Logs large surfaces OLED left grey, for bug reports. Diagnostic builds only.";
+"row.oledgreydiag.title" = "Log Grey Surfaces";
 "row.plusmode.desc" = "How the Plus features are unlocked. If one does not work, try the other.";
 "row.plusmode.direct" = "Direct hook";
 "row.plusmode.title" = "Unlock Method";

@@ -75,6 +75,7 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         // The diagnostic log is kept across launches by default; everything the
         // tweak does is captured into it, so there are no per-feature log toggles.
         FBPKeyLogsKeep         : @YES,
+        FBPKeyOLEDGreyDiag     : @NO,
         FBPKeyKeychainRebind   : @YES,
         FBPKeyNotifClientSync  : @YES,
         FBPKeyNotifyUpdates    : @YES,

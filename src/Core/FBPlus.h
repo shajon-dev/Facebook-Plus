@@ -99,6 +99,7 @@ extern NSString *const FBPKeyLinksInSafari;     // Open external links in the de
 
 // Diagnostics
 extern NSString *const FBPKeyLogsKeep;          // keep the diagnostic log across launches
+extern NSString *const FBPKeyOLEDGreyDiag;      // log OLED surfaces left grey (FBP_DIAG only)
 // Sideload compatibility
 /// Pins keychain calls to the probed access group. SecRebinds.xm cannot see
 /// this header and reads the raw @c "keychainRebind" key: keep the two in step.

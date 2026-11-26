@@ -23,7 +23,9 @@
 #import "FBPHeaders.h"
 
 #import <QuartzCore/QuartzCore.h>
+#import <dlfcn.h>
 #import <objc/runtime.h>
+#import <stdatomic.h>
 
 /// Cached, refreshed on the settings-changed notification: the hot path must
 /// not touch NSUserDefaults.
@@ -33,9 +35,49 @@ static BOOL gOLEDEnabled = NO;
 /// black, off blacks the hairlines out too.
 static BOOL gOLEDDividers = YES;
 
+#if FBP_DIAG
+static void FBPGreyDiagSwitch(BOOL on);
+#endif
+
 static void FBPRefreshOLED(void) {
     gOLEDEnabled = FBPEnabled(FBPKeyOLED);
     gOLEDDividers = FBPEnabled(FBPKeyOLEDDividers);
+#if FBP_DIAG
+    FBPGreyDiagSwitch(FBPEnabled(FBPKeyOLEDGreyDiag));
+#endif
+}
+
+/// Facebook ships over six thousand names beginning FBP, views among them, so a
+/// prefix cannot say whose a class is. The Mach-O image can. One answer per
+/// Class in a direct-mapped table: a hit is a hash and an atomic load.
+static BOOL FBPClassIsOurs(Class cls) {
+    static _Atomic uintptr_t cache[256];
+    static const char *ourPath;
+    static void *ourBase;
+    static dispatch_once_t once;
+    if (!cls) return NO;
+    dispatch_once(&once, ^{
+        Dl_info info;
+        if (dladdr((const void *)&FBPClassIsOurs, &info)) {
+            ourPath = info.dli_fname;
+            ourBase = info.dli_fbase;
+        }
+    });
+    uintptr_t key = (uintptr_t)(__bridge void *)cls;
+    _Atomic uintptr_t *slot = &cache[(key >> 4) & 255];
+    uintptr_t seen = atomic_load_explicit(slot, memory_order_relaxed);
+    if ((seen & ~(uintptr_t)1) == key) return (BOOL)(seen & 1);
+    // The load address first: the two paths for one image can differ by a
+    // /private prefix, and answering NO for our own views would black them out.
+    Dl_info where;
+    BOOL mine = ourBase && dladdr((__bridge const void *)cls, &where) &&
+                where.dli_fbase == ourBase;
+    if (!mine) {
+        const char *image = class_getImageName(cls);
+        mine = ourPath && image && strcmp(image, ourPath) == 0;
+    }
+    atomic_store_explicit(slot, key | (uintptr_t)mine, memory_order_relaxed);
+    return mine;
 }
 
 /// One of Facebook's own windows, never ours, preferring the key one: ours
@@ -45,7 +87,7 @@ static UIWindow *FBPAppKeyWindow(void) {
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-            if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+            if (FBPClassIsOurs(window.class)) continue;
             if (window.isKeyWindow) return window;
             if (!fallback) fallback = window;
         }
@@ -135,7 +177,7 @@ static void FBPOLEDLogState(const char *when) {
         for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
             if (![scene isKindOfClass:UIWindowScene.class]) continue;
             for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-                if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+                if (FBPClassIsOurs(window.class)) continue;
                 if (window.isKeyWindow) { key = window; break; }
                 if (!key) key = window;
             }
@@ -218,7 +260,7 @@ static BOOL FBPCGColorIsDark(CGColorRef cg) {
 
 /// The tweak's own UI keeps its own colours.
 static BOOL FBPOLEDSkip(UIView *view) {
-    return [NSStringFromClass([view class]) hasPrefix:@"FBP"];
+    return FBPClassIsOurs([view class]);
 }
 
 /// YES when this view is shown in LIGHT appearance whatever the window is
@@ -708,7 +750,166 @@ static void FBPApplyHeaderTree(UIView *view, int depth, BOOL active) {
     }
 }
 
+static BOOL FBPCGIsPureBlack(CGColorRef cg);
+
+#pragma mark - Why-still-grey diagnostic
+
+#if FBP_DIAG
+// Main thread only: layoutSubviews and the settings notification.
+static BOOL gFBPGreyDiag = NO;
+static NSMutableSet<NSString *> *gFBPGreySeen;
+static NSUInteger gFBPGreyLines;
+static const NSUInteger kFBPGreyMaxLines = 80;
+static const CGFloat kFBPGreyMinW = 150, kFBPGreyMinH = 100;
+
+static void FBPGreyDiagSwitch(BOOL on) {
+    if (on == gFBPGreyDiag) return;
+    gFBPGreyDiag = on;
+    if (!on) {
+        FBPDiag(@"oledgrey", @"stop lines=%lu", (unsigned long)gFBPGreyLines);
+        gFBPGreySeen = nil;
+        return;
+    }
+    gFBPGreySeen = [NSMutableSet set];
+    gFBPGreyLines = 0;
+    FBPDiag(@"oledgrey",
+            @"start luma<%.2f chroma<%.2f alpha>=0.20 gate>=%.0fx%.0f cap=%lu",
+            kFBPBgMaxLuma, kFBPBgMaxChroma, kFBPGreyMinW, kFBPGreyMinH,
+            (unsigned long)kFBPGreyMaxLines);
+}
+
+static BOOL FBPGreySRGB(CGColorRef cg, CGFloat out[4]) {
+    if (!cg) return NO;
+    static CGColorSpaceRef srgb;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ srgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB); });
+    CGColorRef c = CGColorCreateCopyByMatchingToColorSpace(
+        srgb, kCGRenderingIntentDefault, cg, NULL);
+    if (!c) return NO;
+    BOOL ok = CGColorGetNumberOfComponents(c) == 4;
+    if (ok) memcpy(out, CGColorGetComponents(c), 4 * sizeof(CGFloat));
+    CGColorRelease(c);
+    return ok;
+}
+
+static NSString *FBPGreyText(CGColorRef cg) {
+    CGFloat c[4];
+    if (!cg) return @"nil";
+    if (!FBPGreySRGB(cg, c)) return @"?";
+    return [NSString stringWithFormat:@"%.3f,%.3f,%.3f,%.2f", c[0], c[1], c[2], c[3]];
+}
+
+/// Visible and not already black.
+static BOOL FBPGreyPaints(CGColorRef cg) {
+    CGFloat c[4];
+    return FBPGreySRGB(cg, c) && c[3] >= 0.2 && MAX(c[0], MAX(c[1], c[2])) >= 0.02;
+}
+
+/// Sublayers that paint on their own, not a subview's backing layer.
+static NSUInteger FBPGreyPaintingSublayers(CALayer *layer, NSUInteger *total) {
+    NSUInteger n = 0, seen = 0;
+    *total = layer.sublayers.count;
+    for (CALayer *sub in layer.sublayers) {
+        if (++seen > 16) break;
+        if ([sub.delegate isKindOfClass:UIView.class]) continue;
+        BOOL paints = FBPGreyPaints(sub.backgroundColor);
+        if (!paints && [sub isKindOfClass:CAShapeLayer.class]) {
+            paints = FBPGreyPaints(((CAShapeLayer *)sub).fillColor);
+        }
+        if (!paints && [sub isKindOfClass:CAGradientLayer.class]) {
+            paints = ((CAGradientLayer *)sub).colors.count > 0;
+        }
+        if (paints) n++;
+    }
+    return n;
+}
+
+static NSString *FBPGreyNearestVC(UIView *view) {
+    UIResponder *r = view;
+    for (int i = 0; r && i < 64; i++, r = r.nextResponder) {
+        if ([r isKindOfClass:UIViewController.class]) return NSStringFromClass(r.class);
+    }
+    return @"-";
+}
+
+/// One line per surface OLED looked at and left grey.
+static void FBPGreyReport(UIView *view, BOOL light) {
+    if (!gFBPGreySeen || gFBPGreyLines >= kFBPGreyMaxLines) return;
+    UIWindow *window = view.window;
+    CGRect box = view.bounds;
+    if (!window || box.size.width < kFBPGreyMinW || box.size.height < kFBPGreyMinH) return;
+
+    UIColor *bg = view.backgroundColor;
+    CGColorRef layerCG = view.layer.backgroundColor;
+    if (!light) {
+        BOOL wouldDarken = bg ? (!FBPIsOurPaint(bg) && FBPColorIsDark(FBPResolve(bg)))
+                              : FBPCGColorIsDark(layerCG);
+        if (wouldDarken) return;
+    }
+
+    UIColor *own = bg;
+    if (bg) {
+        @try {
+            own = [bg resolvedColorWithTraitCollection:view.traitCollection] ?: bg;
+        } @catch (__unused NSException *e) {}
+    }
+    NSString *liveText = FBPGreyText(own.CGColor);
+    BOOL ownPaints = FBPGreyPaints(own.CGColor);
+    NSUInteger subTotal = 0;
+    NSUInteger subPaint = FBPGreyPaintingSublayers(view.layer, &subTotal);
+    if (!ownPaints && !FBPGreyPaints(layerCG) && subPaint == 0) return;
+
+    NSString *cls = NSStringFromClass(view.class);
+    NSString *vc = FBPGreyNearestVC(view);
+    NSString *key = [NSString stringWithFormat:@"%@|%@", cls, vc];
+    if ([gFBPGreySeen containsObject:key]) return;
+    [gFBPGreySeen addObject:key];
+    gFBPGreyLines++;
+
+    UIColor *tested = bg ? FBPResolve(bg) : (layerCG ? [UIColor colorWithCGColor:layerCG] : nil);
+    NSString *darkText = FBPGreyText(tested.CGColor);
+    CGFloat r = 0, g = 0, b = 0, a = 0, luma = -1, chroma = -1;
+    if ([tested getRed:&r green:&g blue:&b alpha:&a]) {
+        luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        chroma = MAX(r, MAX(g, b)) - MIN(r, MIN(g, b));
+    } else if ([tested getWhite:&r alpha:&a]) {
+        luma = r;
+        chroma = 0;
+    }
+
+    CGRect f = [view convertRect:box toView:window];
+    FBPDiag(@"oledgrey",
+            @"view why=%s cls=%@ vc=%@ frame=%.0f,%.0f,%.0f,%.0f src=%s "
+            @"bgLive=%@ bgDark=%@ layer=%@ luma=%.3f chroma=%.3f alpha=%.2f "
+            @"paintSub=%lu/%lu light=%d ovr=%ld ours=%d colorCls=%@ n=%lu",
+            light ? "light" : "notdark", cls, vc, f.origin.x, f.origin.y,
+            f.size.width, f.size.height, bg ? "view" : (layerCG ? "layer" : "none"),
+            liveText, darkText, FBPGreyText(layerCG), luma, chroma, a,
+            (unsigned long)subPaint, (unsigned long)subTotal, FBPViewIsLight(view),
+            (long)view.overrideUserInterfaceStyle, FBPIsOurPaint(bg),
+            bg ? NSStringFromClass(bg.class) : @"nil", (unsigned long)gFBPGreyLines);
+}
+#endif
+
 #pragma mark - Per-view apply
+
+/// YES when the layer colour is just the view colour resolved, one storage. A
+/// view that overrides its colour accessor answers NO, and an unreadable colour
+/// answers YES so nothing is touched.
+static BOOL FBPLayerMirrorsView(UIView *view, UIColor *bg) {
+    UIColor *shown = bg;
+    if (@available(iOS 13.0, *)) {
+        shown = [bg resolvedColorWithTraitCollection:view.traitCollection] ?: bg;
+    }
+    UIColor *layerColor = [UIColor colorWithCGColor:view.layer.backgroundColor];
+    CGFloat a[4] = {0}, b[4] = {0};
+    if (![shown getRed:&a[0] green:&a[1] blue:&a[2] alpha:&a[3]] ||
+        ![layerColor getRed:&b[0] green:&b[1] blue:&b[2] alpha:&b[3]]) return YES;
+    for (int i = 0; i < 4; i++) {
+        if (fabs(a[i] - b[i]) > 0.02) return NO;
+    }
+    return YES;
+}
 
 /// The body of UIView -layoutSubviews under OLED: blacken this view's
 /// background, layer and sublayers, or put back everything OLED saved and drop
@@ -734,6 +935,9 @@ static void FBPApplyView(UIView *view, BOOL active) {
             FBPApplySublayers(view.layer, NO);
             FBPClearTouched(view);
         }
+#if FBP_DIAG
+        if (gFBPGreyDiag) FBPGreyReport(view, YES);
+#endif
         return;
     }
 
@@ -769,9 +973,27 @@ static void FBPApplyView(UIView *view, BOOL active) {
         view.backgroundColor = FBPBlackFollowingAppearance(original);
     }
 
+    // Both colours are read again here. For a plain view they are one storage,
+    // so the write above already blackened the layer and it is skipped. React
+    // Native keeps its colour in an ivar and paints the layer itself, so there
+    // the layer is still grey and this is the only pass that reaches it. The
+    // write repeats for the same reason: React Native repaints on every update.
+    UIColor *current = view.backgroundColor;
+    CGColorRef layerBG = view.layer.backgroundColor;
+    if (current && layerBG && FBPCGColorIsDark(layerBG) &&
+        !FBPCGIsPureBlack(layerBG) &&
+        (FBPIsOurPaint(current) || !FBPLayerMirrorsView(view, current))) {
+        FBPSaveLayerBG(view.layer);
+        FBPMarkTouched(view);
+        view.layer.backgroundColor = FBPBlackCGKeepingAlpha(layerBG);
+    }
+
     // Cards and fades that paint onto a sublayer rather than the view or its own
     // layer background. Cheap: most views have no sublayers.
     FBPApplySublayers(view.layer, YES);
+#if FBP_DIAG
+    if (gFBPGreyDiag) FBPGreyReport(view, NO);
+#endif
 }
 
 /// The value to hand the original -setBackgroundColor:. Inactive drops any
@@ -1030,7 +1252,7 @@ static void FBPNudgeOLEDRelayout(void) {
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-            if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+            if (FBPClassIsOurs(window.class)) continue;
             FBPNudgeLayout(window, 0);
         }
     }
@@ -1049,7 +1271,7 @@ static void FBPAdoptAppearance(UIUserInterfaceStyle style) {
         for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
             if (![scene isKindOfClass:UIWindowScene.class]) continue;
             for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-                if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) continue;
+                if (FBPClassIsOurs(window.class)) continue;
                 window.overrideUserInterfaceStyle = style;
                 [window setNeedsLayout];
                 [pinned addObject:window];
@@ -1116,7 +1338,7 @@ static void FBPSweepAppearance(void) {
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *each in ((UIWindowScene *)scene).windows) {
-            if ([NSStringFromClass(each.class) hasPrefix:@"FBP"]) continue;
+            if (FBPClassIsOurs(each.class)) continue;
             FBPApplyTree(each, 0, &stats);
         }
     }
@@ -1171,7 +1393,7 @@ static void FBPTrackWindowStyle(UIWindow *window) {
         last = now;
 
         // Our own windows follow iOS directly, a different question.
-        if ([NSStringFromClass(window.class) hasPrefix:@"FBP"]) return;
+        if (FBPClassIsOurs(window.class)) return;
         UIUserInterfaceStyle style = FBPSystemStyleFromScenes();
         if (style == UIUserInterfaceStyleUnspecified || style == gFBPSystemStyle) return;
 
@@ -1180,6 +1402,61 @@ static void FBPTrackWindowStyle(UIWindow *window) {
 
         FBPSweepAppearance();
         FBPAdoptAppearance(style);
+    }
+}
+
+/// Re-applies after React Native has painted. Guarded, because the write goes
+/// back through the setter hook.
+static BOOL gFBPReactReasserting = NO;
+
+static void FBPReactReassert(UIView *view) {
+    if (gFBPReactReasserting || !view) return;
+    gFBPReactReasserting = YES;
+    FBPApplyView(view, FBPOLEDActiveFor(view));
+    gFBPReactReasserting = NO;
+}
+
+%group FBPOLEDReact
+
+%hook RCTView
+- (void)setBackgroundColor:(UIColor *)color {
+    FBPTraceFire("oled.RCTView.setBackgroundColor");
+    %orig(FBPBGForSet((UIView *)self, color));
+}
+- (void)displayLayer:(CALayer *)layer {
+    %orig;
+    FBPReactReassert((UIView *)self);
+}
+%end
+
+%hook RCTViewComponentView
+- (void)setBackgroundColor:(UIColor *)color {
+    FBPTraceFire("oled.RCTViewComponentView.setBackgroundColor");
+    %orig(FBPBGForSet((UIView *)self, color));
+}
+- (void)invalidateLayer {
+    %orig;
+    FBPReactReassert((UIView *)self);
+}
+%end
+
+%end // FBPOLEDReact
+
+/// React Native stores its own background instead of calling super, so the
+/// UIView setter hook never sees a Marketplace surface. Only worth installing
+/// where the class really does replace that setter, and the framework carrying
+/// it is loaded late, so this runs on every image.
+static void FBPInstallReactHooks(void) {
+    SEL sel = @selector(setBackgroundColor:);
+    Method base = class_getInstanceMethod(UIView.class, sel);
+    Class rct = objc_getClass("RCTView");
+    Class fabric = objc_getClass("RCTViewComponentView");
+    BOOL overrides = (rct && class_getInstanceMethod(rct, sel) != base) ||
+                     (fabric && class_getInstanceMethod(fabric, sel) != base);
+    if (!overrides) return;
+    FBP_ONCE(gOLEDReact) {
+        %init(FBPOLEDReact);
+        FBPLogOnce(@"oled: React Native background hook installed");
     }
 }
 
@@ -1236,4 +1513,5 @@ void FBPInitOLEDHooks(void) {
         FBPStartAppearanceSweep();
         FBPDiag(@"oled", @"hooks installed, toggle=%d", gOLEDEnabled);
     }
+    FBPInstallReactHooks();
 }

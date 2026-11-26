@@ -57,6 +57,7 @@ NSString *const FBPKeyMetaPlus         = @"metaFacebookPlus";
 NSString *const FBPKeyMetaPlusMode     = @"metaFacebookPlusMode";
 NSString *const FBPKeyLinksInSafari    = @"linksInSafari";
 NSString *const FBPKeyLogsKeep         = @"logsKeep";
+NSString *const FBPKeyOLEDGreyDiag     = @"oledGreyDiag";
 NSString *const FBPKeyKeychainRebind   = @"keychainRebind";
 NSString *const FBPKeyNotifClientSync  = @"notifClientSync";
 NSString *const FBPKeyNotifyUpdates    = @"notifyUpdates";
