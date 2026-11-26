@@ -32,6 +32,9 @@ static SEL FBPMarkSeenLegacySelector(void) {
 /// below lets that one call through.
 static __thread BOOL gAllowSeenPassthrough = NO;
 static __thread BOOL gManualSeenMutationForwarded = NO;
+static BOOL gStorySeenManagerHookInstalled = NO;
+static BOOL gStoryBucketReceiptHookInstalled = NO;
+static BOOL gStoryViewerReceiptHookInstalled = NO;
 
 #pragma mark - Incognito
 
@@ -90,7 +93,10 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
                                    bucket:(id)bucket
                          idempotenceToken:(id)token {
     FBPTraceFire("story.FBSnacksUnifiedSeenStateMutator.markForBucket");
-    if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
+    if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) {
+        FBPLogOnce(@"Ghost Mode blocked a Story bucket receipt request");
+        return;
+    }
     %orig;
     if (gAllowSeenPassthrough) gManualSeenMutationForwarded = YES;
 }
@@ -106,7 +112,10 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
                                 idempotenceToken:(id)token
                       bucketToStoryCardIdFilters:(id)filters {
     FBPTraceFire("story.FBSnacksUnifiedSeenStateMutator.markForViewerSession");
-    if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
+    if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) {
+        FBPLogOnce(@"Ghost Mode blocked a Story viewer-session receipt request");
+        return;
+    }
     %orig;
     if (gAllowSeenPassthrough) gManualSeenMutationForwarded = YES;
 }
@@ -166,16 +175,26 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
         return;
     }
 
+    SEL current = NSSelectorFromString(
+        @"markCurrentThreadAsSeen:bucket:session:shouldMarkThreadSeenStateUpdates:"
+        @"skipSeenMutationForLastUnseenThread:");
     SEL modern = FBPMarkSeenModernSelector();
     SEL legacy = FBPMarkSeenLegacySelector();
-    SEL selector = [manager respondsToSelector:modern] ? modern
-                 : ([manager respondsToSelector:legacy] ? legacy : NULL);
+    SEL selector = [manager respondsToSelector:current] ? current
+                 : ([manager respondsToSelector:modern] ? modern
+                 : ([manager respondsToSelector:legacy] ? legacy : NULL));
     if (!selector || !thread || !bucket || !session) {
         [FBPToastManager.shared showMessage:@"Could not mark this story as seen" success:NO];
         return;
     }
 
     NSMethodSignature *signature = [manager methodSignatureForSelector:selector];
+    NSUInteger expectedArguments = selector == legacy ? 6 : 7;
+    if (signature.numberOfArguments != expectedArguments) {
+        FBPLog(@"manual Story mark: unexpected signature for %@", NSStringFromSelector(selector));
+        [FBPToastManager.shared showMessage:@"Could not mark this story as seen" success:NO];
+        return;
+    }
     NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
     invocation.target = manager;
     invocation.selector = selector;
@@ -190,10 +209,12 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     BOOL previousPassthrough = gAllowSeenPassthrough;
     BOOL previousForwarded = gManualSeenMutationForwarded;
     BOOL forwarded = NO;
+    BOOL invoked = NO;
     gAllowSeenPassthrough = YES;
     gManualSeenMutationForwarded = NO;
     @try {
         [invocation invoke];
+        invoked = YES;
         forwarded = gManualSeenMutationForwarded;
     } @catch (NSException *exception) {
         FBPLog(@"could not mark story as seen: %@", exception.reason);
@@ -202,9 +223,11 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
         gManualSeenMutationForwarded = previousForwarded;
     }
 
-    [FBPToastManager.shared showMessage:forwarded ? @"Story view receipt requested"
-                                                 : @"Could not confirm Story view receipt"
-                                success:forwarded];
+    FBPLog(@"manual Story mark via %@: invoked=%d, synchronous receipt observed=%d",
+           NSStringFromSelector(selector), invoked, forwarded);
+    [FBPToastManager.shared showMessage:invoked ? @"Mark as seen requested"
+                                               : @"Could not mark this story as seen"
+                                success:invoked];
 }
 
 /// Asks first, then marks seen. Mark-as-seen is the eye button's only action, so
@@ -367,6 +390,7 @@ static BOOL gStoryRowInstalled = NO;
 // "..." button, where a user already looks for story actions.
 
 static const void *kStoryButtonTargetKey = &kStoryButtonTargetKey;
+static const void *kStoryGhostWarningKey = &kStoryGhostWarningKey;
 
 static void FBPInstallStoryFallbackButton(UIViewController *controller) {
     if (gStoryRowInstalled) return;
@@ -434,6 +458,13 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
     FBPTraceFire("story.FBSnacksBucketViewController.viewDidLayoutSubviews");
     %orig;
     FBPInstallStoryFallbackButton(self);
+    if (FBPEnabled(FBPKeyAnonymousStories) && self.view.window &&
+        !(gStorySeenManagerHookInstalled && gStoryBucketReceiptHookInstalled &&
+          gStoryViewerReceiptHookInstalled) &&
+        !objc_getAssociatedObject(self, kStoryGhostWarningKey)) {
+        objc_setAssociatedObject(self, kStoryGhostWarningKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [FBPToastManager.shared showMessage:@"Ghost Mode may not hide this view" success:NO];
+    }
 }
 
 %end
@@ -537,10 +568,16 @@ void FBPInitStoryHooks(void) {
     Class seenManager = objc_getClass("FBSnacksBucketsSeenStateManager");
     if (seenManager) {
         if ([seenManager instancesRespondToSelector:FBPMarkSeenModernSelector()]) {
-            FBP_ONCE(gSeenModern) { %init(FBPStorySeenModern); }
+            FBP_ONCE(gSeenModern) {
+                %init(FBPStorySeenModern);
+                gStorySeenManagerHookInstalled = YES;
+            }
         }
         if ([seenManager instancesRespondToSelector:FBPMarkSeenLegacySelector()]) {
-            FBP_ONCE(gSeenLegacy) { %init(FBPStorySeenLegacy); }
+            FBP_ONCE(gSeenLegacy) {
+                %init(FBPStorySeenLegacy);
+                gStorySeenManagerHookInstalled = YES;
+            }
         }
     }
 
@@ -553,10 +590,16 @@ void FBPInitStoryHooks(void) {
     BOOL hasViewerMutation = [seenMutator instancesRespondToSelector:
         @selector(markUnifiedThreadsAsSeenForViewerSession:idempotenceToken:bucketToStoryCardIdFilters:)];
     if (hasBucketMutation) {
-        FBP_ONCE(gSeenMutatorBucket) { %init(FBPStorySeenMutatorBucket); }
+        FBP_ONCE(gSeenMutatorBucket) {
+            %init(FBPStorySeenMutatorBucket);
+            gStoryBucketReceiptHookInstalled = YES;
+        }
     }
     if (hasViewerMutation) {
-        FBP_ONCE(gSeenMutatorViewer) { %init(FBPStorySeenMutatorViewer); }
+        FBP_ONCE(gSeenMutatorViewer) {
+            %init(FBPStorySeenMutatorViewer);
+            gStoryViewerReceiptHookInstalled = YES;
+        }
     }
     if (!hasBucketMutation && !hasViewerMutation) {
         FBPLogOnce(@"FBSnacksUnifiedSeenStateMutator send methods not found — "
