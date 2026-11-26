@@ -160,10 +160,28 @@ static FBPAlert *gFBPAlertShowing;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [card.contentView addSubview:stack];
 
+    // Sixty percent of the height above the card, forty below: dead centre
+    // reads as unplaced, and this is where a thumb already is. Breakable, so a
+    // tall card on a short screen is pushed back up by the floor below rather
+    // than running off the bottom.
+    NSLayoutConstraint *lowered =
+        [NSLayoutConstraint constraintWithItem:card
+                                     attribute:NSLayoutAttributeCenterY
+                                     relatedBy:NSLayoutRelationEqual
+                                        toItem:host
+                                     attribute:NSLayoutAttributeCenterY
+                                    multiplier:1.2
+                                      constant:0.0];
+    lowered.priority = UILayoutPriorityDefaultHigh;
+
     CGFloat width = MIN(300.0, CGRectGetWidth(host.bounds) - 72.0);
     [NSLayoutConstraint activateConstraints:@[
         [card.centerXAnchor constraintEqualToAnchor:host.centerXAnchor],
-        [card.centerYAnchor constraintEqualToAnchor:host.centerYAnchor],
+        lowered,
+        [card.topAnchor constraintGreaterThanOrEqualToAnchor:host.safeAreaLayoutGuide.topAnchor
+                                                   constant:24.0],
+        [host.safeAreaLayoutGuide.bottomAnchor constraintGreaterThanOrEqualToAnchor:card.bottomAnchor
+                                                                          constant:24.0],
         [card.widthAnchor constraintEqualToConstant:width],
         [stack.topAnchor constraintEqualToAnchor:card.contentView.topAnchor constant:24.0],
         [stack.leadingAnchor constraintEqualToAnchor:card.contentView.leadingAnchor constant:20.0],
