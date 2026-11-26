@@ -1006,6 +1006,9 @@ class FacebookPlus:
         print("  --install     Sign + install over USB (devicectl, then ideviceinstaller).")
         print("                Given ALONE it skips the build and installs the existing")
         print("                packages/ IPA. Multiple devices: asks which one.")
+        print("  --both        One build, both phones: the jailbroken one over SSH and")
+        print("                the sideloaded one over USB. -u picks the sideloaded device;")
+        print("                the rest comes from .env. Implies --install.")
         print("  --ssh         With --install: dpkg the rootless .deb onto a jailbroken")
         print("                device over SSH instead of sideloading the IPA.")
         print("  --host IP     SSH to this device directly over the network (skips iproxy)")
@@ -1054,6 +1057,7 @@ class FacebookPlus:
         do_install = False
         device_sel = ""
         use_ssh = False
+        install_both = False
         ssh_host = ""
         ssh_port = 2222
         ssh_key = ""
@@ -1087,6 +1091,9 @@ class FacebookPlus:
                 do_install = True
             elif arg == "--ssh":
                 use_ssh = True
+            elif arg == "--both":
+                do_install = True
+                install_both = True
             elif arg == "--host":
                 if index + 1 >= len(args):
                     Log.error("--host requires an IP address.")
@@ -1129,11 +1136,20 @@ class FacebookPlus:
                 return 1
             index += 1
 
+        # One build, both phones: the jailbroken one over SSH and the sideloaded
+        # one over USB. Each side keeps its own device from .env, and -u selects
+        # the sideloaded one, since the SSH side is reached by host.
+        usb_udid = device_sel
+        if install_both:
+            use_ssh = True
+
         # Fall back to the UUID in .env when none was given: the jailbroken
         # device for an SSH install, the sideload device for a USB install.
         if not device_sel:
             device_sel = os.environ.get(
                 "JAILBROKEN_UUID" if use_ssh else "SIDELOAD_UUID", "")
+        if not usb_udid:
+            usb_udid = os.environ.get("SIDELOAD_UUID", "")
 
         ssh = SSHInstaller(self.paths, self.control, host=ssh_host, port=ssh_port, key=ssh_key, udid=device_sel, no_restart=ssh_no_restart) if use_ssh else None
 
@@ -1141,16 +1157,19 @@ class FacebookPlus:
         # install what is already sitting in packages/.
         if do_install and not (build_rootless or build_rootfull or build_roothide
                                or build_trollfools or force_ipa or debug):
+            status = 0
             if ssh:
-                return self.install_existing_ssh(ssh)
-            return self.install_existing_usb(device_sel, drop_nse)
+                status = self.install_existing_ssh(ssh)
+            if install_both or not ssh:
+                status = self.install_existing_usb(usb_udid, drop_nse) or status
+            return status
 
         # Nothing chosen → build the full release set (all three .deb schemes and
         # the TrollFools zip), the same set a release ships.
         if not (build_rootless or build_rootfull or build_roothide or build_trollfools):
             build_rootless = build_rootfull = build_roothide = build_trollfools = True
         # Injection and a USB install both need the rootless build.
-        if (force_ipa or (do_install and not use_ssh)) and not build_rootless:
+        if (force_ipa or install_both or (do_install and not use_ssh)) and not build_rootless:
             build_rootless = True
 
         labels = []
@@ -1173,16 +1192,16 @@ class FacebookPlus:
         injected = None
         # SSH installs the raw .deb, so the sideload IPA step is skipped for it
         # unless --ipa was asked for explicitly.
-        if not skip_ipa and (not use_ssh or force_ipa):
+        if not skip_ipa and (not use_ssh or force_ipa or install_both):
             rootless_deb = builder.output_deb("rootless") if build_rootless else None
             injected = IpaInjector(self.paths, self.control, debug).inject(rootless_deb)
 
         if do_install:
             if ssh:
                 ssh.install(builder.output_deb("rootless"))
-            else:
+            if install_both or not ssh:
                 installer = DeviceInstaller(self.paths)
-                udid = installer.select_udid(device_sel)
+                udid = installer.select_udid(usb_udid)
                 self._purge_signed()
                 signed = Signer(self.paths).sign(injected, udid, drop_nse=drop_nse)
                 if installer.install(signed or injected, udid) and signed:
