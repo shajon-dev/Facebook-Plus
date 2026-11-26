@@ -61,8 +61,10 @@ static NSString *const kSuiteName = @"com.shajon.fbplus";
         FBPKeyFeedLike         : @YES,
         FBPKeyOLED             : @NO,
         FBPKeyOLEDDividers     : @YES,
-        FBPKeyHideSidebarUpgrades     : @YES,
-        FBPKeyHideSidebarAlsoFromMeta : @YES,
+        // Off by default: both hide a whole left-menu section, and a section
+        // whose run cannot be bounded took the rest of the menu with it.
+        FBPKeyHideSidebarUpgrades     : @NO,
+        FBPKeyHideSidebarAlsoFromMeta : @NO,
         FBPKeyDisableHDR       : @NO,
         // Off by default: this unlocks Facebook's paid subscriber UI (and the
         // Meta AI quotas) for preview, so it stays a deliberate opt-in rather
