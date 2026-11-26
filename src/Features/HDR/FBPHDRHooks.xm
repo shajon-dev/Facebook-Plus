@@ -574,7 +574,12 @@ static BOOL FBPHDRHasAll(const char *className, NSArray<NSString *> *selectorNam
 }
 
 void FBPInitHDRHooks(void) {
-    // The installer re-runs on every dyld image load, so this needs a latch.
+    // Every check below is latched. The installer re-runs for each of the
+    // hundreds of images dyld loads, and FBPHDRHasAll walks a class's whole
+    // method list up its superclass chain; a class that is not there yet still
+    // gets another look on a later image.
+    //
+    // This one covers the toggle mirror and its observer.
     FBP_ONCE(gHDRFlag) {
         FBPRefreshHDRFlag();
         [NSNotificationCenter.defaultCenter
@@ -586,87 +591,111 @@ void FBPInitHDRHooks(void) {
         }];
     }
 
-    if (FBPHDRHasAll("UIImageView", @[ @"preferredImageDynamicRange",
+    static BOOL gHDRImageFound = NO;
+    if (!gHDRImageFound && FBPHDRHasAll("UIImageView", @[ @"preferredImageDynamicRange",
                                            @"setPreferredImageDynamicRange:" ])) {
+        gHDRImageFound = YES;
         FBP_ONCE(gHDRImage) {
             %init(FBPHDRImage);
             FBPLogOnce(@"hdr: image dynamic-range clamp installed");
         }
     }
-    if (FBPHDRHasAll("UIImageView", @[ @"imageDynamicRange",
+    static BOOL gHDRImageInternalsFound = NO;
+    if (!gHDRImageInternalsFound && FBPHDRHasAll("UIImageView", @[ @"imageDynamicRange",
                                            @"_maximumEDRForDynamicRange:" ])) {
+        gHDRImageInternalsFound = YES;
         FBP_ONCE(gHDRImageInternals) {
             %init(FBPHDRImageInternals);
             FBPLogOnce(@"hdr: image EDR internals clamp installed");
         }
     }
 
-    if (FBPHDRHasAll("CALayer", @[ @"preferredDynamicRange",
+    static BOOL gHDRLayerRangeFound = NO;
+    if (!gHDRLayerRangeFound && FBPHDRHasAll("CALayer", @[ @"preferredDynamicRange",
                                        @"setPreferredDynamicRange:" ])) {
+        gHDRLayerRangeFound = YES;
         FBP_ONCE(gHDRLayerRange) {
             %init(FBPHDRLayerPreferredRange);
             FBPLogOnce(@"hdr: layer preferredDynamicRange clamp installed");
         }
     }
-    if (FBPHDRHasAll("CALayer", @[ @"wantsExtendedDynamicRangeContent",
+    static BOOL gHDRLayerWantsEDRFound = NO;
+    if (!gHDRLayerWantsEDRFound && FBPHDRHasAll("CALayer", @[ @"wantsExtendedDynamicRangeContent",
                                        @"setWantsExtendedDynamicRangeContent:" ])) {
+        gHDRLayerWantsEDRFound = YES;
         FBP_ONCE(gHDRLayerWantsEDR) {
             %init(FBPHDRLayerWantsEDR);
             FBPLogOnce(@"hdr: layer wantsExtendedDynamicRangeContent clamp installed");
         }
     }
-    if (FBPHDRHasAll("CALayer", @[ @"setContentsMaximumDesiredEDR:",
+    static BOOL gHDRLayerCeilingFound = NO;
+    if (!gHDRLayerCeilingFound && FBPHDRHasAll("CALayer", @[ @"setContentsMaximumDesiredEDR:",
                                        @"setDisplayMaximumDesiredEDR:",
                                        @"setContentsEDRStrength:" ])) {
+        gHDRLayerCeilingFound = YES;
         FBP_ONCE(gHDRLayerCeiling) {
             %init(FBPHDRLayerEDRCeiling);
             FBPLogOnce(@"hdr: layer EDR ceiling clamp installed");
         }
     }
-    if (FBPHDRHasAll("CALayer", @[ @"setToneMapToStandardDynamicRange:" ])) {
+    static BOOL gHDRLayerToneMapFound = NO;
+    if (!gHDRLayerToneMapFound && FBPHDRHasAll("CALayer", @[ @"setToneMapToStandardDynamicRange:" ])) {
+        gHDRLayerToneMapFound = YES;
         FBP_ONCE(gHDRLayerToneMap) {
             %init(FBPHDRLayerToneMap);
             FBPLogOnce(@"hdr: layer tone-map-to-SDR installed");
         }
     }
 
-    if (FBPHDRHasAll("AVPlayerLayer",
+    static BOOL gHDRPlayerToneMapFound = NO;
+    if (!gHDRPlayerToneMapFound && FBPHDRHasAll("AVPlayerLayer",
                  @[ @"setToneMapToStandardDynamicRange:" ])) {
+        gHDRPlayerToneMapFound = YES;
         FBP_ONCE(gHDRPlayerToneMap) {
             %init(FBPHDRPlayerLayerToneMap);
             FBPLogOnce(@"hdr: AVPlayerLayer tone-map-to-SDR installed");
         }
     }
-    if (FBPHDRHasAll("AVSampleBufferDisplayLayer",
+    static BOOL gHDRSampleToneMapFound = NO;
+    if (!gHDRSampleToneMapFound && FBPHDRHasAll("AVSampleBufferDisplayLayer",
                  @[ @"setToneMapToStandardDynamicRange:" ])) {
+        gHDRSampleToneMapFound = YES;
         FBP_ONCE(gHDRSampleToneMap) {
             %init(FBPHDRSampleLayerToneMap);
             FBPLogOnce(@"hdr: AVSampleBufferDisplayLayer tone-map-to-SDR installed");
         }
     }
-    if (FBPHDRHasAll("CAMetalLayer", @[ @"setEDRMetadata:" ])) {
+    static BOOL gHDRMetalMetadataFound = NO;
+    if (!gHDRMetalMetadataFound && FBPHDRHasAll("CAMetalLayer", @[ @"setEDRMetadata:" ])) {
+        gHDRMetalMetadataFound = YES;
         FBP_ONCE(gHDRMetalMetadata) {
             %init(FBPHDRMetalEDRMetadata);
             FBPLogOnce(@"hdr: Metal EDR metadata drop installed");
         }
     }
 
-    if (FBPHDRHasAll("UIScreen", @[ @"currentEDRHeadroom",
+    static BOOL gHDRScreenHeadroomFound = NO;
+    if (!gHDRScreenHeadroomFound && FBPHDRHasAll("UIScreen", @[ @"currentEDRHeadroom",
                                         @"potentialEDRHeadroom" ])) {
+        gHDRScreenHeadroomFound = YES;
         FBP_ONCE(gHDRScreenHeadroom) {
             %init(FBPHDRScreenHeadroom);
             FBPLogOnce(@"hdr: screen EDR headroom clamp installed");
         }
     }
-    if (FBPHDRHasAll("UIScreen", @[ @"maximumDynamicRangeHeadroom",
+    static BOOL gHDRScreenRangeFound = NO;
+    if (!gHDRScreenRangeFound && FBPHDRHasAll("UIScreen", @[ @"maximumDynamicRangeHeadroom",
                                         @"currentDynamicRangeHeadroom" ])) {
+        gHDRScreenRangeFound = YES;
         FBP_ONCE(gHDRScreenRange) {
             %init(FBPHDRScreenDynamicRangeHeadroom);
             FBPLogOnce(@"hdr: screen dynamic-range headroom clamp installed");
         }
     }
-    if (FBPHDRHasAll("UIView", @[ @"maximumDynamicRangeHeadroom",
+    static BOOL gHDRViewRangeFound = NO;
+    if (!gHDRViewRangeFound && FBPHDRHasAll("UIView", @[ @"maximumDynamicRangeHeadroom",
                                       @"currentDynamicRangeHeadroom" ])) {
+        gHDRViewRangeFound = YES;
         FBP_ONCE(gHDRViewRange) {
             %init(FBPHDRViewHeadroom);
             FBPLogOnce(@"hdr: view dynamic-range headroom clamp installed");
