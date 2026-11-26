@@ -11,6 +11,7 @@
 #import "FBPSettingsController.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
+#import "FBPAlert.h"
 #import "FBPSheet.h"
 #import "FBPToast.h"
 #import "FBPAppIconController.h"
@@ -621,25 +622,18 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
         // cancel (or a dismiss) leaves both the UI and the stored preference
         // exactly as they were; only the confirm action commits.
         [sender setOn:NO animated:NO];
-        UIAlertController *alert = [UIAlertController
-            alertControllerWithTitle:confirm[@"title"]
-                             message:confirm[@"message"]
-                      preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
-                                                  style:UIAlertActionStyleCancel
-                                                handler:nil]];
-        [alert addAction:[UIAlertAction actionWithTitle:confirm[@"confirm"]
-                                                  style:UIAlertActionStyleDestructive
-                                                handler:^(UIAlertAction *action) {
+        [FBPAlert showWithTitle:confirm[@"title"]
+                        message:confirm[@"message"]
+                    cancelTitle:FBPL(@"common.cancel")
+                   confirmTitle:confirm[@"confirm"]
+                    destructive:YES
+                      onConfirm:^{
             [sender setOn:YES animated:YES];
             [FBPPrefs.shared setBool:YES forKey:key];
             [FBPPrefs.shared commit];
             if (FBPRowGatesOtherRows(key)) [self.tableView reloadData];
-        }]];
-        // System blue keeps the buttons legible on the alert's light background
-        // (the settings tint is tuned for the black panel, not a system alert).
-        alert.view.tintColor = UIColor.systemBlueColor;
-        [self presentViewController:alert animated:YES completion:nil];
+        }
+                       onCancel:nil];
         return;
     }
 
@@ -1057,6 +1051,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         alertControllerWithTitle:FBPL(@"row.cacheschedule.title")
                          message:nil
                   preferredStyle:UIAlertControllerStyleActionSheet];
+    FBPCenterAlertText(sheet);
 
     void (^choose)(NSString *) = ^(NSString *value) {
         [FBPPrefs.shared setString:value forKey:FBPKeyCacheSchedule];
@@ -1093,6 +1088,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         alertControllerWithTitle:FBPL(@"row.plusmode.title")
                          message:FBPL(@"row.plusmode.desc")
                   preferredStyle:UIAlertControllerStyleActionSheet];
+    FBPCenterAlertText(sheet);
 
     void (^choose)(NSString *) = ^(NSString *mode) {
         [FBPPrefs.shared setString:mode forKey:FBPKeyMetaPlusMode];
@@ -1173,6 +1169,7 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         [UIAlertController alertControllerWithTitle:FBPL(@"reset.title")
                                             message:FBPL(@"reset.message")
                                      preferredStyle:UIAlertControllerStyleAlert];
+    FBPCenterAlertText(alert);
     [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
                                               style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"reset.confirm")

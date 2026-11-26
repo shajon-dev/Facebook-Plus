@@ -12,6 +12,7 @@
 // (comment and post) live separately because they are not ComponentKit buttons.
 
 #import "FBPlus.h"
+#import "FBPAlert.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
 #import "FBPTrace.h"
@@ -210,14 +211,8 @@ static BOOL gConfirmedPassthrough = NO;
         return;
     }
 
+    // The card hosts itself, so no ancestor controller is needed.
     UIView *view = (UIView *)sender;
-    UIViewController *host = view._viewControllerForAncestor
-        ?: [FBPSheetPresenter topViewController];
-    if (!host) {
-        %orig;
-        return;
-    }
-    while (host.presentedViewController) host = host.presentedViewController;
 
     NSString *alertTitle = nil, *message = nil, *verb = nil;
     FBPStringsForKind(kind, &alertTitle, &message, &verb);
@@ -229,44 +224,69 @@ static BOOL gConfirmedPassthrough = NO;
                    view.accessibilityLabel];
     }
 
-    UIAlertController *alert =
-        [UIAlertController alertControllerWithTitle:alertTitle
-                                            message:message
-                                     preferredStyle:UIAlertControllerStyleAlert];
-
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
-                                              style:UIAlertActionStyleCancel
-                                            handler:^(UIAlertAction *action) {
-        FBPSetConfirmPromptVisible(NO);
-    }]];
-
     // Held strongly on purpose: the forwarder must outlive the prompt, or the
     // replay below would message a deallocated object.
     __block id forwarder = self;
-    UIAlertAction *confirm =
-        [UIAlertAction actionWithTitle:verb
-                                 style:UIAlertActionStyleDefault
-                               handler:^(UIAlertAction *action) {
+    FBPSetConfirmPromptVisible(YES);
+    [FBPAlert showWithTitle:alertTitle
+                    message:message
+                cancelTitle:FBPL(@"common.cancel")
+               confirmTitle:verb
+                destructive:NO
+                  onConfirm:^{
         FBPSetConfirmPromptVisible(NO);
         gConfirmedPassthrough = YES;
         [forwarder handleControlEventFromSender:sender withEvent:event];
         gConfirmedPassthrough = NO;
-    }];
-    [alert addAction:confirm];
-    alert.preferredAction = confirm;
-
-    // The settings tint is tuned for the black settings panel and vanishes on
-    // the alert's light background, so use system blue.
-    alert.view.tintColor = UIColor.systemBlueColor;
-    FBPSetConfirmPromptVisible(YES);
-    [host presentViewController:alert animated:YES completion:nil];
+    }
+                   onCancel:^{ FBPSetConfirmPromptVisible(NO); }];
 }
 
 %end
 
 %end // FBPConfirm
 
+#pragma mark - Centred alert text
+
+static const void *kFBPCentreAlert = &kFBPCentreAlert;
+
+void FBPCenterAlertText(UIAlertController *alert) {
+    if (!alert) return;
+    objc_setAssociatedObject(alert, kFBPCentreAlert, @YES,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+static void FBPCentreLabelsIn(UIView *view, int depth) {
+    if (!view || depth > 12) return;
+    if ([view isKindOfClass:UILabel.class]) {
+        UILabel *label = (UILabel *)view;
+        if (label.textAlignment != NSTextAlignmentCenter) {
+            label.textAlignment = NSTextAlignmentCenter;
+        }
+    }
+    for (UIView *sub in view.subviews) FBPCentreLabelsIn(sub, depth + 1);
+}
+
+%group FBPAlertText
+
+%hook UIAlertController
+
+- (void)viewDidLayoutSubviews {
+    %orig;
+    if (objc_getAssociatedObject(self, kFBPCentreAlert)) {
+        FBPCentreLabelsIn(self.view, 0);
+    }
+}
+
+%end
+
+%end // FBPAlertText
+
 void FBPInitConfirmHooks(void) {
+    // Not gated on anything: UIAlertController is always there, and the tweak's
+    // own alerts are presented from every feature.
+    FBP_ONCE(gAlertText) { %init(FBPAlertText); }
+
     if (objc_getClass("CKComponentActionControlForwarder")) {
         FBP_ONCE(gConfirm) { %init(FBPConfirm); }
     } else {

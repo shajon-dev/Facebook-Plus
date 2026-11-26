@@ -398,6 +398,8 @@ static void FBPShowMessage(
                 preferredStyle:
                     UIAlertControllerStyleAlert];
 
+        FBPCenterAlertText(alert);
+
         [alert addAction:
             [UIAlertAction
                 actionWithTitle:FBPL(@"common.ok")

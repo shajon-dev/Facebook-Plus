@@ -4,6 +4,7 @@
 #import "FBPDownloadManagerController.h"
 #import "FBPDownloadStore.h"
 #import "FBPResources.h"
+#import "FBPAlert.h"
 #import "FBPSheet.h"
 #import "FBPToast.h"
 
@@ -545,20 +546,13 @@ static void FBPDownloadLoadAssetThumbnail(NSString *assetIdentifier,
 
 - (void)confirmDeleteJob:(FBPDownloadJob *)job {
     NSString *name = job.title.length ? job.title : job.surfaceName;
-    UIAlertController *alert = [UIAlertController
-        alertControllerWithTitle:FBPL(@"download.manager.delete.title")
-                         message:[NSString stringWithFormat:FBPL(@"download.manager.delete.message"), name]
-                  preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
-                                              style:UIAlertActionStyleCancel
-                                            handler:nil]];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"download.manager.delete")
-                                              style:UIAlertActionStyleDestructive
-                                            handler:^(__unused UIAlertAction *action) {
-        [self deleteJob:job];
-    }]];
-    alert.view.tintColor = FBPTintColor();
-    [self presentViewController:alert animated:YES completion:nil];
+    [FBPAlert showWithTitle:FBPL(@"download.manager.delete.title")
+                    message:[NSString stringWithFormat:FBPL(@"download.manager.delete.message"), name]
+                cancelTitle:FBPL(@"common.cancel")
+               confirmTitle:FBPL(@"download.manager.delete")
+                destructive:YES
+                  onConfirm:^{ [self deleteJob:job]; }
+                   onCancel:nil];
 }
 
 /// Remove the row and, when the video reached Photos, the video itself.

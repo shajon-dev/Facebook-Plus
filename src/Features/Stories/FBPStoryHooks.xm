@@ -2,6 +2,7 @@
 // removal of the tray at the top of News Feed.
 
 #import "FBPlus.h"
+#import "FBPAlert.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
 #import "FBPTrace.h"
@@ -189,29 +190,14 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 /// it is wired straight to a confirmation prompt — matching the like confirmation
 /// — rather than an intermediate one-item menu.
 - (void)confirmAndMarkAsSeen {
-    UIViewController *host = self.controller;
-    if (!host) return;
-    while (host.presentedViewController) host = host.presentedViewController;
-
-    UIAlertController *alert =
-        [UIAlertController alertControllerWithTitle:@"Mark as seen"
-                                            message:@"Send the read receipt for this story now?"
-                                     preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
-                                              style:UIAlertActionStyleCancel
-                                            handler:nil]];
     __weak typeof(self) weakSelf = self;
-    UIAlertAction *confirm =
-        [UIAlertAction actionWithTitle:@"Mark as seen"
-                                 style:UIAlertActionStyleDefault
-                               handler:^(UIAlertAction *action) {
-            [weakSelf markCurrentThreadAsSeen];
-        }];
-    [alert addAction:confirm];
-    alert.preferredAction = confirm;
-
-    alert.view.tintColor = FBPTintColor();
-    [host presentViewController:alert animated:YES completion:nil];
+    [FBPAlert showWithTitle:@"Mark as seen"
+                    message:@"Send the read receipt for this story now?"
+                cancelTitle:FBPL(@"common.cancel")
+               confirmTitle:@"Mark as seen"
+                destructive:NO
+                  onConfirm:^{ [weakSelf markCurrentThreadAsSeen]; }
+                   onCancel:nil];
 }
 
 @end

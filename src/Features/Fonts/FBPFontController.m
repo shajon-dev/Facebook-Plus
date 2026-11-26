@@ -4,6 +4,7 @@
 
 #import "FBPFontController.h"
 #import "FBPlus.h"
+#import "FBPAlert.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
 #import "FBPToast.h"
@@ -358,20 +359,13 @@ static NSString *FBPFontSampleText(void) { return @"Facebook Plus — AaBbGg 012
 }
 
 - (void)confirmDeleteFamily:(NSString *)family {
-    UIAlertController *alert = [UIAlertController
-        alertControllerWithTitle:FBPL(@"fonts.delete.title")
-                         message:[NSString stringWithFormat:FBPL(@"fonts.delete.message"), family]
-                  preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
-                                              style:UIAlertActionStyleCancel
-                                            handler:nil]];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"fonts.delete.confirm")
-                                              style:UIAlertActionStyleDestructive
-                                            handler:^(UIAlertAction *a) {
-        [self deleteFamily:family];
-    }]];
-    alert.view.tintColor = FBPTintColor();
-    [self presentViewController:alert animated:YES completion:nil];
+    [FBPAlert showWithTitle:FBPL(@"fonts.delete.title")
+                    message:[NSString stringWithFormat:FBPL(@"fonts.delete.message"), family]
+                cancelTitle:FBPL(@"common.cancel")
+               confirmTitle:FBPL(@"fonts.delete.confirm")
+                destructive:YES
+                  onConfirm:^{ [self deleteFamily:family]; }
+                   onCancel:nil];
 }
 
 - (void)deleteFamily:(NSString *)family {

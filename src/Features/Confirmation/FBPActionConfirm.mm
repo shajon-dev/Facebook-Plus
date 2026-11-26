@@ -18,6 +18,7 @@
 // the siblings are dropped, and the confirmed replay commits once.
 
 #import "FBPlus.h"
+#import "FBPAlert.h"
 #import "FBPPrefs.h"
 #import "FBPHeaders.h"
 #import "FBPResources.h"
@@ -128,32 +129,17 @@ static IMP FBPResolve(__unsafe_unretained id object, SEL cmd, FBPConfirmKind *ou
 
 static void FBPPresentConfirm(FBPConfirmKind kind, dispatch_block_t onConfirm) {
     dispatch_block_t show = ^{
-        UIViewController *host = [FBPSheetPresenter topViewController];
-        while (host.presentedViewController) host = host.presentedViewController;
-        if (!host) { if (onConfirm) onConfirm(); return; }   // nowhere to ask — fail open
-
-        UIAlertController *alert =
-            [UIAlertController alertControllerWithTitle:FBPL(FBPConfirmTitleKey(kind))
-                                                message:FBPL(FBPConfirmMessageKey(kind))
-                                         preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.cancel")
-                                                  style:UIAlertActionStyleCancel
-                                                handler:^(UIAlertAction *a) {
-            FBPSetConfirmPromptVisible(NO);
-        }]];
-        UIAlertAction *go = [UIAlertAction actionWithTitle:FBPL(FBPConfirmVerbKey(kind))
-                                                     style:UIAlertActionStyleDefault
-                                                   handler:^(UIAlertAction *a) {
+        FBPSetConfirmPromptVisible(YES);
+        [FBPAlert showWithTitle:FBPL(FBPConfirmTitleKey(kind))
+                        message:FBPL(FBPConfirmMessageKey(kind))
+                    cancelTitle:FBPL(@"common.cancel")
+                   confirmTitle:FBPL(FBPConfirmVerbKey(kind))
+                    destructive:NO
+                      onConfirm:^{
             FBPSetConfirmPromptVisible(NO);
             if (onConfirm) onConfirm();
-        }];
-        [alert addAction:go];
-        alert.preferredAction = go;
-        // System blue, not the settings tint: that pale blue is tuned for the
-        // black settings panel and vanishes on a light alert background.
-        alert.view.tintColor = UIColor.systemBlueColor;
-        FBPSetConfirmPromptVisible(YES);
-        [host presentViewController:alert animated:YES completion:nil];
+        }
+                       onCancel:^{ FBPSetConfirmPromptVisible(NO); }];
     };
     if (NSThread.isMainThread) show(); else dispatch_async(dispatch_get_main_queue(), show);
 }

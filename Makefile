@@ -21,6 +21,7 @@ FacebookPlus_FILES = \
 	src/Core/FBPResources.m \
 	src/Core/FBPTrace.m \
 	src/Core/FBPEntry.xm \
+	src/UI/Alert/FBPAlert.m \
 	src/UI/Toast/FBPToastWindow.m \
 	src/UI/Toast/FBPToastView.m \
 	src/UI/Toast/FBPToastManager.m \
@@ -87,6 +88,7 @@ FBP_VERSION := $(shell awk -F': ' '/^Version:/{print $$2; exit}' control)
 FBP_INCLUDE_DIRS = \
 	src/Core \
 	src/UI \
+	src/UI/Alert \
 	src/UI/Toast \
 	src/UI/Sheet \
 	src/Settings \

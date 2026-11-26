@@ -1,4 +1,5 @@
 #import "FBPlus.h"
+#import "FBPAlert.h"
 #import "FBPHeaders.h"
 #import "FBPPrefs.h"
 #import "FBPResources.h"
@@ -160,14 +161,13 @@ static void FBPShowStoryMessage(NSString *message) {
             if (head.length && rest.length) { title = head; body = rest; }
         }
 
-        UIAlertController *alert =
-            [UIAlertController alertControllerWithTitle:title
-                                                message:body
-                                         preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.ok")
-                                                  style:UIAlertActionStyleDefault
-                                                handler:nil]];
-        [vc presentViewController:alert animated:YES completion:nil];
+        [FBPAlert showWithTitle:title
+                        message:body
+                    cancelTitle:nil
+                   confirmTitle:FBPL(@"common.ok")
+                    destructive:NO
+                      onConfirm:nil
+                       onCancel:nil];
     });
 }
 

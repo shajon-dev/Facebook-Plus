@@ -2,6 +2,7 @@
 
 #import "FBPAppIconController.h"
 #import "FBPResources.h"
+#import "FBPAlert.h"
 #import "FBPToast.h"
 
 #import <objc/runtime.h>
@@ -290,14 +291,13 @@ static NSString *const kCell = @"fbp.appicon.row";
 #pragma mark - Helpers
 
 - (void)showError:(NSString *)message {
-    UIAlertController *alert =
-        [UIAlertController alertControllerWithTitle:FBPL(@"row.appicon.title")
-                                            message:message
-                                     preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:FBPL(@"common.ok")
-                                              style:UIAlertActionStyleDefault
-                                            handler:nil]];
-    [self presentViewController:alert animated:YES completion:nil];
+    [FBPAlert showWithTitle:FBPL(@"row.appicon.title")
+                    message:message
+                cancelTitle:nil
+               confirmTitle:FBPL(@"common.ok")
+                destructive:NO
+                  onConfirm:nil
+                   onCancel:nil];
 }
 
 @end

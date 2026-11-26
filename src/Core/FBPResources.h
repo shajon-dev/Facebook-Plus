@@ -32,6 +32,9 @@ extern UIColor *FBPIconColor(void);
 
 extern UIFont *FBPFont(CGFloat size, UIFontWeight weight);
 
+/// Centres an alert's title and message, which iOS 26 lays out leading-aligned.
+extern void FBPCenterAlertText(UIAlertController *alert);
+
 extern NSString *FBPLocalizedString(NSString *key);
 
 #define FBPL(key) FBPLocalizedString(key)
