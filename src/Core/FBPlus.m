@@ -106,20 +106,57 @@ static CFTimeInterval gFBPLastButtonInteractionTime = 0.0;
 static uint64_t gFBPIdleTimerGeneration = 0;
 static NSInteger gFBPActiveDragCount = 0;
 
-CGFloat FBPVideoButtonsAlpha(void) {
+// The button opacity, idle opacity and saved positions are read from the Reels
+// display link, so once or twice per frame per button. A stored read is an
+// NSUserDefaults lookup and a position is a parsed string, so they are mirrored
+// and re-read only when something moves them.
+static uint64_t gFBPButtonPrefGen = 1;
+static uint64_t gFBPButtonMirrorGen = 0;
+static CGFloat gFBPMirrorAlpha = 1.0;
+static CGFloat gFBPMirrorIdleAlpha = 0.05;
+static BOOL gFBPMirrorAutoDim = NO;
+static NSMutableDictionary<NSString *, NSValue *> *gFBPMirrorPositions;
+
+static void FBPInvalidateVideoButtonPrefs(void) { gFBPButtonPrefGen++; }
+
+static void FBPRefreshButtonPrefMirror(void) {
+    // Both notifications already exist: settings commits and the live slider.
+    FBP_ONCE(gFBPButtonPrefWatch) {
+        for (NSNotificationName name in @[ FBPSettingsDidChangeNotification,
+                                           FBPVideoButtonsDidChangeNotification ]) {
+            [NSNotificationCenter.defaultCenter
+                addObserverForName:name object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:^(__unused NSNotification *note) {
+                FBPInvalidateVideoButtonPrefs();
+            }];
+        }
+    }
+    if (gFBPButtonMirrorGen == gFBPButtonPrefGen) return;
+
     double raw = [FBPPrefs.shared doubleForKey:FBPKeyVideoButtonsOpacity];
     if (raw <= 0.001) raw = 1.0;
-    if (raw < kFBPVideoButtonMinAlpha) raw = kFBPVideoButtonMinAlpha;
-    if (raw > kFBPVideoButtonMaxAlpha) raw = kFBPVideoButtonMaxAlpha;
-    return (CGFloat)raw;
+    raw = MIN(MAX(raw, kFBPVideoButtonMinAlpha), kFBPVideoButtonMaxAlpha);
+    gFBPMirrorAlpha = (CGFloat)raw;
+
+    double idle = [FBPPrefs.shared doubleForKey:FBPKeyVideoButtonsIdleOpacity];
+    if (idle <= 0.0001) idle = 0.05;
+    idle = MIN(MAX(idle, kFBPVideoButtonMinIdleRatio), kFBPVideoButtonMaxAlpha);
+    gFBPMirrorIdleAlpha = (CGFloat)idle;
+
+    gFBPMirrorAutoDim = FBPEnabled(FBPKeyVideoButtonsAutoDim);
+    [gFBPMirrorPositions removeAllObjects];
+    gFBPButtonMirrorGen = gFBPButtonPrefGen;
+}
+
+CGFloat FBPVideoButtonsAlpha(void) {
+    FBPRefreshButtonPrefMirror();
+    return gFBPMirrorAlpha;
 }
 
 CGFloat FBPVideoButtonsConfiguredIdleOpacity(void) {
-    double raw = [FBPPrefs.shared doubleForKey:FBPKeyVideoButtonsIdleOpacity];
-    if (raw <= 0.0001) raw = 0.05;
-    if (raw < kFBPVideoButtonMinIdleRatio) raw = kFBPVideoButtonMinIdleRatio;
-    if (raw > kFBPVideoButtonMaxAlpha) raw = kFBPVideoButtonMaxAlpha;
-    return (CGFloat)raw;
+    FBPRefreshButtonPrefMirror();
+    return gFBPMirrorIdleAlpha;
 }
 
 CGFloat FBPVideoButtonsIdleAlpha(void) {
@@ -154,7 +191,8 @@ void FBPNoteVideoButtonsInteraction(void) {
 }
 
 BOOL FBPVideoButtonsAreIdle(void) {
-    if (!FBPEnabled(FBPKeyVideoButtonsAutoDim)) return NO;
+    FBPRefreshButtonPrefMirror();
+    if (!gFBPMirrorAutoDim) return NO;
     if (gFBPActiveDragCount > 0) return NO;
     CFTimeInterval now = CACurrentMediaTime();
     if (gFBPLastButtonInteractionTime <= 0.0) {
@@ -237,10 +275,20 @@ CGPoint FBPResolvedButtonCenter(NSString *prefKey, CGPoint defaultCenter,
     CGRect bounds = container.bounds;
     if (bounds.size.width <= 1.0 || bounds.size.height <= 1.0) return defaultCenter;
 
-    NSString *saved = [FBPPrefs.shared stringForKey:prefKey];
+    FBPRefreshButtonPrefMirror();
+    if (!gFBPMirrorPositions) gFBPMirrorPositions = [NSMutableDictionary dictionary];
+    NSValue *held = gFBPMirrorPositions[prefKey];
     CGPoint ratio = CGPointZero;
-    if (!FBPParseNormalizedPoint(saved, &ratio)) {
-        return defaultCenter;
+    if (held) {
+        ratio = held.CGPointValue;
+        if (ratio.x < 0.0) return defaultCenter;
+    } else {
+        NSString *saved = [FBPPrefs.shared stringForKey:prefKey];
+        BOOL ok = FBPParseNormalizedPoint(saved, &ratio);
+        // A miss is worth remembering too: nothing saved is the common case.
+        gFBPMirrorPositions[prefKey] =
+            [NSValue valueWithCGPoint:ok ? ratio : CGPointMake(-1.0, -1.0)];
+        if (!ok) return defaultCenter;
     }
 
     CGPoint desired = CGPointMake(ratio.x * bounds.size.width,
@@ -335,6 +383,7 @@ BOOL FBPShouldSuppressTapAfterDrag(UIButton *button) {
                 double ry = MIN(MAX(button.center.y / bounds.size.height, 0.0), 1.0);
                 NSString *encoded = [NSString stringWithFormat:@"%.6f,%.6f", rx, ry];
                 [FBPPrefs.shared setString:encoded forKey:prefKey];
+                FBPInvalidateVideoButtonPrefs();
             }
 
             objc_setAssociatedObject(button, kFBPDragEndTimeKey,
@@ -377,6 +426,7 @@ void FBPAttachDraggableBehavior(UIButton *button, NSString *prefKey) {
 }
 
 void FBPResetVideoButtonPositions(void) {
+    FBPInvalidateVideoButtonPrefs();
     [FBPPrefs.shared setString:nil forKey:FBPKeyVideoDownloadPosition];
     [FBPPrefs.shared setString:nil forKey:FBPKeyVideoEyePosition];
     [FBPPrefs.shared setString:nil forKey:FBPKeyStoryDownloadPosition];
