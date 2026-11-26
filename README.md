@@ -42,11 +42,12 @@
     <tr><td>Save with add-only Photos access, without full-library permission (iOS 17+)</td></tr>
     <tr><td>Download manager with progress, cancel and retry</td></tr>
     <tr><td nowrap>👑 <b>Facebook Plus</b></td><td>Preview Meta's paid subscriber features without subscribing (including the Story diamond/heart reaction); Direct or Trial unlock, off by default with a warning</td></tr>
-    <tr><td nowrap rowspan="5">📰 <b>Feed</b></td><td>Remove ads &amp; sponsored posts across feed, video, Stories and Marketplace</td></tr>
+    <tr><td nowrap rowspan="6">📰 <b>Feed</b></td><td>Remove ads &amp; sponsored posts across feed, video, Stories and Marketplace</td></tr>
     <tr><td>Hide "People you may know", Group and Page suggestions</td></tr>
     <tr><td>Hide Reels in the feed, Top Stories tray, Threads promo</td></tr>
     <tr><td>Remove survey prompts ("Are you interested in this post?")</td></tr>
     <tr><td>Remove the affiliate / product banner: under a video post, in the comment sheet and on the Reel itself</td></tr>
+    <tr><td>Hide the quick reaction strip above the comment box, with no empty gap left behind</td></tr>
     <tr><td nowrap rowspan="2">🧭 <b>Links</b></td><td>Open external links in your default browser</td></tr>
     <tr><td>"Open in Facebook" Safari extension: reopens facebook.com links in the app, at the exact destination</td></tr>
     <tr><td nowrap rowspan="3">🎬 <b>Reels</b></td><td>Cinema mode: one tap hides the overlay and the tab bar</td></tr>
@@ -141,7 +142,7 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
    - Run `python3 build.py` to build **every variant**, or narrow it with
      `--rootless` / `--rootfull` / `--roothide` / `--trollfools`. See
      `python3 build.py --help` for the full set of flags (`--ipa`, `--install`,
-     `--ssh`, `--clean`, ...).
+     `--ssh`, `--both`, `--clean`, ...).
    - To also produce an injected `.ipa`, place a decrypted Facebook `.ipa` at
      `test/com.facebook.Facebook.ipa` before running (optional: set `BUNDLE_ID=com.example.id`
      to install alongside the stock app; the tweak is bundle-id-agnostic).
@@ -214,7 +215,7 @@ certificate lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)*
 │   │   ├── AppIcons    # Custom app-icon picker logic
 │   │   ├── Cache       # Scheduled automatic cache cleaner and manual cache sweep
 │   │   ├── Calls       # Incoming Call Blocker (PushKit & CallKit interceptors)
-│   │   ├── Comments    # Remove the affiliate/product banner in the comment sheet
+│   │   ├── Comments    # Remove the affiliate/product banner and the quick reaction strip
 │   │   ├── Confirmation # Opt-in confirmations for like/share/follow/friend (CK forwarder) & comment/post (swizzle)
 │   │   ├── Downloads   # Quality picker, DASH manifest reader, two-stream fetch, lossless
 │   │   │               # mux, AV1/VP9->HEVC conversion, add-only Photos save, download manager
@@ -234,6 +235,7 @@ certificate lives in **[`FBPNotifyBridge/README.md`](FBPNotifyBridge/README.md)*
 │   ├── PluginsInject   # Sideload compatibility layer (Keychain / App-Group / CloudKit)
 │   ├── Settings        # Dedicated full-screen Facebook Plus settings UI
 │   └── UI              # Shared UI components
+│       ├── Alert       # The tweak's own confirmation card (centred text, side-by-side buttons)
 │       ├── Sheet       # Detent & Presentation controllers
 │       └── Toast       # HUD / Progress pills (app-logo toast)
 └── test                # Decrypted input IPA and signing certificates
