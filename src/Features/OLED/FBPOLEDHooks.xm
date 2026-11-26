@@ -1106,6 +1106,37 @@ static BOOL FBPImageViewIsDarkCard(UIImageView *view) {
     return dark;
 }
 
+static const void *kFBPSavedCorner = &kFBPSavedCorner;
+
+static void FBPRestoreCorner(UIView *view) {
+    NSArray<NSNumber *> *saved = objc_getAssociatedObject(view, kFBPSavedCorner);
+    if (!saved) return;
+    view.layer.cornerRadius = saved.firstObject.doubleValue;
+    view.layer.masksToBounds = saved.lastObject.boolValue;
+    objc_setAssociatedObject(view, kFBPSavedCorner, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+/// A card drawn larger than what it sits in is a frame over a picture, and its
+/// rounded corner is what rounded the picture: taking the grey away leaves a
+/// square. The corner is handed to the view underneath, at the radius the frame
+/// had where that view's own corner falls.
+static void FBPRoundUnderCard(UIImageView *card) {
+    UIView *host = card.superview;
+    if (!host || objc_getAssociatedObject(host, kFBPSavedCorner)) return;
+    CGRect f = card.frame;
+    CGFloat overhang = MIN(-f.origin.x, -f.origin.y);
+    if (overhang <= 0.0) return;
+    CGFloat radius = card.image.capInsets.left - overhang;
+    if (radius <= 0.5) return;
+
+    objc_setAssociatedObject(host, kFBPSavedCorner,
+                             @[@(host.layer.cornerRadius), @(host.layer.masksToBounds)],
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    FBPMarkTouched(host);
+    host.layer.cornerRadius = radius;
+    host.layer.masksToBounds = YES;
+}
+
 static void FBPApplyCardImage(UIImageView *view, BOOL active) {
     if (gFBPMeasuringCard) return;
     if (!active) { FBPRestoreAlpha(view); return; }
@@ -1115,6 +1146,7 @@ static void FBPApplyCardImage(UIImageView *view, BOOL active) {
                              OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     FBPMarkTouched(view);
     view.alpha = 0.0;
+    FBPRoundUnderCard(view);
 }
 
 /// The body of UIView -layoutSubviews under OLED: blacken this view's
@@ -1130,6 +1162,7 @@ static void FBPApplyView(UIView *view, BOOL active) {
     if (!active) {
         if (!FBPWasTouched(view)) return;
         FBPRestoreAlpha(view);
+        FBPRestoreCorner(view);
         FBPRestoreViewBG(view);
         FBPRestoreLayerBG(view.layer);
         FBPRestoreBorder(view.layer);
