@@ -31,6 +31,7 @@ static SEL FBPMarkSeenLegacySelector(void) {
 /// Set while the user explicitly asks to be marked as seen, so the suppression
 /// below lets that one call through.
 static __thread BOOL gAllowSeenPassthrough = NO;
+static __thread BOOL gManualSeenMutationForwarded = NO;
 
 #pragma mark - Incognito
 
@@ -91,6 +92,7 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     FBPTraceFire("story.FBSnacksUnifiedSeenStateMutator.markForBucket");
     if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
     %orig;
+    if (gAllowSeenPassthrough) gManualSeenMutationForwarded = YES;
 }
 
 %end
@@ -106,6 +108,7 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     FBPTraceFire("story.FBSnacksUnifiedSeenStateMutator.markForViewerSession");
     if (FBPEnabled(FBPKeyAnonymousStories) && !gAllowSeenPassthrough) return;
     %orig;
+    if (gAllowSeenPassthrough) gManualSeenMutationForwarded = YES;
 }
 
 %end
@@ -148,29 +151,27 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 /// original implementation for the current thread.
 - (void)markCurrentThreadAsSeen {
     UIViewController *controller = self.controller;
-    id manager = [controller valueForKey:@"_bucketsSeenStateManager"];
-    if (!manager) {
-        [FBPToastManager.shared showMessage:@"Something went wrong" success:NO];
-        return;
-    }
-
+    id manager = nil;
     id thread = nil;
     id bucket = nil;
     id session = nil;
     @try {
+        manager = [controller valueForKey:@"_bucketsSeenStateManager"];
         thread  = [controller valueForKey:@"currentThread"];
         bucket  = [controller valueForKey:@"bucket"];
         session = [controller valueForKey:@"session"];
     } @catch (NSException *exception) {
-        FBPLog(@"could not read thread/bucket/session: %@", exception.reason);
+        FBPLog(@"could not read current story state: %@", exception.reason);
+        [FBPToastManager.shared showMessage:@"Could not mark this story as seen" success:NO];
+        return;
     }
 
     SEL modern = FBPMarkSeenModernSelector();
     SEL legacy = FBPMarkSeenLegacySelector();
     SEL selector = [manager respondsToSelector:modern] ? modern
                  : ([manager respondsToSelector:legacy] ? legacy : NULL);
-    if (!selector) {
-        [FBPToastManager.shared showMessage:@"Something went wrong" success:NO];
+    if (!selector || !thread || !bucket || !session) {
+        [FBPToastManager.shared showMessage:@"Could not mark this story as seen" success:NO];
         return;
     }
 
@@ -187,14 +188,23 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     if (signature.numberOfArguments > 6) [invocation setArgument:&no atIndex:6];
 
     BOOL previousPassthrough = gAllowSeenPassthrough;
+    BOOL previousForwarded = gManualSeenMutationForwarded;
+    BOOL forwarded = NO;
     gAllowSeenPassthrough = YES;
+    gManualSeenMutationForwarded = NO;
     @try {
         [invocation invoke];
+        forwarded = gManualSeenMutationForwarded;
+    } @catch (NSException *exception) {
+        FBPLog(@"could not mark story as seen: %@", exception.reason);
     } @finally {
         gAllowSeenPassthrough = previousPassthrough;
+        gManualSeenMutationForwarded = previousForwarded;
     }
 
-    [FBPToastManager.shared showMessage:@"Marked as seen" success:YES];
+    [FBPToastManager.shared showMessage:forwarded ? @"Story view receipt requested"
+                                                 : @"Could not confirm Story view receipt"
+                                success:forwarded];
 }
 
 /// Asks first, then marks seen. Mark-as-seen is the eye button's only action, so
@@ -334,7 +344,7 @@ static BOOL gStoryRowInstalled = NO;
     id (*build)(id, SEL, NSUInteger, id, id, id, id) =
         (id (*)(id, SEL, NSUInteger, id, id, id, id))objc_msgSend;
     bridge = build(bridge, initSel, 0, title, detail,
-                   ^{ [target markCurrentThreadAsSeen]; },
+                   ^{ [target confirmAndMarkAsSeen]; },
                    nil);
     if (!bridge) return %orig;
 
