@@ -961,14 +961,90 @@ static BOOL FBPLayerMirrorsView(UIView *view, UIColor *bg) {
     return YES;
 }
 
+#pragma mark - Search row overflow
+
+// The grey disc behind the per-row "more options" glyph on the search surface.
+// It is artwork, not a colour, so no colour hook can reach it; under OLED the
+// image view that draws it is taken out of sight. Only that one: the glyph
+// itself is a separate image inside the control, so the button stays visible
+// and usable. Transparent rather than hidden, because a hidden view stops
+// laying out and the row has to be read again on every pass.
+static const void *kFBPSavedAlpha = &kFBPSavedAlpha;
+static NSString *const kFBPOverflowID = @"bottomsheet_button";
+static const CGFloat kFBPOverflowMaxSide = 60.0;  // a row-sized host is not one
+
+static Class FBPOverflowHostClass(void) {
+    static Class cls;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        cls = NSClassFromString(@"NTDecorTouchableHighlight2Control");
+    });
+    return cls;
+}
+
+static void FBPRestoreAlpha(UIView *view) {
+    NSNumber *saved = objc_getAssociatedObject(view, kFBPSavedAlpha);
+    if (!saved) return;
+    view.alpha = saved.doubleValue;
+    objc_setAssociatedObject(view, kFBPSavedAlpha, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+/// The slot holds the control and, beside it, the one image view that draws the
+/// disc. The glyph is not a candidate: it lives inside the control.
+static UIImageView *FBPOverflowDisc(UIView *slot) {
+    for (UIView *sub in slot.subviews) {
+        if ([sub isKindOfClass:UIImageView.class]) return (UIImageView *)sub;
+    }
+    return nil;
+}
+
+/// Two class comparisons for every other view in the app, which is why the
+/// identifier and the association are read only once one of them matches.
+static void FBPApplyOverflow(UIView *view, BOOL active) {
+    Class host = FBPOverflowHostClass();
+    if (!host) return;
+
+    if (view.class == host) {
+        // Still ours but mounted as something else, so the marker below is gone
+        // and nothing else would ever bring the disc back.
+        UIView *slot = view.superview;
+        UIImageView *disc = slot ? FBPOverflowDisc(slot) : nil;
+        if (!disc || !objc_getAssociatedObject(disc, kFBPSavedAlpha)) return;
+        for (UIView *sub in view.subviews) {
+            if ([sub.accessibilityIdentifier isEqualToString:kFBPOverflowID]) return;
+        }
+        FBPRestoreAlpha(disc);
+        return;
+    }
+
+    UIView *control = view.superview;
+    if (control.class != host) return;
+    UIView *slot = control.superview;
+    if (!slot) return;
+    CGSize size = slot.bounds.size;
+    if (size.width > kFBPOverflowMaxSide || size.height > kFBPOverflowMaxSide) return;
+    if (![view.accessibilityIdentifier isEqualToString:kFBPOverflowID]) return;
+
+    UIImageView *disc = FBPOverflowDisc(slot);
+    if (!disc) return;
+    if (!active) { FBPRestoreAlpha(disc); return; }
+    if (objc_getAssociatedObject(disc, kFBPSavedAlpha)) return;
+    objc_setAssociatedObject(disc, kFBPSavedAlpha, @(disc.alpha),
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    FBPMarkTouched(disc);
+    disc.alpha = 0.0;
+}
+
 /// The body of UIView -layoutSubviews under OLED: blacken this view's
 /// background, layer and sublayers, or put back everything OLED saved and drop
 /// the touched flag. Untouched views short-circuit immediately.
 static void FBPApplyView(UIView *view, BOOL active) {
     if (FBPOLEDSkip(view)) return;
+    FBPApplyOverflow(view, active);
 
     if (!active) {
         if (!FBPWasTouched(view)) return;
+        FBPRestoreAlpha(view);
         FBPRestoreViewBG(view);
         FBPRestoreLayerBG(view.layer);
         FBPRestoreBorder(view.layer);
