@@ -60,10 +60,10 @@ static NSURL *FBPUnwrapLinkShim(NSURL *url) {
 static NSURL *FBPCanonicalFacebookURL(NSURL *url) {
     if (![url isKindOfClass:NSURL.class]) return nil;
 
+    url = FBPUnwrapLinkShim(url);
     NSString *scheme = url.scheme.lowercaseString ?: @"";
     if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"]) return nil;
 
-    url = FBPUnwrapLinkShim(url);
     if (!FBPIsFacebookHost(url.host)) return nil;
 
     NSURLComponents *components = [NSURLComponents componentsWithURL:url
