@@ -128,7 +128,6 @@
 "footer.feedClutter" = "피드에서 “알 수도 있는 사람 / 가입할 만한 그룹 / 추천” 섹션을 숨깁니다.";
 "footer.metaplus" = "미리보기 전용입니다. 서버 측 기능은 작동하지 않습니다.";
 "footer.plusmode" = "다이렉트는 기능을 즉시 강제로 활성화합니다.\n체험판은 앱에서 활성 체험판 상태를 시뮬레이션합니다.";
-"footer.videobuttons" = "동영상 화면에서 눈 또는 다운로드 버튼을 길게 눌러 원하는 위치로 드래그하세요.";
 
 
 "info.developer" = "개발자";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "잠금 해제 방식";
 "row.plusmode.trial" = "체험판";
 "row.reset.title" = "모든 설정 초기화";
-"row.resetvideobuttons.desc" = "눈 및 다운로드 버튼을 기본 위치로 되돌립니다.";
-"row.resetvideobuttons.title" = "동영상 버튼 위치 초기화";
 "row.suspend.desc" = "Facebook을 강제 종료합니다. 변경 사항을 적용하려면 다시 염니다.";
 "row.suspend.title" = "앱 종료";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "눈 및 다운로드 플로팅 버튼의 투명도를 조절합니다.";
-"row.videobuttonsopacity.title" = "동영상 버튼 투명도";
 "row.welcome.title" = "시작 화면 표시";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "로그가 삭제되었습니다.";
 "toast.logEmpty" = "기록된 로그가 없습니다.";
 "toast.settingsReset" = "설정을 초기화했습니다";
-"toast.videoButtonsReset" = "동영상 버튼 위치가 초기화되었습니다";
 
 
 "update.failed" = "업데이트를 확인하지 못했습니다.";

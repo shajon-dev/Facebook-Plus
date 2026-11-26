@@ -128,7 +128,6 @@
 "footer.feedClutter" = "隱藏動態中的「你可能認識的人 / 推薦加入的社團 / 為你推薦」等區塊。";
 "footer.metaplus" = "僅供預覽，伺服器端功能將無法使用。";
 "footer.plusmode" = "直接掛鉤會直接強制開啟功能。\n試用模式會讓應用程式模擬處於有效試用期。";
-"footer.videobuttons" = "在影片畫面上直接按住並拖曳「眼睛」或「下載」按鈕即可自由移動位置。";
 
 
 "info.developer" = "開發者";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "解鎖方式";
 "row.plusmode.trial" = "試用";
 "row.reset.title" = "重設所有設定";
-"row.resetvideobuttons.desc" = "將「眼睛」和「下載」按鈕恢復至預設位置。";
-"row.resetvideobuttons.title" = "重設影片按鈕位置";
 "row.suspend.desc" = "強制關閉 Facebook；重新開啟以套用變更。";
 "row.suspend.title" = "關閉 App";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "調整影片畫面上懸浮「眼睛」和「下載」按鈕的不透明度。";
-"row.videobuttonsopacity.title" = "影片按鈕不透明度";
 "row.welcome.title" = "顯示歡迎畫面";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "記錄已清除。";
 "toast.logEmpty" = "尚未有任何記錄。";
 "toast.settingsReset" = "已重設設定";
-"toast.videoButtonsReset" = "已重設影片按鈕位置";
 
 
 "update.failed" = "無法檢查更新。";

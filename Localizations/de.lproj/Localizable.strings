@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Blendet die Bereiche „Personen, die du vielleicht kennst / Gruppen, denen du beitreten solltest / Für dich“ aus.";
 "footer.metaplus" = "Nur Vorschau. Serverbasierte Funktionen funktionieren nicht.";
 "footer.plusmode" = "Direkt erzwingt die Funktionen sofort.\nTestphase simuliert eine aktive Testphase in der App.";
-"footer.videobuttons" = "Halte die Augen- oder Download-Taste direkt im Video gedrückt und ziehe sie an eine beliebige Stelle.";
 
 
 "info.developer" = "Entwickler";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Freischaltmethode";
 "row.plusmode.trial" = "Test";
 "row.reset.title" = "Alle Einstellungen zurücksetzen";
-"row.resetvideobuttons.desc" = "Setzt die Augen- und Download-Taste auf ihre Standardposition zurück.";
-"row.resetvideobuttons.title" = "Position der Videotasten zurücksetzen";
 "row.suspend.desc" = "Facebook erzwungen schließen; zum Anwenden erneut öffnen.";
 "row.suspend.title" = "App beenden";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "Passt die Deckkraft der schwebenden Augen- und Download-Tasten an.";
-"row.videobuttonsopacity.title" = "Deckkraft der Videotasten";
 "row.welcome.title" = "Willkommensbildschirm anzeigen";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Protokolle gelöscht.";
 "toast.logEmpty" = "Noch keine Protokolle vorhanden.";
 "toast.settingsReset" = "Einstellungen zurückgesetzt";
-"toast.videoButtonsReset" = "Position der Videotasten zurückgesetzt";
 
 
 "update.failed" = "Updates konnten nicht geprüft werden.";

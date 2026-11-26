@@ -19,14 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Deferred hook installation
 
-/// Installs a hook group once. Most of Facebook's frameworks are dlopen'd long
-/// after %ctor, so the installers are re-run on every dyld image load
-/// (FBPEntry.xm) and each group therefore needs its own latch.
+/// Installs a hook group once. FBPEntry re-runs the installers per dyld image,
+/// because Facebook dlopens most of its frameworks long after %ctor.
 #define FBP_ONCE(name) static BOOL name = NO; if (!name && (name = YES))
 
-/// EVERY report inside an FBPInit* must use this, not FBPLog: the installers
-/// run again for each of the hundreds of images dyld loads, and that applies to
-/// the failure branch ("class not found") as much as to the success one.
+/// Every report inside an FBPInit* uses this, not FBPLog: the installers re-run
+/// per image, failure branches included.
 #define FBPLogOnce(fmt, ...)                                                   \
     do {                                                                       \
         static BOOL _fbp_logged_once = NO;                                     \
@@ -39,10 +37,6 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Notifications
 
 extern NSNotificationName const FBPSettingsDidChangeNotification;
-
-/// Separate from the settings notification so a slider step does not trigger a
-/// full theme/feed re-walk.
-extern NSNotificationName const FBPVideoButtonsDidChangeNotification;
 
 /// userInfo carries @c FBPTabBarFractionKey, an NSNumber<double>, 0 = visible.
 extern NSNotificationName const FBPTabBarVisibilityDidChangeNotification;
@@ -76,18 +70,10 @@ extern NSString *const FBPKeyConfirmPost;       // Confirm before publishing a p
 // Downloads
 extern NSString *const FBPKeyReelsDownloaderEnabled;
 extern NSString *const FBPKeyStoryDownloaderEnabled;
-/// Off means "take the best rendition and start".
 extern NSString *const FBPKeyDownloadQualityPicker;
 
-// Reels & floating video controls
+// Reels
 extern NSString *const FBPKeyReelsHideOverlay;  // Strip the Reels overlay (always on; no toggle)
-extern NSString *const FBPKeyVideoButtonsOpacity;      // Active floating Eye & Download button opacity [0.15 .. 1.0]
-extern NSString *const FBPKeyVideoButtonsAutoDim;      // Auto-fade Eye & Download buttons after 2s without touch
-extern NSString *const FBPKeyVideoButtonsIdleOpacity;  // Idle opacity after 2s [0.01 .. 1.0], default 0.05 (5%)
-extern NSString *const FBPKeyVideoDownloadPosition;    // Normalized "x,y" center for Reels Download button
-extern NSString *const FBPKeyVideoEyePosition;         // Normalized "x,y" center for Reels Eye button
-extern NSString *const FBPKeyStoryDownloadPosition;    // Normalized "x,y" center for Story Download button
-extern NSString *const FBPKeyStoryEyePosition;         // Normalized "x,y" center for Story Eye button
 
 // Stories
 extern NSString *const FBPKeyAnonymousStories;
@@ -114,9 +100,8 @@ extern NSString *const FBPKeyLinksInSafari;     // Open external links in the de
 // Diagnostics
 extern NSString *const FBPKeyLogsKeep;          // keep the diagnostic log across launches
 // Sideload compatibility
-/// Pin keychain calls to the probed access group (PluginsInject/SecRebinds.xm);
-/// off disables the SecItem* rewriting. SecRebinds.xm cannot see this header and
-/// reads the raw @c "keychainRebind" key from the suite — keep the two in step.
+/// Pins keychain calls to the probed access group. SecRebinds.xm cannot see
+/// this header and reads the raw @c "keychainRebind" key: keep the two in step.
 extern NSString *const FBPKeyKeychainRebind;
 
 extern NSString *const FBPKeyNotifClientSync;
@@ -181,26 +166,5 @@ extern NSString *const FBPAXNavSettingsButton;  // nav-settings-button
 typedef NS_ENUM(NSInteger, FBPViewTag) {
     FBPViewTagStoryButton  = 0x7B902,
 };
-
-#pragma mark - Floating video controls (opacity & drag positioning)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-CGFloat FBPVideoButtonsAlpha(void);
-CGFloat FBPVideoButtonsConfiguredIdleOpacity(void);
-CGFloat FBPVideoButtonsIdleAlpha(void);
-CGFloat FBPVideoButtonsEffectiveAlpha(void);
-BOOL FBPVideoButtonsAreIdle(void);
-void FBPNoteVideoButtonsInteraction(void);
-void FBPAttachDraggableBehavior(UIButton *button, NSString *prefKey);
-BOOL FBPIsButtonDragging(UIButton *button);
-BOOL FBPShouldSuppressTapAfterDrag(UIButton *button);
-CGPoint FBPResolvedButtonCenter(NSString *prefKey, CGPoint defaultCenter,
-                                CGSize buttonSize, UIView *container);
-void FBPResetVideoButtonPositions(void);
-#ifdef __cplusplus
-}
-#endif
 
 NS_ASSUME_NONNULL_END

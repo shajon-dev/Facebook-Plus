@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Nasconde le sezioni “Persone che potresti conoscere”, suggerimenti di gruppi e “Per te” dal feed.";
 "footer.metaplus" = "Solo anteprima. Le funzionalità lato server non funzioneranno.";
 "footer.plusmode" = "Diretto forza l'attivazione immediata delle funzioni.\nProva fa simulare all'app un periodo di prova attivo.";
-"footer.videobuttons" = "Tieni premuto e trascina il pulsante Occhio o Scarica direttamente sul video per spostarlo.";
 
 
 "info.developer" = "Sviluppatore";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Metodo di sblocco";
 "row.plusmode.trial" = "Prova";
 "row.reset.title" = "Ripristina tutte le impostazioni";
-"row.resetvideobuttons.desc" = "Ripristina i pulsanti Occhio e Scarica alla posizione predefinita.";
-"row.resetvideobuttons.title" = "Reimposta posizione pulsanti video";
 "row.suspend.desc" = "Forza la chiusura di Facebook; riaprilo per applicare le modifiche.";
 "row.suspend.title" = "Chiudi l’app";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "Regola la trasparenza dei pulsanti flottanti Occhio e Scarica.";
-"row.videobuttonsopacity.title" = "Opacità pulsanti video";
 "row.welcome.title" = "Mostra la schermata di benvenuto";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Registri cancellati.";
 "toast.logEmpty" = "Nessun registro presente.";
 "toast.settingsReset" = "Impostazioni ripristinate";
-"toast.videoButtonsReset" = "Posizione pulsanti video reimpostata";
 
 
 "update.failed" = "Impossibile controllare gli aggiornamenti.";

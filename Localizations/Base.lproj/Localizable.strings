@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Hides the “you may know / should join / for you” units.";
 "footer.metaplus" = "Preview only. Server-side features will not work.";
 "footer.plusmode" = "Direct forces the features on outright.\nTrial makes the app simulate an active trial.";
-"footer.videobuttons" = "Press and drag the Eye or Download button directly on a video to move it anywhere.";
 
 
 "info.developer" = "Developer Name";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Unlock Method";
 "row.plusmode.trial" = "Trial";
 "row.reset.title" = "Reset All Settings";
-"row.resetvideobuttons.desc" = "Restore the Eye and Download buttons to their default positions.";
-"row.resetvideobuttons.title" = "Reset Video Buttons Position";
 "row.suspend.desc" = "Force-close Facebook; reopen it to apply changes.";
 "row.suspend.title" = "Suspend App";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "Adjust transparency of the floating Eye and Download buttons.";
-"row.videobuttonsopacity.title" = "Video Buttons Opacity";
 "row.welcome.title" = "Show Welcome Screen";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Logs cleared.";
 "toast.logEmpty" = "No logs recorded yet.";
 "toast.settingsReset" = "Settings reset";
-"toast.videoButtonsReset" = "Video buttons position reset";
 
 
 "update.failed" = "Couldn't check for updates.";

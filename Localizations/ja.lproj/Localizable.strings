@@ -128,7 +128,6 @@
 "footer.feedClutter" = "フィードの「知り合いかも / おすすめグループ / おすすめ」セクションを非表示にします。";
 "footer.metaplus" = "プレビュー専用です。サーバー側で処理される機能は動作しません。";
 "footer.plusmode" = "ダイレクトは機能を直接強制有効化します。\nトライアルはアプリ内で無料トライアル状態を模擬します。";
-"footer.videobuttons" = "動画上の目のボタンや保存ボタンをドラッグして自由な位置へ移動できます。";
 
 
 "info.developer" = "開発者";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "解除方法";
 "row.plusmode.trial" = "トライアル";
 "row.reset.title" = "すべての設定をリセット";
-"row.resetvideobuttons.desc" = "目のボタンと保存ボタンを初期位置に戻します。";
-"row.resetvideobuttons.title" = "動画ボタンの位置をリセット";
 "row.suspend.desc" = "Facebook を強制終了します。変更を適用するには開き直してください。";
 "row.suspend.title" = "アプリを終了";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "動画上の目のボタンと保存ボタンの透明度を調整します。";
-"row.videobuttonsopacity.title" = "動画ボタンの不透明度";
 "row.welcome.title" = "ようこそ画面を表示";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "ログを消去しました。";
 "toast.logEmpty" = "記録されたログはありません。";
 "toast.settingsReset" = "設定をリセットしました";
-"toast.videoButtonsReset" = "動画ボタンの位置をリセットしました";
 
 
 "update.failed" = "アップデートを確認できませんでした。";

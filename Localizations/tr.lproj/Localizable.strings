@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Akıştaki “Tanıyor Olabileceğin Kişiler / Katılabileceğin Gruplar / Senin İçin” kısımlarını gizler.";
 "footer.metaplus" = "Yalnızca önizleme. Sunucu taraflı özellikler çalışmayacaktır.";
 "footer.plusmode" = "Doğrudan modu özellikleri anında zorlayarak açar.\nDeneme modu uygulamada aktif bir deneme süresi simüle eder.";
-"footer.videobuttons" = "Göz veya İndir düğmesini taşımak için video üzerinde basılı tutup sürükleyin.";
 
 
 "info.developer" = "Geliştirici";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Kilit Açma Yöntemi";
 "row.plusmode.trial" = "Deneme";
 "row.reset.title" = "Tüm Ayarları Sıfırla";
-"row.resetvideobuttons.desc" = "Göz ve İndir düğmelerini varsayılan konumlarına döndürür.";
-"row.resetvideobuttons.title" = "Video Düğmeleri Konumunu Sıfırla";
 "row.suspend.desc" = "Facebook’u zorla kapatır; değişiklikleri uygulamak için yeniden açın.";
 "row.suspend.title" = "Uygulamayı Kapat";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "Yüzen Göz ve İndir düğmelerinin saydamlığını ayarlayın.";
-"row.videobuttonsopacity.title" = "Video Düğmeleri Saydamlığı";
 "row.welcome.title" = "Karşılama Ekranını Göster";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Günlükler temizlendi.";
 "toast.logEmpty" = "Henüz kayıtlı günlük yok.";
 "toast.settingsReset" = "Ayarlar sıfırlandı";
-"toast.videoButtonsReset" = "Video düğmeleri konumu sıfırlandı";
 
 
 "update.failed" = "Güncellemeler denetlenemedi.";

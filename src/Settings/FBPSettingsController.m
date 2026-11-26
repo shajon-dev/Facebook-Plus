@@ -81,7 +81,6 @@ static NSString *const kActionDownloads   = @"downloads";
 static NSString *const kActionLogExport  = @"logExport";
 static NSString *const kActionLogClear   = @"logClear";
 static NSString *const kActionPlusMode   = @"plusMode";
-static NSString *const kActionResetVideoButtons = @"resetVideoButtons";
 
 static NSString *const kCellIdentifier = @"fbp.settings.row";
 static NSString *const kTelegramURL    = @"https://t.me/ReFacebookPlus";
@@ -484,41 +483,7 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
     NSString *type = row[kRowType];
     [cell setSliderMode:[type isEqualToString:kTypeSlider]];
 
-    if ([type isEqualToString:kTypeSlider]) {
-        cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        NSString *sliderKey = row[kRowKey];
-        BOOL isIdleSlider = [sliderKey isEqualToString:FBPKeyVideoButtonsIdleOpacity];
-        CGFloat minVal = isIdleSlider ? 0.01 : 0.15;
-        CGFloat maxVal = 1.00;
-        CGFloat current = isIdleSlider
-            ? FBPVideoButtonsConfiguredIdleOpacity()
-            : FBPVideoButtonsAlpha();
-
-        UILabel *pctLabel = [[UILabel alloc] init];
-        pctLabel.font = [UIFont monospacedDigitSystemFontOfSize:15 weight:UIFontWeightSemibold];
-        pctLabel.textColor = disabled ? UIColor.tertiaryLabelColor : FBPTintColor();
-        pctLabel.textAlignment = NSTextAlignmentRight;
-        pctLabel.text = [NSString stringWithFormat:@"%d%%", (int)lround(current * 100.0)];
-        [self setAccessory:pctLabel inCell:cell];
-
-        cell.slider.enabled = !disabled;
-        cell.slider.minimumValue = (float)minVal;
-        cell.slider.maximumValue = (float)maxVal;
-        cell.slider.value = (float)current;
-        cell.slider.minimumTrackTintColor = disabled ? UIColor.tertiaryLabelColor : FBPTintColor();
-        cell.slider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.18];
-        objc_setAssociatedObject(cell.slider, @selector(tag), sliderKey,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        objc_setAssociatedObject(cell.slider, kFBPSliderValueLabelKey, pctLabel,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [cell.slider addTarget:self action:@selector(fbpSliderChanged:)
-              forControlEvents:UIControlEventValueChanged];
-        [cell.slider addTarget:self action:@selector(fbpSliderFinished:)
-              forControlEvents:UIControlEventTouchUpInside |
-                               UIControlEventTouchUpOutside |
-                               UIControlEventTouchCancel];
-
-    } else if ([type isEqualToString:kTypeSwitch]) {
+    if ([type isEqualToString:kTypeSwitch]) {
         UISwitch *toggle = [[UISwitch alloc] init];
         toggle.onTintColor = FBPTintColor();
         toggle.on = FBPEnabled(row[kRowKey]);
@@ -687,32 +652,6 @@ static CGFloat FBPTitleFontSize(NSString *text, CGFloat availableWidth) {
     if (FBPRowGatesOtherRows(key)) [self.tableView reloadData];
 }
 
-- (void)fbpSliderChanged:(UISlider *)sender {
-    NSString *key = objc_getAssociatedObject(sender, @selector(tag));
-    if (!key) return;
-
-    BOOL isIdleSlider = [key isEqualToString:FBPKeyVideoButtonsIdleOpacity];
-    double minVal = isIdleSlider ? 0.01 : 0.15;
-    double snapped = round((double)sender.value * 100.0) / 100.0;
-    if (snapped < minVal) snapped = minVal;
-    if (snapped > 1.00) snapped = 1.00;
-
-    UILabel *pctLabel = objc_getAssociatedObject(sender, kFBPSliderValueLabelKey);
-    if (pctLabel) {
-        pctLabel.text = [NSString stringWithFormat:@"%d%%", (int)lround(snapped * 100.0)];
-    }
-
-    [FBPPrefs.shared setDouble:snapped forKey:key];
-    [NSNotificationCenter.defaultCenter
-        postNotificationName:FBPVideoButtonsDidChangeNotification
-                      object:nil];
-}
-
-- (void)fbpSliderFinished:(__unused UISlider *)sender {
-    [FBPPrefs.shared commit];
-    FBPNoteVideoButtonsInteraction();
-}
-
 #pragma mark Photos permission
 
 /// Add-only is all a download save needs; a full-access grant covers it too.
@@ -793,12 +732,6 @@ static NSDictionary *FBPInfoRow(NSString *title, NSString *value, NSString *icon
     if (link.length) row[kRowLink] = link;
     return row;
 }
-static NSDictionary *FBPSliderRow(NSString *key, NSString *title, NSString *desc, NSString *icon) {
-    NSMutableDictionary *row = [@{ kRowType : kTypeSlider, kRowKey : key,
-                                   kRowTitle : title, kRowIcon : icon } mutableCopy];
-    if (desc.length) row[kRowDesc] = desc;
-    return row;
-}
 static NSDictionary *FBPSection(NSString *footer, NSArray *rows) {
     NSMutableDictionary *s = [@{ kSecRows : rows } mutableCopy];
     if (footer.length) s[kSecFooter] = footer;
@@ -871,22 +804,11 @@ static NSDictionary *FBPCacheScheduleRow(void) {
     return row;
 }
 
-static NSDictionary *FBPVideoIdleOpacityRow(void) {
-    NSMutableDictionary *row =
-        [FBPSliderRow(FBPKeyVideoButtonsIdleOpacity,
-                      FBPL(@"row.videobuttons_idle.title"),
-                      FBPL(@"row.videobuttons_idle.desc"),
-                      @"eye") mutableCopy];
-    if (!FBPEnabled(FBPKeyVideoButtonsAutoDim)) row[kRowDisabled] = @YES;
-    return row;
-}
-
 /// YES when turning this switch changes whether *other* rows are usable, so the
 /// table has to be redrawn rather than just the switch moved.
 static BOOL FBPRowGatesOtherRows(NSString *key) {
     return [key isEqualToString:FBPKeyMetaPlus] ||
-           [key isEqualToString:FBPKeyAutoClearCache] ||
-           [key isEqualToString:FBPKeyVideoButtonsAutoDim];
+           [key isEqualToString:FBPKeyAutoClearCache];
 }
 
 #pragma mark - Category definitions
@@ -952,12 +874,6 @@ static NSArray<NSDictionary *> *FBPCategoryCatalog(void) {
                 FBPSwitchRow(FBPKeyReelsDownloaderEnabled, FBPL(@"row.downloadreels.title"), FBPL(@"row.downloadreels.desc"), @"download"),
                 FBPSwitchRow(FBPKeyStoryDownloaderEnabled, FBPL(@"row.downloadstories.title"), FBPL(@"row.downloadstories.desc"), @"download"),
                 FBPSwitchRow(FBPKeyDownloadQualityPicker, FBPL(@"row.downloadquality.title"), FBPL(@"row.downloadquality.desc"), @"arrow.down.circle"),
-            ]),
-            FBPSection(FBPL(@"footer.videobuttons"), @[
-                FBPSwitchRow(FBPKeyVideoButtonsAutoDim, FBPL(@"row.videobuttonsautodim.title"), FBPL(@"row.videobuttonsautodim.desc"), @"eye"),
-                FBPVideoIdleOpacityRow(),
-                FBPSliderRow(FBPKeyVideoButtonsOpacity, FBPL(@"row.videobuttonsopacity.title"), FBPL(@"row.videobuttonsopacity.desc"), @"eye"),
-                FBPActionRow(kActionResetVideoButtons, FBPL(@"row.resetvideobuttons.title"), FBPL(@"row.resetvideobuttons.desc"), @"arrow.counterclockwise", NO),
             ]),
         ]},
         @{ kRowTitle : FBPL(@"cat.appearance.title"), kRowDesc : FBPL(@"cat.appearance.summary"),
@@ -1132,9 +1048,6 @@ static NSArray<NSDictionary *> *FBPCategories(void) {
         [self presentPlusModePicker];
     } else if ([action isEqualToString:kActionCacheSchedule]) {
         [self presentCacheSchedulePicker];
-    } else if ([action isEqualToString:kActionResetVideoButtons]) {
-        FBPResetVideoButtonPositions();
-        [FBPToastManager.shared showMessage:FBPL(@"toast.videoButtonsReset") success:YES];
     }
 }
 

@@ -128,7 +128,6 @@
 "footer.feedClutter" = "फ़ीड से “शायद आप जानते हों / ग्रुप से जुड़ें / आपके लिए” वाले सुझाव छुपाता है।";
 "footer.metaplus" = "केवल पूर्वावलोकन। सर्वर-आधारित सुविधाएँ काम नहीं करेंगी।";
 "footer.plusmode" = "डायरेक्ट सीधे सुविधाओं को लागू करता है।\nट्रायल ऐप में एक सक्रिय परीक्षण का अनुकरण करता है।";
-"footer.videobuttons" = "आँख या डाउनलोड बटन को कहीं भी ले जाने के लिए वीडियो पर सीधे दबाकर खींचें।";
 
 
 "info.developer" = "डेवलपर";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "अनलॉक तरीका";
 "row.plusmode.trial" = "ट्रायल";
 "row.reset.title" = "सभी सेटिंग रीसेट करें";
-"row.resetvideobuttons.desc" = "आँख और डाउनलोड बटन को उनकी डिफ़ॉल्ट स्थिति में वापस लाएँ।";
-"row.resetvideobuttons.title" = "वीडियो बटन की स्थिति रीसेट करें";
 "row.suspend.desc" = "Facebook को ज़बरदस्ती बंद करें; बदलाव लागू करने के लिए फिर से खोलें।";
 "row.suspend.title" = "ऐप बंद करें";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "तैरते हुए आँख और डाउनलोड बटन की पारदर्शिता समायोजित करें।";
-"row.videobuttonsopacity.title" = "वीडियो बटन पारदर्शिता";
 "row.welcome.title" = "स्वागत स्क्रीन दिखाएँ";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "लॉग साफ़ कर दिए गए।";
 "toast.logEmpty" = "अभी तक कोई लॉग दर्ज नहीं हुआ।";
 "toast.settingsReset" = "सेटिंग रीसेट हो गईं";
-"toast.videoButtonsReset" = "वीडियो बटन की स्थिति रीसेट हो गई";
 
 
 "update.failed" = "अपडेट जाँच नहीं सका।";

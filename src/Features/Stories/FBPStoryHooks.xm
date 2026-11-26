@@ -70,18 +70,15 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 
 #pragma mark - Incognito (server receipt)
 
-// FBSnacksBucketsSeenStateManager above drives local seen-state, but the receipt
-// that actually tells the author "you viewed this" is sent by
-// FBSnacksUnifiedSeenStateMutator. The impression tracker
-// (FBSnacksBucketSeenStateTracker) can drive that mutator directly, bypassing the
-// manager hook entirely — which is why blocking only the manager let views still
-// register. The mutator's two public send entry points are blocked here too, so
+// The receipt that tells the author "you viewed this" is sent by
+// FBSnacksUnifiedSeenStateMutator, which the impression tracker can drive
+// directly: blocking only the seen-state manager still let views register, so
+// the mutator's two public send entry points are blocked here too, so
 // no receipt leaves the device whichever path triggered it.
 //
-// Both are fire-and-forget void methods, so returning early leaves no completion
-// dangling. The manual "mark as seen" drives the manager synchronously with
-// gAllowSeenPassthrough set, and the manager forwards to this mutator on the same
-// stack, so that one explicit receipt still flows through.
+// Both are fire-and-forget void methods, so returning early leaves nothing
+// dangling. The manual "mark as seen" sets gAllowSeenPassthrough and the
+// manager forwards on the same stack, so that one receipt still flows.
 
 %group FBPStorySeenMutator
 
@@ -113,17 +110,14 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
 
 %hook FBSnacksBucketViewController
 
-/// The per-author story-card controller owns auto-advance: when a photo timer
-/// elapses or a video plays to the end, the media view's completion delegate
-/// fires and advances. No-oping that one delegate stops every automatic advance
-/// and leaves manual navigation alone — a tap goes through navigateToNextItem
-/// and a swipe through the bucket displayer's own scroll. The app already
-/// no-ops this delegate on several paths of its own, so the card simply holds
-/// on its last frame.
+/// The media view's completion delegate is what advances a story, so no-oping
+/// it stops every automatic advance and leaves manual navigation alone: a tap
+/// goes through navigateToNextItem and a swipe through the bucket displayer's
+/// own scroll. The app already no-ops this delegate on several paths of its
+/// own, so holding on the last frame is a state it is built to handle.
 ///
-/// FBSnacksThreadSwitcherViewController does NOT implement this (nor
-/// _advanceToNextItemWithNavigationAction:), so hooking it there installed a
-/// dead new method that never fired.
+/// FBSnacksThreadSwitcherViewController does not implement it, so hooking that
+/// class only added a dead method and auto-advance kept running.
 - (void)mediaViewDidPlayToEnd:(id)mediaView {
     FBPTraceFire("story.FBSnacksBucketViewController.mediaViewDidPlayToEnd");
     if (FBPEnabled(FBPKeyNoAutoNext)) return;
@@ -191,22 +185,10 @@ shouldMarkThreadSeenStateUpdates:(BOOL)shouldUpdate {
     [FBPToastManager.shared showMessage:@"Marked as seen" success:YES];
 }
 
-- (void)storyEyeTouchDown:(UIButton *)sender {
-    if (FBPIsButtonDragging(sender)) return;
-    FBPNoteVideoButtonsInteraction();
-    sender.alpha = MAX(0.25, FBPVideoButtonsAlpha() * 0.72);
-}
-
 /// Asks first, then marks seen. Mark-as-seen is the eye button's only action, so
 /// it is wired straight to a confirmation prompt — matching the like confirmation
 /// — rather than an intermediate one-item menu.
-- (void)confirmAndMarkAsSeen:(UIButton *)sender {
-    FBPNoteVideoButtonsInteraction();
-    if (FBPShouldSuppressTapAfterDrag(sender)) {
-        sender.alpha = FBPVideoButtonsEffectiveAlpha();
-        return;
-    }
-    sender.alpha = FBPVideoButtonsEffectiveAlpha();
+- (void)confirmAndMarkAsSeen {
     UIViewController *host = self.controller;
     if (!host) return;
     while (host.presentedViewController) host = host.presentedViewController;
@@ -252,6 +234,7 @@ static UIViewController *FBPCurrentStoryViewer(void) {
             if ([child isKindOfClass:bucketClass]) return child;
         }
         if (node.presentedViewController) { node = node.presentedViewController; continue; }
+        // Walk into the visible branch of the common containers.
         if ([node isKindOfClass:UINavigationController.class]) {
             node = ((UINavigationController *)node).topViewController;
         } else if ([node isKindOfClass:UITabBarController.class]) {
@@ -261,6 +244,7 @@ static UIViewController *FBPCurrentStoryViewer(void) {
         }
     }
 
+    // Containers vary; fall back to a search of the whole controller tree.
     __block UIViewController *found = nil;
     void (^__block walk)(UIViewController *) = nil;
     void (^walkImpl)(UIViewController *) = ^(UIViewController *controller) {
@@ -276,17 +260,14 @@ static UIViewController *FBPCurrentStoryViewer(void) {
 
 #pragma mark - Appending a row to Facebook's own story menu
 
-// The story "..." sheet builds a std::vector<FDSControl> out of C++ structs,
-// not Objective-C objects, so there is no array to append to. Each builder
-// method is gated by a boolean on FBSnacksTrayTileMenuConfiguration, and one of
-// them — `shouldShowInlineSnacksDebugOverlay` — is an internal debug flag that
-// is off in every production build. Forcing it on and replacing its builder
-// yields one real row in Facebook's own menu and styling, without touching the
-// vector.
+// The sheet's rows are C++ structs built into a std::vector<FDSControl>, so
+// there is no array to append to. Each builder is gated by a boolean on
+// FBSnacksTrayTileMenuConfiguration, and shouldShowInlineSnacksDebugOverlay is
+// an internal debug flag off in every production build: forcing it on and
+// replacing its builder yields a real row in Facebook's own styling.
 //
-// FDSControl is 216 bytes and returned by value (sret). It is never inspected
-// here, only produced by Facebook's own exported converter and passed back, so
-// an opaque buffer of the right size is enough.
+// FDSControl is 216 bytes, returned by value and never inspected here, so an
+// opaque buffer of the right size is enough.
 typedef struct { char opaque[216]; } FBPFDSControl;
 
 /// Facebook's exported bridge from an ObjC-constructible object to an FDSControl.
@@ -313,6 +294,7 @@ static BOOL FBPStoryRowWanted(void) {
     return FBPEnabled(FBPKeyAnonymousStories);
 }
 
+/// Set once the row is actually built, so the fallback button stays out of the way.
 static BOOL gStoryRowInstalled = NO;
 
 %group FBPStoryMenu
@@ -380,79 +362,61 @@ static BOOL gStoryRowInstalled = NO;
 static const void *kStoryButtonTargetKey = &kStoryButtonTargetKey;
 
 static void FBPInstallStoryFallbackButton(UIViewController *controller) {
-    if (!controller || !controller.isViewLoaded) return;
+    if (gStoryRowInstalled) return;
+    if (!FBPEnabled(FBPKeyAnonymousStories)) return;
+    if (!controller.isViewLoaded) return;
+
     UIView *host = controller.view;
-    if (!host) return;
+    if (!host || [host viewWithTag:FBPViewTagStoryButton]) return;
 
-    UIButton *button = (UIButton *)[host viewWithTag:FBPViewTagStoryButton];
-    if (gStoryRowInstalled || !FBPEnabled(FBPKeyAnonymousStories)) {
-        if (button) button.hidden = YES;
-        return;
-    }
+    FBPStoryMenuTarget *target = [[FBPStoryMenuTarget alloc] init];
+    target.controller = controller;
+    objc_setAssociatedObject(controller, kStoryButtonTargetKey, target,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
-    if (![button isKindOfClass:UIButton.class]) {
-        FBPStoryMenuTarget *target = [[FBPStoryMenuTarget alloc] init];
-        target.controller = controller;
-        objc_setAssociatedObject(controller, kStoryButtonTargetKey, target,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    button.tag = FBPViewTagStoryButton;
+    button.tintColor = UIColor.whiteColor;
+    // The tweak's own eye glyph (resources/svg/eye.svg, template-rendered). A plain
+    // glyph, not a circled one: Facebook's own "⌄ ⋯ ✕" in this header are bare white
+    // symbols, and a filled circle among them would read as out of place.
+    [button setImage:[UIImage fbp_imageNamed:@"eye"] forState:UIControlStateNormal];
+    button.imageView.contentMode = UIViewContentModeScaleAspectFit;
+    // Keep the 38pt tap target but shrink the glyph to match Facebook's own
+    // header controls (the "⌄ ⋯ ✕" symbols above it).
+    button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
+    // A single dedicated action: tap the eye, confirm, done — no intermediate
+    // one-item menu.
+    [button addTarget:target
+               action:@selector(confirmAndMarkAsSeen)
+     forControlEvents:UIControlEventTouchUpInside];
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    button.layer.shadowColor = UIColor.blackColor.CGColor;
+    button.layer.shadowOpacity = 0.5;
+    button.layer.shadowOffset = CGSizeMake(0, 1);
+    button.layer.shadowRadius = 3.0;
+    [host addSubview:button];
+    [host bringSubviewToFront:button];
 
-        button = [UIButton buttonWithType:UIButtonTypeSystem];
-        button.tag = FBPViewTagStoryButton;
-        button.frame = CGRectMake(0, 0, 38.0, 38.0);
-        button.tintColor = UIColor.whiteColor;
-        // A plain glyph, not a circled one: Facebook's own header symbols are
-        // bare white, and a filled circle among them reads as out of place.
-        [button setImage:[UIImage fbp_imageNamed:@"eye"] forState:UIControlStateNormal];
-        button.imageView.contentMode = UIViewContentModeScaleAspectFit;
-        // Keep the 38pt tap target, shrink the glyph to match the header.
-        button.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
-        [button addTarget:target
-                   action:@selector(storyEyeTouchDown:)
-         forControlEvents:UIControlEventTouchDown];
-        [button addTarget:target
-                   action:@selector(confirmAndMarkAsSeen:)
-         forControlEvents:UIControlEventTouchUpInside];
-        button.layer.shadowColor = UIColor.blackColor.CGColor;
-        button.layer.shadowOpacity = 0.5;
-        button.layer.shadowOffset = CGSizeMake(0, 1);
-        button.layer.shadowRadius = 3.0;
-        FBPAttachDraggableBehavior(button, FBPKeyStoryEyePosition);
-        [host addSubview:button];
-        FBPNoteVideoButtonsInteraction();
-    }
-
-    // A second row rather than a fourth slot in the first: directly under the
-    // close button, whose own row is centred 41pt below the safe-area top with
-    // the close glyph 24pt in from the right edge.
+    // A second row, directly under the close button: beside "..." it crowded a
+    // row Facebook already fills and collided with the author's name on a
+    // narrow screen. Measured on a 390pt screen with a 47pt safe-area top, the
+    // header row is centred 41pt below it with the glyph 24pt in from the right.
     static const CGFloat kHeaderRowCentre = 41.0;
     static const CGFloat kCloseCentreFromRight = 24.0;
     static const CGFloat kRowGap = 44.0;
     static const CGFloat kButtonBox = 38.0;
 
-    button.hidden = NO;
-    if (!FBPIsButtonDragging(button)) {
-        CGFloat cx = CGRectGetWidth(host.bounds) - host.safeAreaInsets.right - kCloseCentreFromRight;
-        CGFloat cy = host.safeAreaInsets.top + kHeaderRowCentre + kRowGap;
-        CGPoint resolved = FBPResolvedButtonCenter(FBPKeyStoryEyePosition,
-                                                   CGPointMake(cx, cy),
-                                                   CGSizeMake(kButtonBox, kButtonBox),
-                                                   host);
-        button.frame = CGRectMake(round(resolved.x - kButtonBox * 0.5),
-                                  round(resolved.y - kButtonBox * 0.5),
-                                  kButtonBox, kButtonBox);
-        CGFloat targetAlpha = FBPVideoButtonsEffectiveAlpha();
-        if (fabs(button.alpha - targetAlpha) >= 0.004) {
-            NSTimeInterval dur = (targetAlpha < button.alpha) ? 0.32 : 0.12;
-            [UIView animateWithDuration:dur
-                                  delay:0.0
-                                options:UIViewAnimationOptionBeginFromCurrentState |
-                                        UIViewAnimationOptionAllowUserInteraction |
-                                        UIViewAnimationOptionCurveEaseOut
-                             animations:^{ button.alpha = targetAlpha; }
-                             completion:nil];
-        }
-    }
-    [host bringSubviewToFront:button];
+    [NSLayoutConstraint activateConstraints:@[
+        [button.centerXAnchor
+            constraintEqualToAnchor:host.safeAreaLayoutGuide.trailingAnchor
+                           constant:-kCloseCentreFromRight],
+        [button.centerYAnchor
+            constraintEqualToAnchor:host.safeAreaLayoutGuide.topAnchor
+                           constant:kHeaderRowCentre + kRowGap],
+        [button.widthAnchor constraintEqualToConstant:kButtonBox],
+        [button.heightAnchor constraintEqualToConstant:kButtonBox],
+    ]];
 }
 
 %group FBPStoryFallback
@@ -471,16 +435,12 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
 
 #pragma mark - Stories tray (News Feed)
 
-// The horizontal tray at the top of News Feed.
-//
-// It is a ComponentKit *section* of the feed's own data source, not a feed unit
-// and not a view that can be hidden. FBInlineSnacksSectionComponent is the
-// factory that builds it, and refusing to build leaves no empty cell and no gap
-// with paging intact.
-//
-// Sizing the tray's cell to zero instead keeps the section in the data source
-// and lies to the layout about an item it has already measured, which is how
-// the feed gets wedged.
+// The News Feed story tray is a ComponentKit *section* of the feed's own data
+// source, not a feed unit and not a view that can be hidden.
+// FBInlineSnacksSectionComponent is the factory that builds it, and refusing to
+// build it is what removes it. Sizing its cell to zero instead keeps the
+// section in the data source and lies to the layout about an item it has
+// already measured, which is how the feed gets wedged.
 
 %group FBPStoryTray
 
@@ -512,8 +472,9 @@ void FBPInitStoryHooks(void) {
         }
     }
 
-    // Alongside the manager hook, not instead: the manager gates the manual
-    // "mark as seen" while this closes the tracker-driven path.
+    // The actual server-receipt chokepoint. Installed alongside the manager hook,
+    // not instead of it: the manager still gates the manual "mark as seen", while
+    // this closes the tracker-driven path that left views registering anyway.
     Class seenMutator = objc_getClass("FBSnacksUnifiedSeenStateMutator");
     if (seenMutator &&
         [seenMutator instancesRespondToSelector:
@@ -540,26 +501,11 @@ void FBPInitStoryHooks(void) {
     }
 
     if (objc_getClass("FBSnacksBucketViewController")) {
-        FBP_ONCE(gStoryFallback) {
-            %init(FBPStoryFallback);
-            void (^syncStoryEye)(NSNotification *) = ^(__unused NSNotification *note) {
-                UIViewController *viewer = FBPCurrentStoryViewer();
-                if (viewer) FBPInstallStoryFallbackButton(viewer);
-            };
-            [NSNotificationCenter.defaultCenter
-                addObserverForName:FBPSettingsDidChangeNotification
-                            object:nil
-                             queue:NSOperationQueue.mainQueue
-                        usingBlock:syncStoryEye];
-            [NSNotificationCenter.defaultCenter
-                addObserverForName:FBPVideoButtonsDidChangeNotification
-                            object:nil
-                             queue:NSOperationQueue.mainQueue
-                        usingBlock:syncStoryEye];
-        }
+        FBP_ONCE(gStoryFallback) { %init(FBPStoryFallback); }
     }
 
-    // The section component only exists once the feed stack is up.
+    // The section component only exists once the feed stack is up, so this is
+    // latched like the others rather than assumed present at load.
     if (objc_getClass("FBInlineSnacksSectionComponent")) {
         FBP_ONCE(gStoryTray) { %init(FBPStoryTray); }
     } else {

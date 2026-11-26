@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Masque les sections “Vous connaissez peut-être”, suggestions de groupes et “Pour vous”.";
 "footer.metaplus" = "Aperçu uniquement. Les fonctionnalités dépendant des serveurs ne fonctionneront pas.";
 "footer.plusmode" = "Direct active directement les fonctionnalités.\nEssai simule une période d'essai active dans l'application.";
-"footer.videobuttons" = "Maintenez et faites glisser le bouton Œil ou Télécharger directement sur la vidéo pour le déplacer.";
 
 
 "info.developer" = "Développeur";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Méthode de déblocage";
 "row.plusmode.trial" = "Essai";
 "row.reset.title" = "Réinitialiser tous les réglages";
-"row.resetvideobuttons.desc" = "Rétablit la position par défaut des boutons Œil et Télécharger.";
-"row.resetvideobuttons.title" = "Réinitialiser la position des boutons vidéo";
 "row.suspend.desc" = "Force la fermeture de Facebook ; rouvre-le pour appliquer les changements.";
 "row.suspend.title" = "Fermer l’app";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "Ajuste la transparence des boutons flottants Œil et Télécharger.";
-"row.videobuttonsopacity.title" = "Opacité des boutons vidéo";
 "row.welcome.title" = "Afficher l’écran d’accueil";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Journaux effacés.";
 "toast.logEmpty" = "Aucun journal enregistré.";
 "toast.settingsReset" = "Réglages réinitialisés";
-"toast.videoButtonsReset" = "Position des boutons vidéo réinitialisée";
 
 
 "update.failed" = "Impossible de vérifier les mises à jour.";

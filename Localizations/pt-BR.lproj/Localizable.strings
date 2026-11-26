@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Oculta as seções “Pessoas que talvez você conheça”, sugestões de grupos e “Para você”.";
 "footer.metaplus" = "Apenas prévia. Recursos que dependem do servidor não funcionarão.";
 "footer.plusmode" = "Direto força a ativação imediata dos recursos.\nTeste simula um período de testes ativo no app.";
-"footer.videobuttons" = "Pressione e arraste o botão Olho ou Baixar diretamente no vídeo para movê-lo.";
 
 
 "info.developer" = "Desenvolvedor";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Método de desbloqueio";
 "row.plusmode.trial" = "Teste";
 "row.reset.title" = "Redefinir todas as configurações";
-"row.resetvideobuttons.desc" = "Restaura os botões Olho e Baixar para suas posições padrão.";
-"row.resetvideobuttons.title" = "Redefinir posição dos botões de vídeo";
 "row.suspend.desc" = "Força o fechamento do Facebook; reabra para aplicar as alterações.";
 "row.suspend.title" = "Fechar o app";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "Ajusta a transparência dos botões flutuantes Olho e Baixar.";
-"row.videobuttonsopacity.title" = "Opacidade dos botões de vídeo";
 "row.welcome.title" = "Mostrar tela de boas-vindas";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Registros limpos.";
 "toast.logEmpty" = "Nenhum registro gravado ainda.";
 "toast.settingsReset" = "Configurações redefinidas";
-"toast.videoButtonsReset" = "Posição dos botões de vídeo redefinida";
 
 
 "update.failed" = "Não foi possível verificar atualizações.";

@@ -128,7 +128,6 @@
 "footer.feedClutter" = "Ẩn các mục “Những người bạn có thể biết / Nhóm nên tham gia / Dành cho bạn” trên bảng tin.";
 "footer.metaplus" = "Chỉ xem trước. Các tính năng phía máy chủ sẽ không hoạt động.";
 "footer.plusmode" = "Trực tiếp kích hoạt tính năng ngay lập tức.\nDùng thử mô phỏng thời gian dùng thử đang hoạt động trong ứng dụng.";
-"footer.videobuttons" = "Nhấn giữ và kéo trực tiếp nút Con mắt hoặc nút Tải về trên màn hình video để di chuyển vị trí.";
 
 
 "info.developer" = "Nhà phát triển";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "Cách mở khóa";
 "row.plusmode.trial" = "Dùng thử";
 "row.reset.title" = "Đặt lại tất cả cài đặt";
-"row.resetvideobuttons.desc" = "Đưa nút Con mắt và nút Tải về trở lại vị trí mặc định ban đầu.";
-"row.resetvideobuttons.title" = "Đặt lại vị trí nút Video";
 "row.suspend.desc" = "Buộc đóng Facebook; mở lại để áp dụng thay đổi.";
 "row.suspend.title" = "Thoát ứng dụng";
-"row.videobuttons_idle.desc" = "Độ rõ còn lại sau 2 giây không chạm (mặc định 5% — gần như trong suốt).";
-"row.videobuttons_idle.title" = "Độ rõ sau 2 giây không chạm";
-"row.videobuttonsautodim.desc" = "Tự động làm trong suốt nút Con mắt và nút Tải video sau 2 giây không chạm vào.";
-"row.videobuttonsautodim.title" = "Tự làm trong suốt sau 2 giây";
-"row.videobuttonsopacity.desc" = "Chỉnh độ trong suốt của nút Con mắt và nút Tải về khi xem video.";
-"row.videobuttonsopacity.title" = "Độ trong suốt nút Video";
 "row.welcome.title" = "Hiển thị màn hình chào mừng";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "Đã xóa nhật ký.";
 "toast.logEmpty" = "Chưa có nhật ký nào được ghi.";
 "toast.settingsReset" = "Đã đặt lại cài đặt";
-"toast.videoButtonsReset" = "Đã đặt lại vị trí nút Video";
 
 
 "update.failed" = "Không thể kiểm tra cập nhật.";

@@ -128,7 +128,6 @@
 "footer.feedClutter" = "ফিডের “আপনি চিনতে পারেন / যে গ্রুপে যোগ দিতে পারেন / আপনার জন্য” অংশগুলি লুকায়।";
 "footer.metaplus" = "শুধুমাত্র প্রিভিউ। সার্ভার-নির্ভর ফিচারগুলো কাজ করবে না।";
 "footer.plusmode" = "ডিরেক্ট সরাসরি ফিচার চালু করে।\nট্রায়াল অ্যাপে একটি সক্রিয় ট্রায়াল সিমুলেট করে।";
-"footer.videobuttons" = "অবস্থান পরিবর্তন করতে ভিডিও স্ক্রিনে চোখ বা ডাউনলোড বোতাম ধরে টেনে আনুন।";
 
 
 "info.developer" = "ডেভেলপার";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "আনলক পদ্ধতি";
 "row.plusmode.trial" = "ট্রায়াল";
 "row.reset.title" = "সব সেটিং রিসেট করুন";
-"row.resetvideobuttons.desc" = "চোখ এবং ডাউনলোড বোতাম ডিফল্ট অবস্থানে ফিরিয়ে আনুন।";
-"row.resetvideobuttons.title" = "ভিডিও বোতামের অবস্থান রিসেট করুন";
 "row.suspend.desc" = "Facebook জোর করে বন্ধ করে; পরিবর্তন প্রয়োগ করতে আবার খুলুন।";
 "row.suspend.title" = "অ্যাপ বন্ধ করুন";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "ভাসমান চোখ এবং ডাউনলোড বোতামের স্বচ্ছতা সামঞ্জস্য করুন।";
-"row.videobuttonsopacity.title" = "ভিডিও বোতামের স্বচ্ছতা";
 "row.welcome.title" = "স্বাগত স্ক্রিন দেখান";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "লগ মুছে ফেলা হয়েছে।";
 "toast.logEmpty" = "এখনও কোনো লগ রেকর্ড করা হয়নি।";
 "toast.settingsReset" = "সেটিং রিসেট হয়েছে";
-"toast.videoButtonsReset" = "ভিডিও বোতামের অবস্থান রিসেট হয়েছে";
 
 
 "update.failed" = "আপডেট চেক করা যায়নি।";

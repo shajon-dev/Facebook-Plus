@@ -128,7 +128,6 @@
 "footer.feedClutter" = "إخفاء وحدات “قد تعرفهم / يجب أن تنضم / لك” من الموجز.";
 "footer.metaplus" = "للمعاينة فقط. لن تعمل الميزات التي تتطلب خوادم فيسبوك.";
 "footer.plusmode" = "الوضع المباشر يفرض تفعيل الميزات فوراً.\nوضع التجربة يحاكي وجود فترة تجريبية نشطة.";
-"footer.videobuttons" = "اضغط مع الاستمرار واسحب زر العين أو التنزيل مباشرةً على الفيديو لتغيير موضعه.";
 
 
 "info.developer" = "المطوّر";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "طريقة الفتح";
 "row.plusmode.trial" = "تجريبي";
 "row.reset.title" = "إعادة تعيين كل الإعدادات";
-"row.resetvideobuttons.desc" = "استعادة الموضع الافتراضي لزري العين والتنزيل.";
-"row.resetvideobuttons.title" = "إعادة تعيين موضع أزرار الفيديو";
 "row.suspend.desc" = "أغلق Facebook إجبارياً؛ أعد فتحه لتطبيق التغييرات.";
 "row.suspend.title" = "تعليق التطبيق";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "ضبط شفافية زري العين والتنزيل أثناء مشاهدة الفيديو.";
-"row.videobuttonsopacity.title" = "شفافية أزرار الفيديو";
 "row.welcome.title" = "عرض شاشة الترحيب";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "تم مسح السجلات.";
 "toast.logEmpty" = "لا توجد سجلات مسجلة بعد.";
 "toast.settingsReset" = "تمت إعادة تعيين الإعدادات";
-"toast.videoButtonsReset" = "تمت إعادة تعيين موضع أزرار الفيديو";
 
 
 "update.failed" = "تعذّر التحقق من التحديثات.";

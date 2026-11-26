@@ -128,7 +128,6 @@
 "footer.feedClutter" = "隐藏动态中的“你可能认识的人 / 建议加入的小组 / 为你推荐”等模块。";
 "footer.metaplus" = "仅供预览，服务端功能将无法使用。";
 "footer.plusmode" = "直接挂钩会直接强制开启功能。\n试用模式会让应用模拟处于有效试用期。";
-"footer.videobuttons" = "在视频画面上直接按住并拖动“眼睛”或“下载”按钮即可自由移动位置。";
 
 
 "info.developer" = "开发者";
@@ -236,16 +235,8 @@
 "row.plusmode.title" = "解锁方式";
 "row.plusmode.trial" = "试用";
 "row.reset.title" = "重置所有设置";
-"row.resetvideobuttons.desc" = "将“眼睛”和“下载”按钮恢复到默认位置。";
-"row.resetvideobuttons.title" = "重置视频按钮位置";
 "row.suspend.desc" = "强制关闭 Facebook；重新打开以应用更改。";
 "row.suspend.title" = "关闭应用";
-"row.videobuttons_idle.desc" = "Remaining visibility after 2 seconds untouched (default 5% — nearly transparent).";
-"row.videobuttons_idle.title" = "Idle Opacity After 2s";
-"row.videobuttonsautodim.desc" = "Automatically fade the Eye and Download buttons after 2 seconds without touching them.";
-"row.videobuttonsautodim.title" = "Auto-Fade Buttons After 2s";
-"row.videobuttonsopacity.desc" = "调节视频画面上悬浮“眼睛”和“下载”按钮的不透明度。";
-"row.videobuttonsopacity.title" = "视频按钮不透明度";
 "row.welcome.title" = "显示欢迎界面";
 
 
@@ -256,7 +247,6 @@
 "toast.logCleared" = "日志已清除。";
 "toast.logEmpty" = "暂无记录的日志。";
 "toast.settingsReset" = "设置已重置";
-"toast.videoButtonsReset" = "已重置视频按钮位置";
 
 
 "update.failed" = "无法检查更新。";
