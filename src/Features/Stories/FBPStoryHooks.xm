@@ -427,6 +427,10 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
 // build it is what removes it. Sizing its cell to zero instead keeps the
 // section in the data source and lies to the layout about an item it has
 // already measured, which is how the feed gets wedged.
+//
+// Which of the feed's story modules runs is decided per session, so one
+// refusal is not enough: the story section is refused outright, while the
+// shared top-of-feed section carries other modules and only loses its tray.
 
 %group FBPStoryTray
 
@@ -443,6 +447,68 @@ static void FBPInstallStoryFallbackButton(UIViewController *controller) {
 %end
 
 %end // FBPStoryTray
+
+%group FBPStoryTrayRender
+
+%hook FBInlineSnacksRenderSectionComponent
+
+/// The newer wrapper around the section above. Its whole body is a send of that
+/// factory, so refusing here is the same refusal one step earlier, and the row
+/// survives the older half being retired.
+- (id)render:(id)state {
+    FBPTraceFire("story.FBInlineSnacksRenderSectionComponent.render");
+    if (FBPEnabled(FBPKeyNoMainStories)) return nil;
+    return %orig;
+}
+
+%end
+
+%end // FBPStoryTrayRender
+
+#pragma mark - Stories tray (shared top-of-feed section)
+
+/// Non-zero while this thread is inside the shared top-of-feed section's build.
+static __thread NSUInteger gTopOfFeedDepth = 0;
+
+%group FBPStoryTrayTopOfFeed
+
+%hook FBUnifiedTofuSection_Spec
+
+- (id)render:(id)state {
+    FBPTraceFire("story.FBUnifiedTofuSection_Spec.render");
+    if (!FBPEnabled(FBPKeyNoMainStories)) return %orig;
+    gTopOfFeedDepth++;
+    // A depth left raised would refuse trays on surfaces this row does not cover.
+    @try {
+        return %orig;
+    } @finally {
+        gTopOfFeedDepth--;
+    }
+}
+
+%end
+
+%hook FBSnacksTrayCollectionComponent
+
+/// Every snacks surface draws its tray with this one component, the Reels tab
+/// among them, so the refusal is armed only for the section above: ComponentKit
+/// builds a section's children inside that section's own -render:, on the
+/// calling thread. @c options is a C++ struct pointer and is only forwarded.
++ (id)newWithModel:(id)model
+           options:(const void *)options
+           toolbox:(id)toolbox
+thumbnailImageProvider:(id)provider {
+    FBPTraceFire("story.FBSnacksTrayCollectionComponent.newWithModel");
+    if (gTopOfFeedDepth > 0 && FBPEnabled(FBPKeyNoMainStories)) {
+        FBPTraceFire("story.FBSnacksTrayCollectionComponent.refused");
+        return nil;
+    }
+    return %orig;
+}
+
+%end
+
+%end // FBPStoryTrayTopOfFeed
 
 #pragma mark - Init
 
@@ -490,11 +556,37 @@ void FBPInitStoryHooks(void) {
         FBP_ONCE(gStoryFallback) { %init(FBPStoryFallback); }
     }
 
-    // The section component only exists once the feed stack is up, so this is
-    // latched like the others rather than assumed present at load.
-    if (objc_getClass("FBInlineSnacksSectionComponent")) {
+    // The section components only exist once the feed stack is up, so these are
+    // latched like the others. Each factory is checked as well as its class:
+    // hooking a selector a class has lost adds an override nothing calls.
+    Class snacksSection = objc_getClass("FBInlineSnacksSectionComponent");
+    SEL sectionFactory =
+        NSSelectorFromString(@"newWithSession:inlineSnacksController:initialModel:");
+    if (snacksSection && [snacksSection respondsToSelector:sectionFactory]) {
         FBP_ONCE(gStoryTray) { %init(FBPStoryTray); }
     } else {
-        FBPLogOnce(@"FBInlineSnacksSectionComponent not found — stories tray stays");
+        FBPLogOnce(@"FBInlineSnacksSectionComponent factory not found — "
+               @"stories tray stays");
+    }
+
+    Class renderSection = objc_getClass("FBInlineSnacksRenderSectionComponent");
+    if (renderSection && [renderSection instancesRespondToSelector:@selector(render:)]) {
+        FBP_ONCE(gStoryTrayRender) { %init(FBPStoryTrayRender); }
+    } else {
+        FBPLogOnce(@"FBInlineSnacksRenderSectionComponent render: not found — "
+               @"the story section is refused at its factory only");
+    }
+
+    Class topOfFeedSection = objc_getClass("FBUnifiedTofuSection_Spec");
+    Class trayComponent = objc_getClass("FBSnacksTrayCollectionComponent");
+    SEL trayFactory =
+        NSSelectorFromString(@"newWithModel:options:toolbox:thumbnailImageProvider:");
+    if (topOfFeedSection &&
+        [topOfFeedSection instancesRespondToSelector:@selector(render:)] &&
+        trayComponent && [trayComponent respondsToSelector:trayFactory]) {
+        FBP_ONCE(gStoryTrayTopOfFeed) { %init(FBPStoryTrayTopOfFeed); }
+    } else {
+        FBPLogOnce(@"top-of-feed tray classes not found — the tray in the "
+               @"shared section stays");
     }
 }
