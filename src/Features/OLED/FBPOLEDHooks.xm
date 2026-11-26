@@ -1035,12 +1035,97 @@ static void FBPApplyOverflow(UIView *view, BOOL active) {
     disc.alpha = 0.0;
 }
 
+#pragma mark - Stretched card artwork
+
+// A nine-part asset stretched to fill its view is a background card, not
+// content: the tile behind a shortcut is drawn this way. It is artwork, so no
+// colour hook reaches it, and a card that only adds its own grey has nothing
+// left to say on black. The verdict is taken once per image and cached on it,
+// because one asset is reused down a whole row.
+static const void *kFBPCardVerdict = &kFBPCardVerdict;
+
+/// Set while a card is being measured, so the render below cannot re-enter the
+/// layout hooks. Main thread only.
+static BOOL gFBPMeasuringCard = NO;
+
+static BOOL FBPImageViewIsDarkCard(UIImageView *view) {
+    UIImage *image = view.image;
+    if (!image) return NO;
+    UIEdgeInsets caps = image.capInsets;
+    if (caps.top <= 0.0 && caps.left <= 0.0 && caps.bottom <= 0.0 && caps.right <= 0.0) {
+        return NO;
+    }
+    NSNumber *cached = objc_getAssociatedObject(image, kFBPCardVerdict);
+    if (cached) return cached.boolValue;
+
+    // What the view puts on screen, not what the asset holds. Reading the asset
+    // answers a different question: a stretched nine-part card is drawn through
+    // the layer, and tint, scaling and the caps all land between the two.
+    const size_t side = 8;
+    uint8_t px[side * side * 4];
+    memset(px, 0, sizeof(px));
+    BOOL dark = NO;
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    if (space) {
+        CGContextRef ctx = CGBitmapContextCreate(px, side, side, 8, side * 4, space,
+            (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+        if (ctx) {
+            CGRect bounds = view.bounds;
+            if (bounds.size.width > 0.0 && bounds.size.height > 0.0) {
+                CGContextScaleCTM(ctx, (CGFloat)side / bounds.size.width,
+                                       (CGFloat)side / bounds.size.height);
+                gFBPMeasuringCard = YES;
+                [view.layer renderInContext:ctx];
+                gFBPMeasuringCard = NO;
+            }
+            CGContextRelease(ctx);
+
+            // Premultiplied, so each sample is what this view adds to whatever is
+            // behind it, which is the same question for an opaque grey card and
+            // for white laid at a low alpha.
+            unsigned long sum[4] = {0, 0, 0, 0};
+            for (size_t i = 0; i < side * side; i++) {
+                for (size_t c = 0; c < 4; c++) sum[c] += px[i * 4 + c];
+            }
+            CGFloat n = (CGFloat)(side * side);
+            CGFloat r = sum[0] / n, g = sum[1] / n, b = sum[2] / n, a = sum[3] / n;
+            if (a > 10.0) {
+                UIColor *adds = [UIColor colorWithRed:r / 255.0 green:g / 255.0
+                                                 blue:b / 255.0 alpha:1.0];
+                dark = FBPColorIsDark(adds) && !FBPCGIsPureBlack(adds.CGColor);
+            }
+#if FBP_DIAG
+            FBPDiag(@"oled", @"card %@ in %@ caps=%.0f adds=%.0f,%.0f,%.0f a=%.0f -> %@",
+                    NSStringFromCGSize(image.size), NSStringFromCGSize(view.bounds.size),
+                    caps.left, r, g, b, a, dark ? @"BLACKENED" : @"left alone");
+#endif
+        }
+        CGColorSpaceRelease(space);
+    }
+    objc_setAssociatedObject(image, kFBPCardVerdict, @(dark), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return dark;
+}
+
+static void FBPApplyCardImage(UIImageView *view, BOOL active) {
+    if (gFBPMeasuringCard) return;
+    if (!active) { FBPRestoreAlpha(view); return; }
+    if (objc_getAssociatedObject(view, kFBPSavedAlpha)) return;
+    if (!FBPImageViewIsDarkCard(view)) return;
+    objc_setAssociatedObject(view, kFBPSavedAlpha, @(view.alpha),
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    FBPMarkTouched(view);
+    view.alpha = 0.0;
+}
+
 /// The body of UIView -layoutSubviews under OLED: blacken this view's
 /// background, layer and sublayers, or put back everything OLED saved and drop
 /// the touched flag. Untouched views short-circuit immediately.
 static void FBPApplyView(UIView *view, BOOL active) {
     if (FBPOLEDSkip(view)) return;
     FBPApplyOverflow(view, active);
+    if ([view isKindOfClass:UIImageView.class]) {
+        FBPApplyCardImage((UIImageView *)view, active);
+    }
 
     if (!active) {
         if (!FBPWasTouched(view)) return;
@@ -1208,6 +1293,19 @@ static UIColor *FBPBGForSet(UIView *self, UIColor *color) {
             [self setNeedsLayout];
         }
     }
+}
+
+%end
+
+// UIImageView overrides -layoutSubviews, so the UIView hook above never runs
+// for one, and a card asset that mounts while OLED is already on would be seen
+// only by the next sweep.
+%hook UIImageView
+
+- (void)layoutSubviews {
+    %orig;
+    FBPTraceFire("oled.UIImageView.layoutSubviews");
+    FBPApplyCardImage(self, FBPOLEDActiveFor(self) && !FBPOLEDSkip(self));
 }
 
 %end
