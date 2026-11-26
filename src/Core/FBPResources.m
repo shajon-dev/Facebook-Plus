@@ -3,11 +3,31 @@
 #import "FBPResources.h"
 #import "FBPPrefs.h"
 
+#import <dlfcn.h>
+
 #if __has_include(<rootless.h>)
 #import <rootless.h>
 #endif
 
 static NSString *const kBundleName = @"FacebookPlus.bundle";
+
+/// The bundle ships beside the dylib in every packaging layout, so asking the
+/// loader where this code came from finds it whatever the jailbreak root is
+/// called. A roothide root is named afresh on each jailbreak, so no path baked
+/// in at build time can name it.
+static NSString *FBPBundleBesideCode(void) {
+    Dl_info info;
+    if (!dladdr((const void *)&FBPBundleBesideCode, &info) || !info.dli_fname) return nil;
+    NSString *image = @(info.dli_fname);
+    if (image.length == 0) return nil;
+    // <root>/Library/MobileSubstrate/DynamicLibraries/FacebookPlus.dylib
+    NSString *library = image.stringByDeletingLastPathComponent
+                             .stringByDeletingLastPathComponent
+                             .stringByDeletingLastPathComponent;
+    if (![library.lastPathComponent isEqualToString:@"Library"]) return nil;
+    return [library stringByAppendingPathComponent:
+        [@"Application Support" stringByAppendingPathComponent:kBundleName]];
+}
 
 @implementation NSBundle (FBPlus)
 
@@ -16,6 +36,9 @@ static NSString *const kBundleName = @"FacebookPlus.bundle";
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSMutableArray<NSString *> *candidates = [NSMutableArray array];
+
+        NSString *beside = FBPBundleBesideCode();
+        if (beside) [candidates addObject:beside];
 
 #if __has_include(<rootless.h>)
         // Rootless / roothide: the real path is prefixed at build time.

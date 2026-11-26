@@ -214,16 +214,27 @@ class IconPlist:
 class TweakBuilder:
     # Per-scheme `make package` + the versioned rename to
     # packages/Facebook-Plus-v<version>-<label>.deb. Each entry is
-    # (THEOS_PACKAGE_SCHEME, Architecture-override): rootfull is theos's empty
-    # scheme; roothide is the rootless layout (/var/jb) repackaged as arm64e,
-    # which roothide's package manager expects. (A roothide-native build would
-    # need roothide's own theos fork; this theos has no "roothide" scheme, so the
-    # arch relabel is the portable approximation, matching how comparable projects
-    # ship a roothide .deb.)
+    # (THEOS_PACKAGE_SCHEME, Architecture-override, install-prefix-override).
+    #
+    # The three layouts differ in two independent ways, and a package is only
+    # installable when both are right for the jailbreak:
+    #   rootless  files under /var/jb, and the dylib finds Substrate through
+    #             /var/jb/Library/Frameworks.
+    #   rootfull  files at the real root, and the dylib links Substrate at an
+    #             absolute /Library/Frameworks path with no rpath at all.
+    #   roothide  files at the real root AGAIN, because roothide installs them
+    #             inside a jailbreak root whose name is random, but the dylib
+    #             must reach Substrate through the @loader_path/.jbroot rpath
+    #             this theos emits under the rootless scheme. A rootfull build
+    #             cannot: its absolute path is outside that root, so the whole
+    #             dylib fails to load and nothing in the tweak runs.
+    # So roothide is the rootless scheme with the /var/jb prefix cleared, which
+    # keeps the rpaths and moves the files, and the arm64e label its package
+    # manager expects.
     SCHEME_VALUES: ClassVar[dict] = {
-        "rootless": ("rootless", None),
-        "rootfull": ("", None),
-        "roothide": ("", "iphoneos-arm64e"),
+        "rootless": ("rootless", None, None),
+        "rootfull": ("", None, None),
+        "roothide": ("rootless", "iphoneos-arm64e", ""),
     }
 
     def __init__(self, paths, control, debug):
@@ -245,25 +256,27 @@ class TweakBuilder:
                 stale.unlink()
 
     def build_scheme(self, label):
-        scheme, arch = self.SCHEME_VALUES[label]
+        scheme, arch, prefix = self.SCHEME_VALUES[label]
         out = self.output_deb(label)
         env = self.paths.make_env(self.debug)
         Log.section()
         Log.info("Building " + label + " (THEOS_PACKAGE_SCHEME='" + scheme + "'" +
-                 (", Architecture=" + arch if arch else "") + ")")
+                 (", Architecture=" + arch if arch else "") +
+                 (", install prefix cleared" if prefix == "" else "") + ")")
         subprocess.run(["make", "clean"], cwd=str(self.paths.root), env=env, check=True, stdout=subprocess.DEVNULL)
         # Clear any previous raw theos output so the freshest build is unambiguous.
         for stale in self.paths.packages.glob(self.control.package_id + "_*.deb"):
             stale.unlink()
 
-        # roothide is the default (rootful) layout under an arm64e arch label, the
-        # same way comparable projects ship one. theos writes the package's
-        # Architecture from THEOS_PACKAGE_ARCH (makefiles/package/deb.mk), and a
-        # command-line value overrides what it would otherwise read from control,
-        # so no file is touched.
+        # theos writes the package's Architecture from THEOS_PACKAGE_ARCH
+        # (makefiles/package/deb.mk) and its install paths from
+        # THEOS_PACKAGE_INSTALL_PREFIX; a value given on the command line beats
+        # what either would otherwise be, so no file is touched.
         cmd = ["make", "package", "FINALPACKAGE=1", "THEOS_PACKAGE_SCHEME=" + scheme]
         if arch:
             cmd.append("THEOS_PACKAGE_ARCH=" + arch)
+        if prefix is not None:
+            cmd.append("THEOS_PACKAGE_INSTALL_PREFIX=" + prefix)
         subprocess.run(cmd, cwd=str(self.paths.root), env=env, check=True)
 
         produced = sorted(self.paths.packages.glob(self.control.package_id + "_*.deb"),
@@ -997,7 +1010,8 @@ class FacebookPlus:
         print("Options:")
         print("  --rootless    Build rootless package only")
         print("  --rootfull    Build rootfull package only")
-        print("  --roothide    Build roothide package only (rootless layout, arm64e arch)")
+        print("  --roothide    Build roothide package only (rootless linking, jbroot-")
+        print("                relative paths, arm64e arch)")
         print("  --trollfools  Build the TrollFools zip only (dylib + bundle)")
         print("  --all         Build every variant: rootless, rootfull, roothide and TrollFools (default)")
         print("  --debug       Build with FBP_DIAG=1 (the [FBPDIAG] os_log trace); v" + version + ", names unchanged")

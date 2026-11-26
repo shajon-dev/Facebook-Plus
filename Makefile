@@ -6,8 +6,11 @@ TARGET := iphone:clang:latest:15.1
 ARCHS  := arm64
 INSTALL_TARGET_PROCESSES = Facebook
 
-# Set to 1 (or export in your environment) when building for a roothide
-# jailbreak, which needs the .jbroot loader-path indirection.
+# The layout to build for. build.py overrides this per variant and is the only
+# supported way to produce a release: rootless as it stands, rootfull with the
+# scheme cleared, and roothide with this same rootless scheme but
+# THEOS_PACKAGE_INSTALL_PREFIX cleared, which keeps the @loader_path/.jbroot
+# rpaths a roothide root needs while moving the files out from under /var/jb.
 THEOS_PACKAGE_SCHEME ?= rootless
 THEOS ?= $(HOME)/theos
 

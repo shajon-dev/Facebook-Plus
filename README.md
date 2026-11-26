@@ -153,7 +153,7 @@ This project requires [Theos](https://theos.dev) to build. Ensure you have it in
      |---|---|
      | `rootless` | `Facebook-Plus-v<version>-rootless.deb` |
      | `rootfull` | `Facebook-Plus-v<version>-rootfull.deb` |
-     | `roothide` | `Facebook-Plus-v<version>-roothide.deb` (rootless layout, arm64e) |
+     | `roothide` | `Facebook-Plus-v<version>-roothide.deb` (jbroot-relative paths, arm64e) |
      | `trollfools` | `Facebook-Plus-v<version>-TrollFools.zip` (dylib + bundle) |
 
    - If a decrypted `.ipa` is present, injects the **rootless** build into it with
